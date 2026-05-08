@@ -9,4 +9,5 @@ urlpatterns = [
     path('mensagens/', include('mensagens.urls')),
     path('kanban/', include('kanban.urls')),
     path('comunicados/', include('comunicados.urls')),
+    path('atendimento/', include('atendimento.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

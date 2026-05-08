@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Novo Atendimento{% endblock %}
+{% block page_title %}Novo Atendimento{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'atendimento:list' %}" class="btn-secondary text-xs">← Voltar</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+
+    <!-- Dados do filiado -->
+    <div class="card mb-4">
+      <h3 class="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">👤 Dados do filiado</h3>
+      <div class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">CPF <span class="text-red-500">*</span></label>
+            {{ form.cpf }}
+            {% if form.cpf.errors %}<p class="text-red-500 text-xs mt-1">{{ form.cpf.errors|join:" " }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Nome completo <span class="text-red-500">*</span></label>
+            {{ form.nome_filiado }}
+            {% if form.nome_filiado.errors %}<p class="text-red-500 text-xs mt-1">{{ form.nome_filiado.errors|join:" " }}</p>{% endif %}
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Telefone</label>
+            {{ form.telefone }}
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">E-mail</label>
+            {{ form.email_filiado }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Atendimento -->
+    <div class="card mb-4">
+      <h3 class="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">📋 Atendimento</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">Assunto <span class="text-red-500">*</span></label>
+          {{ form.assunto }}
+          {% if form.assunto.errors %}<p class="text-red-500 text-xs mt-1">{{ form.assunto.errors|join:" " }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">Descrição inicial</label>
+          {{ form.descricao }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">Anexar documento (opcional)</label>
+          <input type="file" name="arquivo" class="form-input text-sm">
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-3">
+      <button type="submit" class="btn-primary">Abrir atendimento</button>
+      <a href="{% url 'atendimento:list' %}" class="btn-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

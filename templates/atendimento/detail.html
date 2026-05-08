@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}{{ at.nome_filiado }} — Atendimento #{{ at.pk }}{% endblock %}
+{% block page_title %}Atendimento #{{ at.pk }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'atendimento:list' %}" class="btn-secondary text-xs">← Atendimentos</a>
+<a href="{% url 'atendimento:list' %}?cpf={{ at.cpf }}" class="btn-secondary text-xs">Histórico do filiado</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+  <!-- Main: timeline -->
+  <div class="lg:col-span-2 space-y-4">
+
+    <!-- Filiado info -->
+    <div class="card">
+      <div class="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h2 class="text-lg font-bold text-gray-900">{{ at.nome_filiado }}</h2>
+          <p class="text-sm text-gray-500 font-mono mt-0.5">CPF: {{ at.cpf }}</p>
+          {% if at.telefone or at.email_filiado %}
+          <div class="flex flex-wrap gap-3 mt-2 text-sm text-gray-500">
+            {% if at.telefone %}<span>📞 {{ at.telefone }}</span>{% endif %}
+            {% if at.email_filiado %}<span>✉ {{ at.email_filiado }}</span>{% endif %}
+          </div>
+          {% endif %}
+        </div>
+        <span class="text-sm px-3 py-1 rounded-full text-white font-medium"
+              style="background-color:{{ at.status_color }}">
+          {{ at.get_status_display }}
+        </span>
+      </div>
+      <div class="mt-3 pt-3 border-t border-gray-100">
+        <p class="text-sm font-medium text-gray-700">{{ at.assunto }}</p>
+        {% if at.responsavel %}
+        <p class="text-xs text-gray-400 mt-1">Responsável atual: {{ at.responsavel.get_full_name }}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="card">
+      <h3 class="font-semibold text-gray-900 mb-5">Histórico</h3>
+      <div class="relative">
+        <!-- Vertical line -->
+        <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-100"></div>
+        <div class="space-y-5">
+          {% for etapa in etapas %}
+          <div class="flex gap-4">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 z-10
+              {% if etapa.tipo == 'ABERTURA' %}bg-blue-100
+              {% elif etapa.tipo == 'ENCAMINHAMENTO' %}bg-purple-100
+              {% elif etapa.tipo == 'CONCLUSAO' %}bg-green-100
+              {% elif etapa.tipo == 'CANCELAMENTO' %}bg-red-100
+              {% else %}bg-gray-100{% endif %}">
+              {{ etapa.tipo_icon }}
+            </div>
+            <div class="flex-1 pb-1">
+              <div class="flex items-center gap-2 mb-1 flex-wrap">
+                <span class="text-sm font-medium text-gray-800">
+                  {{ etapa.autor.get_full_name|default:etapa.autor.email|default:"Sistema" }}
+                </span>
+                {% if etapa.departamento %}
+                <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{{ etapa.departamento.name }}</span>
+                {% endif %}
+                <span class="text-xs text-gray-400">{{ etapa.created_at|date:"d/m/Y H:i" }}</span>
+              </div>
+              {% if etapa.tipo == 'ENCAMINHAMENTO' and etapa.para_departamento %}
+              <p class="text-sm text-gray-600">
+                Encaminhado para <strong class="text-purple-700">{{ etapa.para_departamento.name }}</strong>
+                {% if etapa.descricao and etapa.descricao != 'Encaminhado para '|add:etapa.para_departamento.name|add:'.' %}
+                — {{ etapa.descricao }}
+                {% endif %}
+              </p>
+              {% else %}
+              <p class="text-sm text-gray-600 whitespace-pre-wrap">{{ etapa.descricao }}</p>
+              {% endif %}
+              {% if etapa.anexos.all %}
+              <div class="flex flex-wrap gap-2 mt-2">
+                {% for anexo in etapa.anexos.all %}
+                <a href="{{ anexo.arquivo.url }}" target="_blank"
+                   class="flex items-center gap-1.5 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 px-2.5 py-1 rounded-full transition-colors">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                  {{ anexo.nome_original }}
+                </a>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Sidebar: ações -->
+  <div class="space-y-4" x-data="{ panel: '' }">
+
+    <!-- Detalhes -->
+    <div class="card">
+      <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-3">Detalhes</h3>
+      <div class="space-y-2.5 text-sm">
+        <div>
+          <p class="text-xs text-gray-400">Aberto por</p>
+          <p class="text-gray-800 mt-0.5">{{ at.criado_por.get_full_name|default:"—" }}</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-400">Departamento atual</p>
+          <p class="text-gray-800 mt-0.5">{{ at.departamento_atual.name|default:"—" }}</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-400">Aberto em</p>
+          <p class="text-gray-800 mt-0.5">{{ at.created_at|date:"d/m/Y H:i" }}</p>
+        </div>
+        {% if at.concluido_em %}
+        <div>
+          <p class="text-xs text-gray-400">Concluído em</p>
+          <p class="text-gray-800 mt-0.5">{{ at.concluido_em|date:"d/m/Y H:i" }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if pode_agir and ativo %}
+    <!-- Ações -->
+    <div class="card space-y-2">
+      <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-3">Ações</h3>
+
+      <!-- Iniciar atendimento (se encaminhado para o dept do usuário) -->
+      {% if at.status == 'ENCAMINHADO' %}
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="em_andamento">
+        <button type="submit" class="btn-primary w-full text-sm">▶ Iniciar atendimento</button>
+      </form>
+      {% endif %}
+
+      <!-- Adicionar nota -->
+      <button type="button" @click="panel = panel === 'nota' ? '' : 'nota'"
+              class="btn-secondary w-full text-sm">📝 Adicionar anotação</button>
+
+      <div x-show="panel === 'nota'" x-cloak class="pt-2 border-t border-gray-100 space-y-3">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="nota">
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Anotação</label>
+            {{ nota_form.descricao }}
+            {% if nota_form.descricao.errors %}<p class="text-red-500 text-xs mt-1">{{ nota_form.descricao.errors|join:" " }}</p>{% endif %}
+          </div>
+          <div class="mt-2">
+            <label class="block text-xs font-medium text-gray-500 mb-1">Anexo (opcional)</label>
+            {{ nota_form.arquivo }}
+          </div>
+          <button type="submit" class="btn-primary w-full text-sm mt-3">Salvar anotação</button>
+        </form>
+      </div>
+
+      <!-- Encaminhar -->
+      <button type="button" @click="panel = panel === 'encaminhar' ? '' : 'encaminhar'"
+              class="btn-secondary w-full text-sm">➡️ Encaminhar para</button>
+
+      <div x-show="panel === 'encaminhar'" x-cloak class="pt-2 border-t border-gray-100 space-y-3">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="encaminhar">
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Departamento</label>
+            {{ encaminhar_form.para_departamento }}
+          </div>
+          <div class="mt-2">
+            <label class="block text-xs font-medium text-gray-500 mb-1">Observações (opcional)</label>
+            {{ encaminhar_form.descricao }}
+          </div>
+          <button type="submit" class="btn-primary w-full text-sm mt-3">Encaminhar</button>
+        </form>
+      </div>
+
+      <!-- Concluir -->
+      <button type="button" @click="panel = panel === 'concluir' ? '' : 'concluir'"
+              class="w-full text-sm py-2 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-colors">✅ Concluir atendimento</button>
+
+      <div x-show="panel === 'concluir'" x-cloak class="pt-2 border-t border-gray-100 space-y-3">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="concluir">
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Resumo da conclusão</label>
+            {{ concluir_form.descricao }}
+            {% if concluir_form.descricao.errors %}<p class="text-red-500 text-xs mt-1">{{ concluir_form.descricao.errors|join:" " }}</p>{% endif %}
+          </div>
+          <div class="mt-2">
+            <label class="block text-xs font-medium text-gray-500 mb-1">Anexo (opcional)</label>
+            {{ concluir_form.arquivo }}
+          </div>
+          <button type="submit" class="w-full text-sm py-2 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-colors mt-3">Confirmar conclusão</button>
+        </form>
+      </div>
+
+      <!-- Cancelar -->
+      <button type="button" @click="panel = panel === 'cancelar' ? '' : 'cancelar'"
+              class="btn-danger w-full text-sm">✕ Cancelar atendimento</button>
+
+      <div x-show="panel === 'cancelar'" x-cloak class="pt-2 border-t border-gray-100">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="cancelar">
+          <label class="block text-xs font-medium text-gray-500 mb-1">Motivo</label>
+          <textarea name="motivo" rows="2" class="form-input" placeholder="Motivo do cancelamento..."></textarea>
+          <button type="submit" class="btn-danger w-full text-sm mt-2"
+                  onclick="return confirm('Cancelar este atendimento?')">Confirmar cancelamento</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Buscar outros atendimentos deste filiado -->
+    <a href="{% url 'atendimento:list' %}?cpf={{ at.cpf }}"
+       class="card block hover:bg-blue-50 border border-transparent hover:border-blue-200 transition-all text-center">
+      <p class="text-sm font-medium text-blue-700">🔍 Ver todos os atendimentos</p>
+      <p class="text-xs text-blue-400 mt-0.5">CPF {{ at.cpf }}</p>
+    </a>
+
+  </div>
+
+</div>
+{% endblock %}

@@ -178,6 +178,9 @@ class AuditLog(models.Model):
         USER_ANONYMIZE = 'USER_ANONYMIZE', 'Usuário anonimizado'
         DATA_EXPORT = 'DATA_EXPORT', 'Exportação de dados'
         LGPD_CONSENT = 'LGPD_CONSENT', 'Consentimento LGPD'
+        ATENDIMENTO_CREATE = 'ATEND_CREATE', 'Atendimento criado'
+        ATENDIMENTO_UPDATE = 'ATEND_UPDATE', 'Atendimento atualizado'
+        ATENDIMENTO_CLOSE = 'ATEND_CLOSE', 'Atendimento concluído'
 
     user = models.ForeignKey(
         CustomUser, on_delete=models.SET_NULL, null=True, blank=True,

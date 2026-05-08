@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     'comunicados',
     'mensagens',
     'kanban',
+    'atendimento',
 ]
 
 MIDDLEWARE = [
