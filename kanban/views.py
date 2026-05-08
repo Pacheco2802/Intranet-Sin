@@ -106,7 +106,11 @@ def card_detail(request, board_pk, pk):
                     card=card, user=request.user,
                     action=f'Adicionou sub-tarefa: {st.title}'
                 )
-                _notify_subtask(st, request.user)
+                try:
+                    _notify_subtask(st, request.user)
+                except Exception:
+                    pass
+                messages.success(request, f'Sub-tarefa "{st.title}" adicionada.')
                 return redirect('kanban:card_detail', board_pk=board.pk, pk=card.pk)
 
     subtasks = card.subtasks.select_related('assignee', 'target_department')

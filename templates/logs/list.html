@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Logs de Auditoria{% endblock %}
+{% block page_title %}Logs de Auditoria{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-4">
+
+  <!-- Filters -->
+  <form method="get" class="card">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Usuário</label>
+        <input type="text" name="user" value="{{ filters.user }}"
+               class="form-input" placeholder="Nome ou e-mail">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Ação</label>
+        <select name="action" class="form-input">
+          <option value="">Todas as ações</option>
+          {% for val, label in action_choices %}
+          <option value="{{ val }}" {% if filters.action == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Recurso</label>
+        <input type="text" name="resource" value="{{ filters.resource }}"
+               class="form-input" placeholder="Tipo ou ID">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">De</label>
+        <input type="date" name="date_from" value="{{ filters.date_from }}" class="form-input">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Até</label>
+        <input type="date" name="date_to" value="{{ filters.date_to }}" class="form-input">
+      </div>
+    </div>
+    <div class="flex gap-2 mt-3">
+      <button type="submit" class="btn-primary text-xs py-1.5">Filtrar</button>
+      <a href="{% url 'core:audit_log_list' %}" class="btn-secondary text-xs py-1.5">Limpar</a>
+    </div>
+  </form>
+
+  <!-- Count -->
+  <div class="flex items-center justify-between">
+    <p class="text-sm text-gray-500">
+      <span class="font-semibold text-gray-800">{{ total }}</span> registro{{ total|pluralize:"s" }} encontrado{{ total|pluralize:"s" }}
+      {% if total > 200 %}<span class="text-amber-600 ml-1">(mostrando os 200 mais recentes)</span>{% endif %}
+    </p>
+  </div>
+
+  <!-- Table -->
+  {% if logs %}
+  <div class="card p-0 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm min-w-[700px]">
+        <thead>
+          <tr class="border-b border-gray-100 bg-gray-50">
+            <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 w-36">Data/Hora</th>
+            <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Usuário</th>
+            <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Ação</th>
+            <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 hidden md:table-cell">Recurso</th>
+            <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 hidden lg:table-cell">IP</th>
+            <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 hidden xl:table-cell">Detalhes</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for log in logs %}
+          <tr class="hover:bg-gray-50 transition-colors">
+            <td class="px-4 py-2.5">
+              <span class="text-xs text-gray-500 font-mono whitespace-nowrap">{{ log.timestamp|date:"d/m/Y" }}</span>
+              <span class="block text-xs text-gray-400 font-mono">{{ log.timestamp|date:"H:i:s" }}</span>
+            </td>
+            <td class="px-4 py-2.5">
+              {% if log.user %}
+              <p class="font-medium text-gray-800 text-xs">{{ log.user.get_full_name|default:log.user.email }}</p>
+              <p class="text-xs text-gray-400">{{ log.user.get_role_display }}</p>
+              {% else %}
+              <span class="text-xs text-gray-400 italic">Sistema</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2.5">
+              <span class="text-xs px-2 py-0.5 rounded-full font-medium
+                {% if 'DELETE' in log.action or 'REJECT' in log.action or 'DEACTIVATE' in log.action or 'ANONYMIZE' in log.action %}
+                  bg-red-100 text-red-700
+                {% elif 'CREATE' in log.action or 'APPROVE' in log.action or 'REGISTER' in log.action %}
+                  bg-green-100 text-green-700
+                {% elif 'UPDATE' in log.action or 'EDIT' in log.action %}
+                  bg-blue-100 text-blue-700
+                {% elif 'LOGIN' == log.action %}
+                  bg-purple-100 text-purple-700
+                {% elif 'LOGOUT' == log.action %}
+                  bg-gray-100 text-gray-600
+                {% else %}
+                  bg-amber-100 text-amber-700
+                {% endif %}">
+                {{ log.get_action_display }}
+              </span>
+            </td>
+            <td class="px-4 py-2.5 hidden md:table-cell">
+              {% if log.resource_type %}
+              <span class="text-xs text-gray-600">{{ log.resource_type }}</span>
+              {% if log.resource_id %}
+              <span class="text-xs text-gray-400 ml-1">#{{ log.resource_id }}</span>
+              {% endif %}
+              {% else %}
+              <span class="text-xs text-gray-300">—</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2.5 hidden lg:table-cell">
+              <span class="text-xs font-mono text-gray-400">{{ log.ip_address|default:"—" }}</span>
+            </td>
+            <td class="px-4 py-2.5 hidden xl:table-cell">
+              {% if log.detail %}
+              <span class="text-xs text-gray-400 truncate max-w-40 block" title="{{ log.detail }}">
+                {{ log.detail|truncatechars:50 }}
+              </span>
+              {% else %}
+              <span class="text-xs text-gray-300">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="card text-center py-14">
+    <div class="text-4xl mb-3">🔍</div>
+    <p class="text-gray-500 font-medium">Nenhum log encontrado para os filtros selecionados.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

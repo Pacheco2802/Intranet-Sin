@@ -98,7 +98,7 @@
       {% endif %}
 
       <!-- Add subtask form -->
-      <form method="post" novalidate x-data="{ open: false }">
+      <form method="post" novalidate x-data="{ open: {% if subtask_form.errors %}true{% else %}false{% endif %} }">
         {% csrf_token %}
         <input type="hidden" name="action" value="subtask">
         <div x-show="!open">

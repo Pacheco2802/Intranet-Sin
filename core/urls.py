@@ -36,4 +36,6 @@ urlpatterns = [
     path('notificacoes/', views.notification_list, name='notification_list'),
     path('notificacoes/<int:pk>/lida/', views.notification_mark_read, name='notification_mark_read'),
     path('notificacoes/marcar-todas/', views.notification_mark_all_read, name='notification_mark_all_read'),
+
+    path('logs/', views.audit_log_list, name='audit_log_list'),
 ]

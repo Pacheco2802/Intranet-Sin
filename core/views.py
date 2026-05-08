@@ -551,3 +551,56 @@ def notification_mark_read(request, pk):
 def notification_mark_all_read(request):
     request.user.notifications.filter(is_read=False).update(is_read=True)
     return redirect(request.META.get('HTTP_REFERER', '/'))
+
+
+# ── Logs de Auditoria (ADMIN_TI only) ─────────
+
+@login_required
+def audit_log_list(request):
+    if not request.user.can_manage_users:
+        return HttpResponseForbidden()
+
+    from django.db.models import Q
+
+    qs = AuditLog.objects.select_related('user').order_by('-timestamp')
+
+    # Filtros
+    user_q = request.GET.get('user', '').strip()
+    action_q = request.GET.get('action', '').strip()
+    resource_q = request.GET.get('resource', '').strip()
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+
+    if user_q:
+        qs = qs.filter(
+            Q(user__first_name__icontains=user_q) |
+            Q(user__last_name__icontains=user_q) |
+            Q(user__email__icontains=user_q)
+        )
+    if action_q:
+        qs = qs.filter(action=action_q)
+    if resource_q:
+        qs = qs.filter(
+            Q(resource_type__icontains=resource_q) |
+            Q(resource_id__icontains=resource_q)
+        )
+    if date_from:
+        qs = qs.filter(timestamp__date__gte=date_from)
+    if date_to:
+        qs = qs.filter(timestamp__date__lte=date_to)
+
+    total = qs.count()
+    logs = qs[:200]
+
+    return render(request, 'logs/list.html', {
+        'logs': logs,
+        'total': total,
+        'action_choices': AuditLog.Action.choices,
+        'filters': {
+            'user': user_q,
+            'action': action_q,
+            'resource': resource_q,
+            'date_from': date_from,
+            'date_to': date_to,
+        },
+    })
