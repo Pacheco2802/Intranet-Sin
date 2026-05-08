@@ -98,17 +98,14 @@
       {% endif %}
 
       <!-- Add subtask form -->
-      <form method="post" novalidate x-data="{ open: {% if subtask_form.errors %}true{% else %}false{% endif %} }">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="subtask">
-        <div x-show="!open">
-          <button type="button" @click="open = true"
-            class="flex items-center gap-2 text-sm text-gray-400 hover:text-blue-600 transition-colors py-1">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Adicionar sub-tarefa
-          </button>
-        </div>
-        <div x-show="open" x-cloak class="space-y-3 pt-2 border-t border-gray-100">
+      <details {% if subtask_form.errors %}open{% endif %} class="group">
+        <summary class="flex items-center gap-2 text-sm text-gray-400 hover:text-blue-600 transition-colors py-1 cursor-pointer list-none">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Adicionar sub-tarefa
+        </summary>
+        <form method="post" novalidate class="space-y-3 pt-3 mt-2 border-t border-gray-100">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="subtask">
           <div>
             <label class="block text-xs font-medium text-gray-500 mb-1">Descrição da sub-tarefa</label>
             {{ subtask_form.title }}
@@ -126,10 +123,9 @@
           </div>
           <div class="flex gap-2">
             <button type="submit" class="btn-primary text-xs py-1.5">Adicionar</button>
-            <button type="button" @click="open = false" class="btn-secondary text-xs py-1.5">Cancelar</button>
           </div>
-        </div>
-      </form>
+        </form>
+      </details>
     </div>
 
     <!-- Comments -->
