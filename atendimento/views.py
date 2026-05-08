@@ -7,6 +7,7 @@ from django.utils.timezone import now
 
 from core.models import AuditLog, Notification, CustomUser
 from core.middleware import AuditMiddleware
+from kanban.utils import criar_card_automatico
 from .models import Atendimento, AtendimentoEtapa, AtendimentoAnexo
 from .forms import (
     AtendimentoForm, EtapaNotaForm, EncaminharForm,
@@ -117,6 +118,15 @@ def atendimento_create(request):
             descricao=at.descricao or 'Atendimento aberto.',
         )
         _salvar_anexo(request.FILES.get('arquivo'), at, etapa, request.user)
+
+        criar_card_automatico(
+            department=at.departamento_atual,
+            title=f'Atendimento: {at.assunto}',
+            description=f'Filiado: {at.nome_filiado}\nCPF: {at.cpf}\n\n{at.descricao or ""}',
+            creator=request.user,
+            tags='atendimento',
+            atendimento_id=at.pk,
+        )
 
         AuditLog.log(
             request.user, AuditLog.Action.ATENDIMENTO_CREATE,

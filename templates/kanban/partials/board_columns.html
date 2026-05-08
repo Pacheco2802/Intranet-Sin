@@ -20,12 +20,19 @@
     {% for card in col.cards.all %}
     <div class="bg-white rounded-lg shadow-sm p-3 cursor-grab active:cursor-grabbing border border-gray-100 hover:border-blue-200 hover:shadow transition-all group"
          data-card-id="{{ card.pk }}">
-      <!-- Priority badge -->
+      <!-- Priority badge + origem -->
       <div class="flex items-start justify-between mb-2">
-        <span class="text-xs px-2 py-0.5 rounded-full font-medium text-white"
-              style="background-color:{{ card.priority_color }}">
-          {{ card.get_priority_display }}
-        </span>
+        <div class="flex items-center gap-1 flex-wrap">
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium text-white"
+                style="background-color:{{ card.priority_color }}">
+            {{ card.get_priority_display }}
+          </span>
+          {% if card.source_atendimento_id %}
+          <span class="text-xs px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">Atendimento</span>
+          {% elif card.source_subtask_id %}
+          <span class="text-xs px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">Sub-tarefa</span>
+          {% endif %}
+        </div>
         {% if card.is_overdue %}
         <span class="text-xs text-red-500 font-medium">⚠ Vencido</span>
         {% endif %}

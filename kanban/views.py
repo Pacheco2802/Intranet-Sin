@@ -9,8 +9,9 @@ from django.views.decorators.http import require_POST
 
 from core.models import AuditLog, Notification, CustomUser
 from core.middleware import AuditMiddleware
-from .models import Board, Column, Card, CardComment, CardActivity, SubTask
+from .models import Board, Column, Card, CardComment, CardActivity, SubTask, SubTaskAnexo
 from .forms import BoardForm, ColumnForm, CardForm, CardCommentForm, SubTaskForm
+from .utils import criar_card_automatico, mover_card_para_ultima_coluna, mover_card_para_primeira_coluna
 
 
 @login_required
@@ -79,7 +80,10 @@ def card_detail(request, board_pk, pk):
     board = get_object_or_404(Board, pk=board_pk)
     if not board.can_access(request.user):
         return HttpResponseForbidden()
-    card = get_object_or_404(Card, pk=pk, column__board=board)
+    card = get_object_or_404(
+        Card.objects.select_related('source_subtask__card__column__board'),
+        pk=pk, column__board=board,
+    )
 
     comment_form = CardCommentForm()
     subtask_form = SubTaskForm()
@@ -106,6 +110,21 @@ def card_detail(request, board_pk, pk):
                     card=card, user=request.user,
                     action=f'Adicionou sub-tarefa: {st.title}'
                 )
+
+                desc_subtask = f'Sub-tarefa de: {card.title}\nBoard: {board.name}'
+                depts_notificados = set()
+                dept_destino = st.target_department or (st.assignee.department if st.assignee else None)
+                if dept_destino:
+                    criar_card_automatico(
+                        department=dept_destino,
+                        title=st.title,
+                        description=desc_subtask,
+                        creator=request.user,
+                        assignee=st.assignee,
+                        tags='subtarefa',
+                        subtask=st,
+                    )
+
                 try:
                     _notify_subtask(st, request.user)
                 except Exception:
@@ -113,7 +132,7 @@ def card_detail(request, board_pk, pk):
                 messages.success(request, f'Sub-tarefa "{st.title}" adicionada.')
                 return redirect('kanban:card_detail', board_pk=board.pk, pk=card.pk)
 
-    subtasks = card.subtasks.select_related('assignee', 'target_department')
+    subtasks = card.subtasks.select_related('assignee', 'target_department').prefetch_related('anexos__enviado_por')
     done_count = subtasks.filter(is_done=True).count()
     return render(request, 'kanban/card_detail.html', {
         'board': board,
@@ -138,6 +157,11 @@ def subtask_toggle(request, pk):
         card=st.card, user=request.user,
         action=f'{"Concluiu" if st.is_done else "Reabriu"} sub-tarefa: {st.title}'
     )
+    for kanban_card in st.kanban_cards.select_related('column__board').all():
+        if st.is_done:
+            mover_card_para_ultima_coluna(kanban_card)
+        else:
+            mover_card_para_primeira_coluna(kanban_card)
     return redirect('kanban:card_detail', board_pk=board.pk, pk=st.card.pk)
 
 
@@ -151,6 +175,28 @@ def subtask_delete(request, pk):
     card_pk = st.card.pk
     st.delete()
     return redirect('kanban:card_detail', board_pk=board.pk, pk=card_pk)
+
+
+@login_required
+@require_POST
+def subtask_attach(request, pk):
+    st = get_object_or_404(SubTask, pk=pk)
+    board = st.card.column.board
+    if not board.can_access(request.user):
+        return HttpResponseForbidden()
+    arquivo = request.FILES.get('arquivo')
+    if arquivo:
+        SubTaskAnexo.objects.create(
+            subtask=st,
+            arquivo=arquivo,
+            nome_original=arquivo.name,
+            enviado_por=request.user,
+        )
+        CardActivity.objects.create(
+            card=st.card, user=request.user,
+            action=f'Anexou documento na sub-tarefa: {st.title}'
+        )
+    return redirect('kanban:card_detail', board_pk=board.pk, pk=st.card.pk)
 
 
 @login_required

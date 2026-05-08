@@ -14,4 +14,5 @@ urlpatterns = [
     path('card/<int:pk>/mover/', views.card_move, name='card_move'),
     path('subtarefa/<int:pk>/toggle/', views.subtask_toggle, name='subtask_toggle'),
     path('subtarefa/<int:pk>/excluir/', views.subtask_delete, name='subtask_delete'),
+    path('subtarefa/<int:pk>/anexar/', views.subtask_attach, name='subtask_attach'),
 ]

@@ -58,74 +58,97 @@
 
       <!-- Existing subtasks -->
       {% if subtasks %}
-      <div class="space-y-2 mb-4">
+      <div class="space-y-3 mb-4">
         {% for st in subtasks %}
-        <div class="flex items-center gap-3 p-2.5 rounded-lg {% if st.is_done %}bg-green-50{% else %}bg-gray-50{% endif %} group">
-          <form method="post" action="{% url 'kanban:subtask_toggle' st.pk %}">
-            {% csrf_token %}
-            <button type="submit" class="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors
-              {% if st.is_done %}bg-green-500 border-green-500 text-white{% else %}border-gray-300 hover:border-green-400{% endif %}">
-              {% if st.is_done %}
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-              {% endif %}
-            </button>
-          </form>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm {% if st.is_done %}line-through text-gray-400{% else %}text-gray-800{% endif %} truncate">
-              {{ st.title }}
-            </p>
-            <div class="flex items-center gap-2 mt-0.5">
-              {% if st.assignee %}
-              <span class="text-xs text-gray-400">👤 {{ st.assignee.first_name }}</span>
-              {% endif %}
-              {% if st.target_department %}
-              <span class="text-xs text-gray-400">🏢 {{ st.target_department.name }}</span>
-              {% endif %}
+        <div class="rounded-lg border {% if st.is_done %}border-green-200 bg-green-50{% else %}border-gray-200 bg-gray-50{% endif %}">
+          <div class="flex items-center gap-3 p-2.5 group">
+            <form method="post" action="{% url 'kanban:subtask_toggle' st.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors
+                {% if st.is_done %}bg-green-500 border-green-500 text-white{% else %}border-gray-300 hover:border-green-400{% endif %}">
+                {% if st.is_done %}
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                {% endif %}
+              </button>
+            </form>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm {% if st.is_done %}line-through text-gray-400{% else %}text-gray-800{% endif %}">{{ st.title }}</p>
+              <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                {% if st.assignee %}<span class="text-xs text-gray-400">👤 {{ st.assignee.first_name }}</span>{% endif %}
+                {% if st.target_department %}<span class="text-xs text-gray-400">🏢 {{ st.target_department.name }}</span>{% endif %}
+                {% if st.anexos.exists %}<span class="text-xs text-blue-500">📎 {{ st.anexos.count }} anexo{{ st.anexos.count|pluralize:"s" }}</span>{% endif %}
+              </div>
             </div>
+            <form method="post" action="{% url 'kanban:subtask_delete' st.pk %}"
+                  class="opacity-0 group-hover:opacity-100 transition-opacity">
+              {% csrf_token %}
+              <button type="submit" class="text-gray-300 hover:text-red-500 transition-colors" title="Remover">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </form>
           </div>
-          <form method="post" action="{% url 'kanban:subtask_delete' st.pk %}"
-                class="opacity-0 group-hover:opacity-100 transition-opacity">
-            {% csrf_token %}
-            <button type="submit" class="text-gray-300 hover:text-red-500 transition-colors" title="Remover">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
-          </form>
+
+          {% if st.anexos.exists %}
+          <div class="px-3 pb-2 space-y-1 border-t border-gray-200 pt-2">
+            {% for anexo in st.anexos.all %}
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+              <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+              <a href="{{ anexo.arquivo.url }}" target="_blank" class="hover:text-blue-600 truncate max-w-xs">{{ anexo.nome_original }}</a>
+              <span class="text-gray-300">· {{ anexo.enviado_por.first_name }} {{ anexo.created_at|date:"d/m H:i" }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="px-3 pb-2 {% if not st.anexos.exists %}border-t border-gray-200 pt-2{% endif %}">
+            <form method="post" action="{% url 'kanban:subtask_attach' st.pk %}" enctype="multipart/form-data"
+                  class="flex items-center gap-2">
+              {% csrf_token %}
+              <input type="file" name="arquivo" class="text-xs text-gray-400 file:mr-2 file:text-xs file:btn-secondary file:border-0 file:py-1 file:px-2 file:rounded">
+              <button type="submit" class="text-xs text-blue-500 hover:text-blue-700 whitespace-nowrap">Anexar</button>
+            </form>
+          </div>
         </div>
         {% endfor %}
       </div>
       {% endif %}
 
       <!-- Add subtask form -->
-      <details {% if subtask_form.errors %}open{% endif %} class="group">
-        <summary class="flex items-center gap-2 text-sm text-gray-400 hover:text-blue-600 transition-colors py-1 cursor-pointer list-none">
+      <div>
+        <button type="button" onclick="document.getElementById('subtask-form-{{ card.pk }}').classList.toggle('hidden')"
+                class="flex items-center gap-2 text-sm text-gray-400 hover:text-blue-600 transition-colors py-1">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           Adicionar sub-tarefa
-        </summary>
-        <form method="post" novalidate class="space-y-3 pt-3 mt-2 border-t border-gray-100">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="subtask">
-          <div>
-            <label class="block text-xs font-medium text-gray-500 mb-1">Descrição da sub-tarefa</label>
-            {{ subtask_form.title }}
-            {% if subtask_form.title.errors %}<p class="text-red-500 text-xs mt-1">{{ subtask_form.title.errors|join:" " }}</p>{% endif %}
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-medium text-gray-500 mb-1">Responsável</label>
-              {{ subtask_form.assignee }}
+        </button>
+        <div id="subtask-form-{{ card.pk }}" class="{% if not subtask_form.errors %}hidden{% endif %} space-y-3 pt-3 mt-2 border-t border-gray-100">
+          <form method="post" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="subtask">
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Descrição da sub-tarefa</label>
+                {{ subtask_form.title }}
+                {% if subtask_form.title.errors %}<p class="text-red-500 text-xs mt-1">{{ subtask_form.title.errors|join:" " }}</p>{% endif %}
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Responsável</label>
+                  {{ subtask_form.assignee }}
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Área responsável</label>
+                  {{ subtask_form.target_department }}
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <button type="submit" class="btn-primary text-xs py-1.5">Adicionar</button>
+              </div>
             </div>
-            <div>
-              <label class="block text-xs font-medium text-gray-500 mb-1">Área responsável</label>
-              {{ subtask_form.target_department }}
-            </div>
-          </div>
-          <div class="flex gap-2">
-            <button type="submit" class="btn-primary text-xs py-1.5">Adicionar</button>
-          </div>
-        </form>
-      </details>
+          </form>
+        </div>
+      </div>
     </div>
 
     <!-- Comments -->
@@ -163,6 +186,29 @@
 
   <!-- Sidebar -->
   <div class="space-y-4">
+
+    {% if card.source_atendimento_id or card.source_subtask_id %}
+    <div class="card border-l-4 {% if card.source_atendimento_id %}border-l-orange-400{% else %}border-l-purple-400{% endif %}">
+      <p class="text-xs font-semibold uppercase tracking-wide {% if card.source_atendimento_id %}text-orange-600{% else %}text-purple-600{% endif %} mb-2">
+        {% if card.source_atendimento_id %}Originado de Atendimento{% else %}Originado de Sub-tarefa{% endif %}
+      </p>
+      {% if card.source_atendimento_id %}
+      <a href="{% url 'atendimento:detail' card.source_atendimento_id %}"
+         class="text-sm text-blue-600 hover:underline flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        Ver atendimento #{{ card.source_atendimento_id }}
+      </a>
+      {% elif card.source_subtask %}
+      <p class="text-xs text-gray-500 mb-1">Sub-tarefa de:</p>
+      <a href="{% url 'kanban:card_detail' card.source_subtask.card.column.board.pk card.source_subtask.card.pk %}"
+         class="text-sm text-blue-600 hover:underline flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        {{ card.source_subtask.card.title }}
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <div class="card">
       <h3 class="font-semibold text-gray-900 mb-3 text-xs uppercase tracking-wide text-gray-500">Detalhes</h3>
       <div class="space-y-3">

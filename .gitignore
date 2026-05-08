@@ -36,3 +36,6 @@ static_root/
 # Secrets
 .env
 *.env
+
+# Claude Code
+.claude/

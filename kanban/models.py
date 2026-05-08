@@ -84,6 +84,13 @@ class Card(models.Model):
     priority = models.CharField('Prioridade', max_length=10, choices=Priority.choices, default=Priority.MEDIUM)
     tags = models.CharField('Tags', max_length=200, blank=True, help_text='Separadas por vírgula')
     order = models.PositiveIntegerField('Ordem', default=0)
+    source_subtask = models.ForeignKey(
+        'SubTask', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='kanban_cards', verbose_name='Subtarefa de origem',
+    )
+    source_atendimento_id = models.PositiveIntegerField(
+        'ID do atendimento de origem', null=True, blank=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -153,6 +160,24 @@ class CardComment(models.Model):
 
     def __str__(self):
         return f'{self.author} em {self.card}'
+
+
+class SubTaskAnexo(models.Model):
+    subtask = models.ForeignKey(SubTask, on_delete=models.CASCADE, related_name='anexos', verbose_name='Sub-tarefa')
+    arquivo = models.FileField('Arquivo', upload_to='subtarefas/%Y/%m/')
+    nome_original = models.CharField('Nome do arquivo', max_length=255)
+    enviado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name='Enviado por'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Anexo de Sub-tarefa'
+        verbose_name_plural = 'Anexos de Sub-tarefas'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return self.nome_original
 
 
 class CardActivity(models.Model):

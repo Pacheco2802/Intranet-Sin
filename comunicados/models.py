@@ -1,25 +1,30 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from core.models import Department
 
 
 class Comunicado(models.Model):
     title = models.CharField('Título', max_length=200)
     content = models.TextField('Conteúdo')
-    author = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-        verbose_name='Autor', related_name='comunicados'
-    )
-    departments = models.ManyToManyField(
-        'core.Department', verbose_name='Departamentos', blank=True,
-        help_text='Deixe em branco para enviar a todos'
-    )
     is_pinned = models.BooleanField('Fixar', default=False)
     is_published = models.BooleanField('Publicado', default=False)
-    published_at = models.DateTimeField('Publicado em', null=True, blank=True)
-    expires_at = models.DateTimeField('Expira em', null=True, blank=True)
+    published_at = models.DateTimeField('Publicado em', blank=True, null=True)
+    expires_at = models.DateTimeField('Expira em', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='comunicados',
+        verbose_name='Autor',
+    )
+    departments = models.ManyToManyField(
+        Department,
+        blank=True,
+        verbose_name='Departamentos',
+        help_text='Deixe em branco para enviar a todos',
+    )
 
     class Meta:
         verbose_name = 'Comunicado'
@@ -29,23 +34,8 @@ class Comunicado(models.Model):
     def __str__(self):
         return self.title
 
-    @property
-    def is_active(self):
-        now = timezone.now()
-        if not self.is_published:
-            return False
-        if self.expires_at and self.expires_at < now:
-            return False
-        return True
-
     def publish(self):
         self.is_published = True
-        self.published_at = timezone.now()
-        self.save(update_fields=['is_published', 'published_at'])
-
-    def is_visible_to(self, user):
-        if not self.is_active:
-            return False
-        if not self.departments.exists():
-            return True
-        return self.departments.filter(pk=user.department_id).exists()
+        if not self.published_at:
+            self.published_at = timezone.now()
+        self.save()
