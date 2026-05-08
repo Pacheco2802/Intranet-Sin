@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Equipes{% endblock %}
+{% block page_title %}Equipes{% endblock %}
+{% block topbar_actions %}
+{% if is_admin %}
+<a href="{% url 'core:team_create' %}" class="btn-primary text-xs">+ Nova equipe</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+{% if is_admin %}
+<!-- Resumo das regras de negócio -->
+<details class="mb-6 card border border-blue-100 bg-blue-50 cursor-pointer">
+  <summary class="flex items-center gap-2 text-sm font-semibold text-blue-800 select-none">
+    <svg class="w-4 h-4 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    Regras de negócio — Equipes
+    <span class="ml-auto text-blue-400 text-xs font-normal">clique para expandir</span>
+  </summary>
+  <ol class="mt-3 space-y-1.5 text-xs text-blue-700 list-decimal list-inside leading-relaxed">
+    <li><strong>Apenas ADMIN_TI</strong> pode criar, renomear, excluir equipes e adicionar/remover membros.</li>
+    <li>A <strong>Equipe Geral</strong> e as <strong>equipes de departamento</strong> são protegidas — não podem ser excluídas.</li>
+    <li>Todo usuário aprovado entra automaticamente na <strong>Equipe Geral</strong>.</li>
+    <li>Ao ser aprovado, o usuário entra na equipe do seu <strong>departamento</strong> (se houver).</li>
+    <li>Quando o <strong>departamento do usuário é alterado</strong>, ele sai da equipe anterior e entra na nova.</li>
+    <li>Cada equipe tem um <strong>chat de grupo</strong> criado automaticamente no primeiro acesso.</li>
+    <li>Ao adicionar/remover membro, ele é adicionado/removido do <strong>chat da equipe</strong>.</li>
+    <li>Ao excluir equipe manual, o <strong>chat é excluído</strong> junto.</li>
+    <li>Todos os membros podem <strong>ler e enviar mensagens</strong> no chat da sua equipe.</li>
+  </ol>
+</details>
+{% endif %}
+
+<div class="grid gap-5">
+  {% for team in teams %}
+  <div class="card" x-data="{ addOpen: false }">
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-4">
+      <div class="flex items-center gap-3">
+        {% if team.is_general %}
+        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </div>
+        {% elif team.department %}
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+          style="background:{{ team.department.color }}22;">
+          {{ team.department.icon }}
+        </div>
+        {% else %}
+        <div class="w-10 h-10 rounded-xl bg-gray-200 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </div>
+        {% endif %}
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 class="font-semibold text-gray-900">{{ team.name }}</h3>
+            {% if team.is_general %}
+            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Geral</span>
+            {% endif %}
+            {% if team.department %}
+            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">Departamento</span>
+            {% endif %}
+            {% if team.is_protected %}
+            <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full" title="Não pode ser excluída">Protegida</span>
+            {% endif %}
+          </div>
+          <p class="text-xs text-gray-400 mt-0.5">{{ team.members.count }} membro{{ team.members.count|pluralize:"s" }}</p>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <!-- Chat button - visible to all members or admin -->
+        <a href="{% url 'core:team_chat' team.pk %}"
+           class="flex items-center gap-1.5 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium px-3 py-1.5 rounded-lg transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+          </svg>
+          Chat
+        </a>
+        {% if is_admin %}
+        <button @click="addOpen = !addOpen"
+          class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3 py-1.5 rounded-lg transition-colors">
+          + Membro
+        </button>
+        <a href="{% url 'core:team_edit' team.pk %}"
+           class="text-xs text-gray-500 hover:text-gray-800 font-medium px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+          Editar
+        </a>
+        {% if not team.is_protected %}
+        <form method="post" action="{% url 'core:team_delete' team.pk %}"
+          onsubmit="return confirm('Excluir a equipe &quot;{{ team.name }}&quot; e seu chat?')">
+          {% csrf_token %}
+          <button type="submit" class="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1.5 rounded-lg hover:bg-red-50 transition-colors">
+            Excluir
+          </button>
+        </form>
+        {% endif %}
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Add member panel (admin only) -->
+    {% if is_admin %}
+    <div x-show="addOpen" x-cloak class="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+      <form method="post" action="{% url 'core:team_add_member' team.pk %}" class="flex items-center gap-2">
+        {% csrf_token %}
+        <select name="user_id"
+          class="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Selecione um usuário…</option>
+          {% for u in all_users %}
+          {% if u not in team.members.all %}
+          <option value="{{ u.pk }}">{{ u.get_full_name|default:u.email }} — {{ u.get_role_display }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn-primary text-xs py-2">Adicionar</button>
+        <button type="button" @click="addOpen = false" class="btn-secondary text-xs py-2">Cancelar</button>
+      </form>
+    </div>
+    {% endif %}
+
+    <!-- Members grid -->
+    <div class="flex flex-wrap gap-2">
+      {% for member in team.members.all %}
+      <div class="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-full pl-1 pr-2 py-1 group">
+        {% if member.avatar %}
+        <img src="{{ member.avatar.url }}" class="w-6 h-6 rounded-full object-cover flex-shrink-0">
+        {% else %}
+        <div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+          {{ member.first_name|first|upper }}{{ member.last_name|first|upper }}
+        </div>
+        {% endif %}
+        <span class="text-xs text-gray-700 whitespace-nowrap">{{ member.get_full_name|default:member.email }}</span>
+        {% if is_admin %}
+        <form method="post" action="{% url 'core:team_remove_member' team.pk member.pk %}" class="inline opacity-0 group-hover:opacity-100 transition-opacity">
+          {% csrf_token %}
+          <button type="submit" class="text-gray-400 hover:text-red-500 transition-colors" title="Remover">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </form>
+        {% endif %}
+      </div>
+      {% empty %}
+      <p class="text-sm text-gray-400 italic">Nenhum membro ainda.</p>
+      {% endfor %}
+    </div>
+  </div>
+  {% empty %}
+  <div class="card text-center py-16 text-gray-400">
+    <div class="text-4xl mb-3">👥</div>
+    <p>Nenhuma equipe encontrada.</p>
+    {% if is_admin %}
+    <a href="{% url 'core:team_create' %}" class="btn-primary inline-block mt-4 text-sm">Criar primeira equipe</a>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

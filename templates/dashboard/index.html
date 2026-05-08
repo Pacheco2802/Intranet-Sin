@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-5 max-w-7xl mx-auto">
+
+  <!-- Welcome -->
+  <div class="rounded-xl overflow-hidden" style="background:linear-gradient(135deg,#1e40af 0%,#2563eb 60%,#3b82f6 100%);">
+    <div class="px-6 py-5 flex items-center justify-between">
+      <div>
+        <p class="text-blue-200 text-xs font-medium uppercase tracking-wider">Bem-vindo de volta</p>
+        <h2 class="text-xl font-bold text-white mt-0.5">{{ user.first_name|default:user.username }} {{ user.last_name }}</h2>
+        <p class="text-blue-200 text-sm mt-1">{{ user.get_role_display }}{% if user.department %} · {{ user.department }}{% endif %}</p>
+      </div>
+      <div class="hidden sm:flex items-center gap-3">
+        {% if user.avatar %}
+          <img src="{{ user.avatar.url }}" class="w-14 h-14 rounded-2xl object-cover border-2 border-white/30">
+        {% else %}
+          <div class="w-14 h-14 rounded-2xl bg-white/20 border-2 border-white/30 flex items-center justify-center text-white text-xl font-bold">
+            {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <a href="{% url 'mensagens:inbox' %}" class="card card-hover group">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+          <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        </div>
+        <div>
+          <p class="text-2xl font-bold text-gray-900">{{ unread_messages_count }}</p>
+          <p class="text-xs text-gray-500 leading-tight">Mensagens<br>não lidas</p>
+        </div>
+      </div>
+    </a>
+    <a href="{% url 'kanban:board_list' %}" class="card card-hover group">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+          <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        </div>
+        <div>
+          <p class="text-2xl font-bold text-gray-900">{{ my_cards|length }}</p>
+          <p class="text-xs text-gray-500 leading-tight">Cards<br>atribuídos</p>
+        </div>
+      </div>
+    </a>
+    <a href="{% url 'comunicados:list' %}" class="card card-hover group">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
+          <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+        </div>
+        <div>
+          <p class="text-2xl font-bold text-gray-900">{{ comunicados|length }}</p>
+          <p class="text-xs text-gray-500 leading-tight">Comunicados<br>ativos</p>
+        </div>
+      </div>
+    </a>
+    <a href="{% url 'kanban:board_list' %}" class="card card-hover group">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center group-hover:bg-violet-100 transition-colors">
+          <svg class="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+        </div>
+        <div>
+          <p class="text-2xl font-bold text-gray-900">{{ my_convs|length }}</p>
+          <p class="text-xs text-gray-500 leading-tight">Conversas<br>ativas</p>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Kanban alerts -->
+  {% if overdue_cards or upcoming_cards %}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+    <!-- Overdue cards -->
+    {% if overdue_cards %}
+    <div class="card border-l-4 border-red-500">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-red-700 text-sm flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Cards vencidos ({{ overdue_cards|length }})
+        </h3>
+        <a href="{% url 'kanban:board_list' %}" class="text-xs text-red-500 hover:text-red-700 font-medium">Ver kanban →</a>
+      </div>
+      <div class="space-y-1.5">
+        {% for card in overdue_cards|slice:":5" %}
+        <a href="{% url 'kanban:card_detail' card.column.board.pk card.pk %}"
+           class="flex items-center gap-2 p-2 rounded-lg bg-red-50 hover:bg-red-100 transition-colors group">
+          <div class="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"></div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-red-800 truncate group-hover:text-red-900">{{ card.title }}</p>
+            <p class="text-xs text-red-400 truncate">{{ card.column.board.name }} · venceu {{ card.due_date|date:"d/m/Y" }}</p>
+          </div>
+        </a>
+        {% endfor %}
+        {% if overdue_cards|length > 5 %}
+        <p class="text-xs text-red-400 text-center pt-1">+ {{ overdue_cards|length|add:"-5" }} mais vencidos</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Upcoming deadlines -->
+    {% if upcoming_cards %}
+    <div class="card border-l-4 border-amber-400">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-amber-700 text-sm flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Próximos vencimentos ({{ upcoming_cards|length }})
+        </h3>
+        <a href="{% url 'kanban:board_list' %}" class="text-xs text-amber-500 hover:text-amber-700 font-medium">Ver kanban →</a>
+      </div>
+      <div class="space-y-1.5">
+        {% for card in upcoming_cards|slice:":5" %}
+        <a href="{% url 'kanban:card_detail' card.column.board.pk card.pk %}"
+           class="flex items-center gap-2 p-2 rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors group">
+          <div class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-amber-800 truncate group-hover:text-amber-900">{{ card.title }}</p>
+            <p class="text-xs text-amber-400 truncate">{{ card.column.board.name }} · vence {{ card.due_date|date:"d/m/Y" }}</p>
+          </div>
+        </a>
+        {% endfor %}
+        {% if upcoming_cards|length > 5 %}
+        <p class="text-xs text-amber-400 text-center pt-1">+ {{ upcoming_cards|length|add:"-5" }} mais</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+  {% endif %}
+
+  {% if user.can_see_all and dept_stats %}
+  <!-- Tasks by department -->
+  <div class="card">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-gray-900 text-sm">📊 Tarefas por departamento</h3>
+      <a href="{% url 'kanban:board_list' %}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Ver quadros →</a>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+      {% for stat in dept_stats %}
+      <div class="bg-gray-50 rounded-xl p-3 text-center hover:bg-blue-50 transition-colors">
+        <p class="text-2xl font-bold text-gray-900">{{ stat.total }}</p>
+        <p class="text-xs font-medium text-gray-600 mt-0.5 truncate" title="{{ stat.name }}">{{ stat.name }}</p>
+        {% if stat.overdue %}
+        <p class="text-xs text-red-500 font-medium mt-1">{{ stat.overdue }} vencido{{ stat.overdue|pluralize:"s" }}</p>
+        {% else %}
+        <p class="text-xs text-gray-300 mt-1">Em dia</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Content grid -->
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+
+    <!-- Comunicados -->
+    <div class="card xl:col-span-1">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-gray-900 text-sm">📢 Comunicados recentes</h3>
+        <a href="{% url 'comunicados:list' %}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Ver todos →</a>
+      </div>
+      {% if comunicados %}
+      <div class="space-y-2">
+        {% for c in comunicados %}
+        <a href="{% url 'comunicados:detail' c.pk %}"
+           class="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all group">
+          <div class="w-8 h-8 rounded-lg {% if c.is_pinned %}bg-yellow-100{% else %}bg-blue-50{% endif %} flex items-center justify-center flex-shrink-0 text-sm">
+            {% if c.is_pinned %}📌{% else %}📄{% endif %}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800 truncate group-hover:text-blue-700 transition-colors">{{ c.title }}</p>
+            <p class="text-xs text-gray-400 mt-0.5">{{ c.author.first_name }} · {{ c.published_at|date:"d/m/Y" }}</p>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-8">
+        <div class="text-3xl mb-2">📢</div>
+        <p class="text-sm text-gray-400">Nenhum comunicado ativo</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- My cards -->
+    <div class="card xl:col-span-1">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-gray-900 text-sm">📋 Meus cards</h3>
+        <a href="{% url 'kanban:board_list' %}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Kanban →</a>
+      </div>
+      {% if my_cards %}
+      <div class="space-y-2">
+        {% for card in my_cards %}
+        <a href="{% url 'kanban:card_detail' card.column.board.pk card.pk %}"
+           class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all group">
+          <div class="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-0.5" style="background:{{ card.priority_color }}"></div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800 truncate group-hover:text-blue-700 transition-colors">{{ card.title }}</p>
+            <p class="text-xs text-gray-400 truncate">{{ card.column.board.name }} › {{ card.column.name }}</p>
+          </div>
+          {% if card.is_overdue %}
+          <span class="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-medium flex-shrink-0">Vencido</span>
+          {% elif card.due_date %}
+          <span class="text-[10px] text-gray-400 flex-shrink-0">{{ card.due_date|date:"d/m" }}</span>
+          {% endif %}
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-8">
+        <div class="text-3xl mb-2">✅</div>
+        <p class="text-sm text-gray-400">Nenhum card atribuído</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Conversas recentes -->
+    <div class="card xl:col-span-1">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-gray-900 text-sm">💬 Conversas recentes</h3>
+        <a href="{% url 'mensagens:inbox' %}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Ver todas →</a>
+      </div>
+      {% if my_convs %}
+      <div class="space-y-2">
+        {% for item in my_convs %}
+        <a href="{% url 'mensagens:conversation' item.conv.pk %}"
+           class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all group">
+          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+            {{ item.display_name|first|upper }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800 truncate group-hover:text-blue-700 transition-colors">{{ item.display_name }}</p>
+            {% if item.last_message %}
+            <p class="text-xs text-gray-400 truncate mt-0.5">{{ item.last_message.content }}</p>
+            {% else %}
+            <p class="text-xs text-gray-300 italic">Sem mensagens</p>
+            {% endif %}
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-8">
+        <div class="text-3xl mb-2">💬</div>
+        <p class="text-sm text-gray-400 mb-3">Nenhuma conversa ainda</p>
+        <a href="{% url 'mensagens:new_conversation' %}" class="btn-primary text-xs">+ Iniciar</a>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

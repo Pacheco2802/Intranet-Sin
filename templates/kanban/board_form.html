@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto card">
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    {% for field in form %}
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<p class="text-xs text-gray-400 mt-1">{{ field.help_text }}</p>{% endif %}
+      {% for err in field.errors %}<p class="text-xs text-red-500 mt-1">{{ err }}</p>{% endfor %}
+    </div>
+    {% endfor %}
+    <p class="text-xs text-gray-400">As colunas padrão (A Fazer, Em Andamento, Em Revisão, Concluído) serão criadas automaticamente.</p>
+    <div class="flex gap-3 pt-2">
+      <button type="submit" class="btn-primary">Criar Quadro</button>
+      <a href="{% url 'kanban:board_list' %}" class="btn-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

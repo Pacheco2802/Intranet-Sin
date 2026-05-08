@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Política de Privacidade{% endblock %}
+{% block page_title %}Política de Privacidade — LGPD{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto card">
+  <h2 class="text-lg font-bold text-gray-900 mb-4">Lei Geral de Proteção de Dados (LGPD) — Lei nº 13.709/2018</h2>
+  <div class="prose prose-sm text-gray-600 space-y-4">
+    <p>Esta intranet corporativa trata dados pessoais de colaboradores exclusivamente para fins de gestão e comunicação interna.</p>
+    <h3 class="font-semibold text-gray-800">Dados tratados</h3>
+    <ul class="list-disc list-inside space-y-1">
+      <li>Nome, e-mail — identificação</li>
+      <li>Telefone, bio — comunicação (opcional)</li>
+      <li>Mensagens — comunicação interna</li>
+      <li>Atividades — acompanhamento de tarefas</li>
+      <li>Logs de acesso (IP, horário) — segurança</li>
+    </ul>
+    <h3 class="font-semibold text-gray-800">Seus direitos (Art. 18 LGPD)</h3>
+    <ul class="list-disc list-inside space-y-1">
+      <li><a href="{% url 'core:lgpd_export' %}" class="text-blue-600 hover:underline">Exportar meus dados</a></li>
+      <li>Solicitar correção via TI</li>
+      <li>Solicitar anonimização via TI</li>
+    </ul>
+    <p class="text-sm text-gray-500">Contato do controlador: <strong>ti@sinsaudesp.org.br</strong></p>
+  </div>
+</div>
+{% endblock %}

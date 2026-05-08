@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Usuários{% endblock %}
+{% block page_title %}Gerenciar Usuários{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'core:user_create' %}" class="btn-primary text-xs">+ Novo Usuário</a>
+{% endblock %}
+
+{% block content %}
+
+{% if pending %}
+<div class="card mb-6 border border-amber-200 bg-amber-50">
+  <div class="flex items-center gap-2 mb-4">
+    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <h3 class="font-semibold text-amber-800 text-sm">Cadastros aguardando aprovação ({{ pending|length }})</h3>
+  </div>
+  <div class="space-y-2">
+    {% for u in pending %}
+    <div class="flex items-center justify-between bg-white rounded-lg px-4 py-3 border border-amber-100">
+      <div>
+        <p class="font-medium text-gray-900 text-sm">{{ u.get_full_name|default:u.email }}</p>
+        <p class="text-xs text-gray-500">{{ u.email }} &middot; Solicitado em {{ u.date_joined|date:"d/m/Y H:i" }}</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <form method="post" action="{% url 'core:user_approve' u.pk %}" class="inline">
+          {% csrf_token %}
+          <button type="submit"
+            class="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors">
+            Aprovar
+          </button>
+        </form>
+        <form method="post" action="{% url 'core:user_reject' u.pk %}" class="inline"
+          onsubmit="return confirm('Rejeitar e remover o cadastro de {{ u.get_full_name|default:u.email }}?')">
+          {% csrf_token %}
+          <button type="submit"
+            class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded-lg font-medium transition-colors">
+            Rejeitar
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="card overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="text-left text-xs text-gray-500 uppercase tracking-wide border-b border-gray-100">
+        <th class="pb-3 font-semibold">Usuário</th>
+        <th class="pb-3 font-semibold">Cargo</th>
+        <th class="pb-3 font-semibold">Departamento</th>
+        <th class="pb-3 font-semibold">Status</th>
+        <th class="pb-3 font-semibold">LGPD</th>
+        <th class="pb-3 font-semibold">Ações</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-50">
+      {% for u in users %}
+      <tr class="hover:bg-gray-50 transition-colors">
+        <td class="py-3">
+          <div class="flex items-center gap-3">
+            {% if u.avatar %}
+            <img src="{{ u.avatar.url }}" class="w-8 h-8 rounded-full object-cover">
+            {% else %}
+            <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
+              {{ u.first_name|first|upper }}{{ u.last_name|first|upper }}
+            </div>
+            {% endif %}
+            <div>
+              <p class="font-medium text-gray-900">{{ u.get_full_name|default:u.username }}</p>
+              <p class="text-xs text-gray-400">{{ u.email }}</p>
+            </div>
+          </div>
+        </td>
+        <td class="py-3 text-gray-600">{{ u.get_role_display }}</td>
+        <td class="py-3 text-gray-600">{{ u.department|default:"—" }}</td>
+        <td class="py-3">
+          {% if u.is_active %}
+          <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Ativo</span>
+          {% else %}
+          <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Inativo</span>
+          {% endif %}
+        </td>
+        <td class="py-3">
+          {% if u.lgpd_consent %}
+          <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Aceito</span>
+          {% else %}
+          <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Pendente</span>
+          {% endif %}
+        </td>
+        <td class="py-3">
+          <div class="flex items-center gap-2" x-data="{ confirm: false }">
+            {% if u != user %}
+            <a href="{% url 'core:user_edit' u.pk %}" class="text-blue-600 hover:text-blue-800 text-xs font-medium">Editar</a>
+            {% if u.is_active %}
+            <button @click="confirm = true" class="text-red-500 hover:text-red-700 text-xs font-medium">Desativar</button>
+            <div x-show="confirm" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div class="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl">
+                <h3 class="font-bold text-gray-900 mb-2">Desativar {{ u.get_full_name }}?</h3>
+                <p class="text-sm text-gray-600 mb-4">Escolha como desativar o usuário:</p>
+                <form method="post" action="{% url 'core:user_deactivate' u.pk %}">
+                  {% csrf_token %}
+                  <div class="space-y-2 mb-4">
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="radio" name="anonymize" value="0" checked class="text-blue-600"> Apenas desativar (mantém dados)
+                    </label>
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="radio" name="anonymize" value="1" class="text-red-600"> Anonimizar (LGPD) — apaga dados pessoais
+                    </label>
+                  </div>
+                  <div class="flex gap-2">
+                    <button type="submit" class="btn-danger flex-1">Confirmar</button>
+                    <button type="button" @click="confirm = false" class="btn-secondary flex-1">Cancelar</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+            {% endif %}
+            {% else %}
+            <span class="text-xs text-gray-400">Você</span>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

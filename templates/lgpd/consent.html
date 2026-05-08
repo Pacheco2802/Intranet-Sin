@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block auth_content %}
+<div class="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+  <div class="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-8">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">Política de Privacidade — LGPD</h1>
+        <p class="text-sm text-gray-500">Lei Geral de Proteção de Dados — Lei nº 13.709/2018</p>
+      </div>
+    </div>
+
+    <div class="prose prose-sm text-gray-600 max-h-96 overflow-y-auto border border-gray-100 rounded-lg p-4 mb-6 bg-gray-50">
+      <h3>Coleta e uso de dados</h3>
+      <p>Esta intranet coleta e processa os seguintes dados pessoais para fins exclusivamente corporativos:</p>
+      <ul>
+        <li><strong>Nome completo e e-mail:</strong> identificação do colaborador</li>
+        <li><strong>Telefone e bio (opcionais):</strong> facilitar comunicação interna</li>
+        <li><strong>Mensagens trocadas:</strong> comunicação entre colaboradores</li>
+        <li><strong>Atividades no Kanban:</strong> acompanhamento de tarefas</li>
+        <li><strong>Logs de acesso:</strong> segurança e conformidade</li>
+      </ul>
+      <h3>Base legal</h3>
+      <p>O tratamento de dados ocorre com base no legítimo interesse do empregador (Art. 7º, IX da LGPD) para fins de gestão corporativa e comunicação interna.</p>
+      <h3>Seus direitos</h3>
+      <ul>
+        <li>Acessar e exportar seus dados (disponível em <em>LGPD › Exportar meus dados</em>)</li>
+        <li>Solicitar correção de dados incorretos</li>
+        <li>Solicitar anonimização ao TI</li>
+      </ul>
+      <h3>Retenção</h3>
+      <p>Os dados são mantidos durante o vínculo empregatício e pelo período exigido por lei após o encerramento.</p>
+      <h3>Controlador</h3>
+      <p>O controlador dos dados é a organização. Dúvidas: <strong>ti@sinsaudesp.org.br</strong></p>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <label class="flex items-start gap-3 mb-6 cursor-pointer group" x-data="{ checked: false }">
+        <input type="checkbox" name="accept" required x-model="checked" class="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+        <span class="text-sm text-gray-700">Li e concordo com a <strong>Política de Privacidade</strong> e autorizo o tratamento dos meus dados pessoais conforme descrito acima.</span>
+      </label>
+      <div class="flex gap-3">
+        <button type="submit" class="btn-primary flex-1 py-2.5 text-center">Concordar e continuar</button>
+        <a href="{% url 'core:logout' %}" class="btn-secondary flex-1 py-2.5 text-center">Sair</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

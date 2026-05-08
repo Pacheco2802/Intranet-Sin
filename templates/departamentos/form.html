@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'core:department_list' %}" class="btn-secondary text-xs">← Voltar</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+  <div class="card">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="space-y-4">
+
+        <div class="grid grid-cols-3 gap-4">
+          <div class="col-span-2">
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nome</label>
+            {{ form.name }}
+            {% if form.name.errors %}<p class="text-red-500 text-xs mt-1">{{ form.name.errors|join:" " }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Ícone</label>
+            {{ form.icon }}
+            {% if form.icon.errors %}<p class="text-red-500 text-xs mt-1">{{ form.icon.errors|join:" " }}</p>{% endif %}
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Descrição</label>
+          {{ form.description }}
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Cor do departamento</label>
+            {{ form.color }}
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Líder</label>
+            {{ form.leader }}
+          </div>
+        </div>
+
+        {% if not dept %}
+        <div class="p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700 space-y-1">
+          <p>Ao criar o departamento, serão gerados automaticamente:</p>
+          <ul class="list-disc list-inside space-y-0.5 ml-1">
+            <li>Uma <strong>equipe</strong> para o departamento</li>
+            <li>Um <strong>board Kanban interno</strong> com as colunas padrão</li>
+          </ul>
+        </div>
+        {% endif %}
+
+      </div>
+      <div class="flex gap-3 mt-6">
+        <button type="submit" class="btn-primary flex-1">
+          {% if dept %}Salvar alterações{% else %}Criar departamento{% endif %}
+        </button>
+        <a href="{% url 'core:department_list' %}" class="btn-secondary flex-1 text-center">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

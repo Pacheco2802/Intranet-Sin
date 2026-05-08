@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Meu Perfil{% endblock %}
+{% block page_title %}Meu Perfil{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+  <div class="card flex items-center gap-5">
+    {% if user.avatar %}
+    <img src="{{ user.avatar.url }}" class="w-20 h-20 rounded-2xl object-cover">
+    {% else %}
+    <div class="w-20 h-20 rounded-2xl bg-primary flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+      {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+    </div>
+    {% endif %}
+    <div>
+      <h2 class="text-xl font-bold text-gray-900">{{ user.get_full_name|default:user.username }}</h2>
+      <p class="text-gray-500 text-sm">{{ user.get_role_display }}{% if user.department %} · {{ user.department }}{% endif %}</p>
+      <p class="text-gray-400 text-xs mt-1">{{ user.email }}</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="font-semibold text-gray-900 mb-4">Editar dados</h3>
+    <form method="post" enctype="multipart/form-data" class="space-y-4">
+      {% csrf_token %}
+      {% for field in form %}
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+        {{ field }}
+        {% for err in field.errors %}<p class="text-xs text-red-500 mt-1">{{ err }}</p>{% endfor %}
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn-primary">Salvar alterações</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3 class="font-semibold text-gray-900 mb-3">Privacidade — LGPD</h3>
+    <div class="space-y-2 text-sm text-gray-600">
+      <p>Consentimento: {% if user.lgpd_consent %}✅ Aceito em {{ user.lgpd_consent_date|date:"d/m/Y" }}{% else %}❌ Pendente{% endif %}</p>
+      <div class="flex gap-3 pt-2">
+        <a href="{% url 'core:lgpd_export' %}" class="btn-secondary text-xs">📥 Exportar meus dados</a>
+        <a href="{% url 'core:lgpd_policy' %}" class="btn-secondary text-xs">📄 Política de privacidade</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

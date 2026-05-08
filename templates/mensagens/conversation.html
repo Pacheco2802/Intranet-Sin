@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ display_name }}{% endblock %}
+{% block page_title %}{{ display_name }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'mensagens:inbox' %}" class="btn-secondary text-xs">← Voltar</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto flex flex-col" style="height: calc(100vh - 8rem)">
+  <!-- Messages area -->
+  <div id="messages-container"
+       class="flex-1 overflow-y-auto bg-white rounded-xl border border-gray-100 p-4 mb-4"
+       hx-get="{% url 'mensagens:messages_poll' conv.pk %}"
+       hx-trigger="every 5s"
+       hx-target="#messages-container"
+       hx-swap="innerHTML">
+    {% include "mensagens/partials/messages_list.html" %}
+  </div>
+
+  <!-- Input area -->
+  <form hx-post="{% url 'mensagens:send_message' conv.pk %}"
+        hx-target="#messages-container"
+        hx-swap="innerHTML"
+        hx-on::after-request="this.reset(); document.getElementById('messages-container').scrollTop = document.getElementById('messages-container').scrollHeight"
+        class="flex gap-2 items-end bg-white rounded-xl border border-gray-200 p-3">
+    {% csrf_token %}
+    <textarea name="content" rows="1" placeholder="Digite sua mensagem..."
+      class="flex-1 border-0 resize-none text-sm focus:outline-none focus:ring-0 leading-relaxed"
+      x-data
+      @keydown.enter.prevent="if (!$event.shiftKey) { $el.closest('form').dispatchEvent(new Event('submit', {bubbles: true})) }"></textarea>
+    <button type="submit" class="bg-primary hover:bg-primary-light text-white rounded-xl p-2.5 transition-colors flex-shrink-0">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+    </button>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // auto scroll to bottom on load
+  const container = document.getElementById('messages-container');
+  container.scrollTop = container.scrollHeight;
+  document.body.addEventListener('htmx:afterSwap', e => {
+    if (e.target.id === 'messages-container') container.scrollTop = container.scrollHeight;
+  });
+</script>
+{% endblock %}

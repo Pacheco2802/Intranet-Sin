@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Mensagens{% endblock %}
+{% block page_title %}Mensagens{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'mensagens:new_conversation' %}" class="btn-primary text-xs">+ Nova conversa</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-3">
+  {% if conv_data %}
+    {% for item in conv_data %}
+    <a href="{% url 'mensagens:conversation' item.conv.pk %}"
+       class="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-100 hover:border-blue-200 hover:shadow-sm transition-all">
+      <div class="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+        {{ item.display_name|first|upper }}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center justify-between">
+          <p class="font-semibold text-gray-900 text-sm truncate">{{ item.display_name }}</p>
+          {% if item.last_message %}<span class="text-xs text-gray-400 ml-2 flex-shrink-0">{{ item.last_message.sent_at|date:"d/m H:i" }}</span>{% endif %}
+        </div>
+        {% if item.last_message %}
+        <p class="text-sm text-gray-500 truncate mt-0.5">
+          {% if item.last_message.sender == user %}Você: {% endif %}{{ item.last_message.content }}
+        </p>
+        {% else %}
+        <p class="text-sm text-gray-400 italic">Nenhuma mensagem ainda</p>
+        {% endif %}
+      </div>
+      {% if item.unread > 0 %}
+      <span class="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">{{ item.unread }}</span>
+      {% endif %}
+    </a>
+    {% endfor %}
+  {% else %}
+  <div class="card text-center py-16">
+    <div class="text-5xl mb-4">💬</div>
+    <p class="text-gray-500">Nenhuma conversa ainda.</p>
+    <a href="{% url 'mensagens:new_conversation' %}" class="btn-primary inline-block mt-4">Iniciar conversa</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

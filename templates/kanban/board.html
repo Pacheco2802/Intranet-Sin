@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ board.name }}{% endblock %}
+{% block page_title %}{{ board.name }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'kanban:board_list' %}" class="btn-secondary text-xs">← Quadros</a>
+<a href="{% url 'kanban:card_create' board.pk %}" class="btn-primary text-xs">+ Card</a>
+{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<!-- Board info -->
+<div class="flex items-center gap-3 mb-5">
+  <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold"
+       style="background:{{ board.department.color|default:'#1e3a5f' }}">
+    {{ board.department.icon|default:"📋" }}
+  </div>
+  <div>
+    <span class="font-semibold text-gray-900">{{ board.name }}</span>
+    {% if board.department %}<span class="text-gray-400 text-sm ml-2">{{ board.department }}</span>{% endif %}
+    {% if board.is_cross_department %}<span class="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Entre departamentos</span>{% endif %}
+  </div>
+</div>
+
+<!-- Kanban board -->
+<div class="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6" style="min-height: calc(100vh - 14rem)">
+  {% include "kanban/partials/board_columns.html" %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const MOVE_URL = (id) => `/kanban/card/${id}/mover/`;
+const CSRF = '{{ csrf_token }}';
+
+document.querySelectorAll('.sortable-cards').forEach(el => {
+  Sortable.create(el, {
+    group: 'cards',
+    animation: 150,
+    ghostClass: 'opacity-30',
+    dragClass: 'shadow-2xl',
+    onEnd(evt) {
+      const cardId = evt.item.dataset.cardId;
+      const colId = evt.to.dataset.columnId;
+      const order = evt.newIndex;
+
+      fetch(MOVE_URL(cardId), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF,
+        },
+        body: JSON.stringify({ column_id: colId, order }),
+      });
+    }
+  });
+});
+</script>
+{% endblock %}

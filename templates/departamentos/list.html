@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Departamentos{% endblock %}
+{% block page_title %}Departamentos{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'core:department_create' %}" class="btn-primary text-xs">+ Novo Departamento</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for dept in depts %}
+  <div class="card border border-gray-100 hover:border-blue-200 transition-all">
+    <div class="flex items-start justify-between mb-3">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+             style="background:{{ dept.color }}22; border: 2px solid {{ dept.color }}44;">
+          {{ dept.icon }}
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-900">{{ dept.name }}</h3>
+          <p class="text-xs text-gray-400 mt-0.5">{{ dept.users.count }} usuário{{ dept.users.count|pluralize:"s" }}</p>
+        </div>
+      </div>
+      <a href="{% url 'core:department_edit' dept.pk %}"
+         class="text-xs text-gray-400 hover:text-blue-600 font-medium px-2 py-1 rounded hover:bg-gray-50 transition-colors">
+        Editar
+      </a>
+    </div>
+
+    {% if dept.description %}
+    <p class="text-sm text-gray-500 mb-3">{{ dept.description }}</p>
+    {% endif %}
+
+    <div class="flex items-center justify-between text-xs text-gray-400 pt-3 border-t border-gray-50">
+      <span>
+        {% if dept.leader %}
+        👤 Líder: <span class="text-gray-600 font-medium">{{ dept.leader.get_full_name }}</span>
+        {% else %}
+        <span class="text-gray-400 italic">Sem líder definido</span>
+        {% endif %}
+      </span>
+      <div class="flex gap-2">
+        {% if dept.team %}
+        <a href="{% url 'core:team_list' %}" class="text-blue-500 hover:underline">Equipe</a>
+        {% endif %}
+        {% for board in dept.boards.all %}
+        {% if board.is_auto %}
+        <a href="{% url 'kanban:board_detail' board.pk %}" class="text-purple-500 hover:underline">Kanban</a>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-span-3 card text-center py-16 text-gray-400">
+    <div class="text-4xl mb-3">🏢</div>
+    <p>Nenhum departamento criado ainda.</p>
+    <a href="{% url 'core:department_create' %}" class="btn-primary inline-block mt-4 text-sm">Criar primeiro departamento</a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
