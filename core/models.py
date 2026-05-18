@@ -43,6 +43,7 @@ class CustomUser(AbstractUser):
     avatar = models.ImageField('Avatar', upload_to='avatars/', null=True, blank=True)
     phone = models.CharField('Telefone', max_length=20, blank=True)
     bio = models.TextField('Bio', blank=True)
+    birth_date = models.DateField('Data de nascimento', null=True, blank=True)
     is_approved = models.BooleanField('Aprovado', default=False)
     lgpd_consent = models.BooleanField('Consentimento LGPD', default=False)
     lgpd_consent_date = models.DateTimeField('Data do consentimento', null=True, blank=True)
@@ -76,7 +77,7 @@ class CustomUser(AbstractUser):
 
     @property
     def can_see_all(self):
-        return self.role in (self.Role.ADMIN_TI, self.Role.PRESIDENTE, self.Role.LIDER)
+        return self.role in (self.Role.ADMIN_TI, self.Role.PRESIDENTE)
 
     def anonymize(self):
         uid = hashlib.sha256(str(self.pk).encode()).hexdigest()[:8]

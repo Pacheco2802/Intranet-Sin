@@ -37,5 +37,8 @@ static_root/
 .env
 *.env
 
+# Backup de migração
+backup.json
+
 # Claude Code
 .claude/

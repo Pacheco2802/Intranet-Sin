@@ -1,27 +1,260 @@
 {% extends "base.html" %}
-{% block title %}Política de Privacidade{% endblock %}
-{% block page_title %}Política de Privacidade — LGPD{% endblock %}
+{% block title %}Política de Privacidade e Proteção de Dados{% endblock %}
+{% block page_title %}Política de Privacidade e Proteção de Dados{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto card">
-  <h2 class="text-lg font-bold text-gray-900 mb-4">Lei Geral de Proteção de Dados (LGPD) — Lei nº 13.709/2018</h2>
-  <div class="prose prose-sm text-gray-600 space-y-4">
-    <p>Esta intranet corporativa trata dados pessoais de colaboradores exclusivamente para fins de gestão e comunicação interna.</p>
-    <h3 class="font-semibold text-gray-800">Dados tratados</h3>
-    <ul class="list-disc list-inside space-y-1">
-      <li>Nome, e-mail — identificação</li>
-      <li>Telefone, bio — comunicação (opcional)</li>
-      <li>Mensagens — comunicação interna</li>
-      <li>Atividades — acompanhamento de tarefas</li>
-      <li>Logs de acesso (IP, horário) — segurança</li>
-    </ul>
-    <h3 class="font-semibold text-gray-800">Seus direitos (Art. 18 LGPD)</h3>
-    <ul class="list-disc list-inside space-y-1">
-      <li><a href="{% url 'core:lgpd_export' %}" class="text-blue-600 hover:underline">Exportar meus dados</a></li>
-      <li>Solicitar correção via TI</li>
-      <li>Solicitar anonimização via TI</li>
-    </ul>
-    <p class="text-sm text-gray-500">Contato do controlador: <strong>ti@sinsaudesp.org.br</strong></p>
+<div class="max-w-3xl mx-auto space-y-6">
+
+  <!-- Cabeçalho -->
+  <div class="card border-l-4 border-l-blue-600">
+    <div class="flex items-start gap-4">
+      <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 flex-shrink-0 mt-0.5">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      </div>
+      <div>
+        <h2 class="font-bold text-gray-900 text-lg">Política de Privacidade e Proteção de Dados Pessoais</h2>
+        <p class="text-sm text-gray-500 mt-1">SINSAÚDE-SP — Sindicato dos Trabalhadores em Saúde do Estado de São Paulo</p>
+        <div class="flex flex-wrap gap-4 mt-2 text-xs text-gray-400">
+          <span>Versão 1.0</span>
+          <span>·</span>
+          <span>Vigência: maio de 2026</span>
+          <span>·</span>
+          <span>Lei nº 13.709/2018 — LGPD</span>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <!-- 1. Identificação -->
+  <div class="card">
+    <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+      <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">1</span>
+      Identificação do Controlador e do Encarregado
+    </h3>
+    <div class="space-y-2 text-sm text-gray-600">
+      <p><strong class="text-gray-800">Controlador:</strong> SINSAÚDE-SP — Sindicato dos Trabalhadores em Saúde do Estado de São Paulo, inscrito no CNPJ sob nº a identificar, com sede em São Paulo/SP.</p>
+      <p><strong class="text-gray-800">Encarregado pelo tratamento (DPO):</strong> Setor de Tecnologia da Informação</p>
+      <p><strong class="text-gray-800">Contato do Encarregado:</strong> <a href="mailto:ti@sinsaudesp.org.br" class="text-blue-600 hover:underline">ti@sinsaudesp.org.br</a></p>
+      <p class="text-xs text-gray-400 mt-2">O encarregado é o canal responsável por receber comunicações dos titulares de dados e da Autoridade Nacional de Proteção de Dados (ANPD).</p>
+    </div>
+  </div>
+
+  <!-- 2. Dados tratados -->
+  <div class="card">
+    <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+      <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">2</span>
+      Dados Pessoais Tratados
+    </h3>
+    <div class="space-y-4 text-sm text-gray-600">
+      <p>Esta intranet trata as seguintes categorias de dados pessoais dos colaboradores:</p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs border border-gray-200 rounded-lg overflow-hidden">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="text-left px-3 py-2 font-semibold text-gray-700">Categoria</th>
+              <th class="text-left px-3 py-2 font-semibold text-gray-700">Dados</th>
+              <th class="text-left px-3 py-2 font-semibold text-gray-700">Obrigatoriedade</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <tr class="hover:bg-gray-50">
+              <td class="px-3 py-2 font-medium text-gray-800">Cadastrais</td>
+              <td class="px-3 py-2">Nome completo, e-mail corporativo</td>
+              <td class="px-3 py-2"><span class="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-xs">Obrigatório</span></td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-3 py-2 font-medium text-gray-800">Funcionais</td>
+              <td class="px-3 py-2">Cargo, departamento</td>
+              <td class="px-3 py-2"><span class="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-xs">Obrigatório</span></td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-3 py-2 font-medium text-gray-800">Opcionais</td>
+              <td class="px-3 py-2">Telefone, foto (avatar), data de nascimento, biografia</td>
+              <td class="px-3 py-2"><span class="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-xs">Opcional</span></td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-3 py-2 font-medium text-gray-800">Comunicação</td>
+              <td class="px-3 py-2">Mensagens internas, comentários em cards, comunicados</td>
+              <td class="px-3 py-2"><span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">Gerado pelo uso</span></td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-3 py-2 font-medium text-gray-800">Atividade</td>
+              <td class="px-3 py-2">Cards Kanban criados ou atribuídos, atendimentos registrados, subtarefas</td>
+              <td class="px-3 py-2"><span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">Gerado pelo uso</span></td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-3 py-2 font-medium text-gray-800">Técnicos</td>
+              <td class="px-3 py-2">Endereço IP, data/hora de acesso, ações realizadas (logs de auditoria)</td>
+              <td class="px-3 py-2"><span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">Gerado pelo uso</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-gray-400">Não são tratados dados sensíveis (art. 5º, II da LGPD) como origem racial, saúde, orientação sexual ou dados biométricos.</p>
+    </div>
+  </div>
+
+  <!-- 3. Finalidades e bases legais -->
+  <div class="card">
+    <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+      <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">3</span>
+      Finalidades e Bases Legais (Art. 7º da LGPD)
+    </h3>
+    <div class="space-y-3 text-sm text-gray-600">
+      <div class="border border-gray-100 rounded-lg divide-y divide-gray-100">
+        <div class="px-4 py-3">
+          <p class="font-medium text-gray-800">Gestão e comunicação interna</p>
+          <p class="text-xs mt-0.5">Identificação dos colaboradores, acesso ao sistema, troca de mensagens e comunicados departamentais.</p>
+          <p class="text-xs text-blue-600 mt-1">Base: Execução de contrato — Art. 7º, V</p>
+        </div>
+        <div class="px-4 py-3">
+          <p class="font-medium text-gray-800">Controle de tarefas e produtividade</p>
+          <p class="text-xs mt-0.5">Atribuição e acompanhamento de cards Kanban, subtarefas e atendimentos a filiados.</p>
+          <p class="text-xs text-blue-600 mt-1">Base: Execução de contrato — Art. 7º, V</p>
+        </div>
+        <div class="px-4 py-3">
+          <p class="font-medium text-gray-800">Segurança e auditoria</p>
+          <p class="text-xs mt-0.5">Logs de acesso e ações sensíveis para garantir a integridade e rastreabilidade das operações.</p>
+          <p class="text-xs text-blue-600 mt-1">Base: Legítimo interesse — Art. 7º, IX</p>
+        </div>
+        <div class="px-4 py-3">
+          <p class="font-medium text-gray-800">Dados opcionais (foto, telefone, data de nascimento, bio)</p>
+          <p class="text-xs mt-0.5">Enriquecer o perfil do colaborador e facilitar a comunicação entre equipes.</p>
+          <p class="text-xs text-blue-600 mt-1">Base: Consentimento — Art. 7º, I (pode ser retirado a qualquer momento)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Compartilhamento -->
+  <div class="card">
+    <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+      <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">4</span>
+      Compartilhamento de Dados
+    </h3>
+    <div class="text-sm text-gray-600 space-y-2">
+      <p>Os dados pessoais <strong class="text-gray-800">não são compartilhados com terceiros</strong> para fins comerciais.</p>
+      <p>O acesso interno é restrito conforme o cargo do colaborador:</p>
+      <ul class="list-disc list-inside space-y-1 ml-2 text-xs">
+        <li>Colaboradores comuns visualizam apenas os dados necessários para suas atividades</li>
+        <li>Líderes e gerentes têm acesso aos dados de seus departamentos</li>
+        <li>Administrador TI tem acesso amplo para fins de suporte técnico e conformidade</li>
+        <li>O Presidente tem acesso para fins de gestão estratégica</li>
+      </ul>
+      <p class="text-xs text-gray-400 mt-2">O sistema opera em infraestrutura local ou em servidor contratado com cláusula de confidencialidade. Nenhum dado é transmitido a países sem legislação adequada.</p>
+    </div>
+  </div>
+
+  <!-- 5. Retenção -->
+  <div class="card">
+    <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+      <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">5</span>
+      Retenção e Descarte de Dados
+    </h3>
+    <div class="space-y-2 text-sm text-gray-600">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="bg-gray-50 rounded-lg p-3">
+          <p class="font-medium text-gray-800 text-xs uppercase tracking-wide mb-1">Durante o vínculo</p>
+          <p class="text-xs">Todos os dados cadastrais e de atividade são mantidos e acessíveis.</p>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-3">
+          <p class="font-medium text-gray-800 text-xs uppercase tracking-wide mb-1">Após encerramento</p>
+          <p class="text-xs">Dados funcionais: 5 anos (prazo trabalhista). Logs de segurança: 2 anos. Demais dados: eliminados ou anonimizados.</p>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-3">
+          <p class="font-medium text-gray-800 text-xs uppercase tracking-wide mb-1">Anonimização a pedido</p>
+          <p class="text-xs">Solicitada ao Encarregado (TI). Dados pessoais são substituídos por identificadores genéricos, tornando o titular irreconhecível.</p>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-3">
+          <p class="font-medium text-gray-800 text-xs uppercase tracking-wide mb-1">Obrigação legal</p>
+          <p class="text-xs">Registros exigidos por lei serão mantidos pelo prazo legal mínimo, mesmo após solicitação de eliminação.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Seus direitos -->
+  <div class="card">
+    <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+      <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">6</span>
+      Seus Direitos como Titular (Art. 18 da LGPD)
+    </h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600">
+      <div class="flex items-start gap-2 p-3 rounded-lg border border-gray-100">
+        <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <div><p class="font-medium text-gray-800 text-xs">Acesso e confirmação</p><p class="text-xs mt-0.5">Saber se seus dados são tratados e quais são eles</p></div>
+      </div>
+      <div class="flex items-start gap-2 p-3 rounded-lg border border-gray-100">
+        <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <div><p class="font-medium text-gray-800 text-xs">Correção</p><p class="text-xs mt-0.5">Atualizar dados incompletos, inexatos ou desatualizados</p></div>
+      </div>
+      <div class="flex items-start gap-2 p-3 rounded-lg border border-gray-100">
+        <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <div><p class="font-medium text-gray-800 text-xs">Portabilidade</p><p class="text-xs mt-0.5">Exportar seus dados em formato estruturado (disponível no perfil)</p></div>
+      </div>
+      <div class="flex items-start gap-2 p-3 rounded-lg border border-gray-100">
+        <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <div><p class="font-medium text-gray-800 text-xs">Eliminação e anonimização</p><p class="text-xs mt-0.5">Solicitar a exclusão ou anonimização de dados tratados com base no consentimento</p></div>
+      </div>
+      <div class="flex items-start gap-2 p-3 rounded-lg border border-gray-100">
+        <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <div><p class="font-medium text-gray-800 text-xs">Revogação do consentimento</p><p class="text-xs mt-0.5">Retirar o consentimento para dados opcionais a qualquer momento</p></div>
+      </div>
+      <div class="flex items-start gap-2 p-3 rounded-lg border border-gray-100">
+        <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <div><p class="font-medium text-gray-800 text-xs">Informação sobre compartilhamento</p><p class="text-xs mt-0.5">Saber com quais entidades públicas ou privadas seus dados são compartilhados</p></div>
+      </div>
+      <div class="flex items-start gap-2 p-3 rounded-lg border border-gray-100">
+        <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <div><p class="font-medium text-gray-800 text-xs">Oposição</p><p class="text-xs mt-0.5">Opor-se ao tratamento realizado com base em legítimo interesse</p></div>
+      </div>
+      <div class="flex items-start gap-2 p-3 rounded-lg border border-gray-100">
+        <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <div><p class="font-medium text-gray-800 text-xs">Petição à ANPD</p><p class="text-xs mt-0.5">Apresentar reclamação à Autoridade Nacional de Proteção de Dados</p></div>
+      </div>
+    </div>
+    <div class="mt-4 p-3 bg-blue-50 rounded-lg text-xs text-blue-700">
+      Para exercer qualquer um desses direitos, entre em contato com o Encarregado:
+      <a href="mailto:ti@sinsaudesp.org.br" class="font-semibold underline">ti@sinsaudesp.org.br</a>.
+      O prazo de resposta é de até 15 dias úteis.
+    </div>
+  </div>
+
+  <!-- 7. Segurança -->
+  <div class="card">
+    <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+      <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">7</span>
+      Medidas de Segurança
+    </h3>
+    <div class="text-sm text-gray-600 space-y-2">
+      <p>O SINSAÚDE-SP adota medidas técnicas e organizacionais para proteger os dados pessoais, incluindo:</p>
+      <ul class="list-disc list-inside space-y-1 ml-2 text-xs">
+        <li>Autenticação por e-mail e senha com critérios mínimos de complexidade</li>
+        <li>Controle de acesso por cargo — cada colaborador acessa apenas o necessário para suas funções</li>
+        <li>Sessões com expiração automática após período de inatividade</li>
+        <li>Registro de auditoria de todas as ações sensíveis (login, criação e exclusão de registros)</li>
+        <li>Proteção contra CSRF, XSS e clickjacking nas interfaces web</li>
+        <li>Aprovação manual de novos cadastros pelo Administrador TI</li>
+      </ul>
+      <p class="text-xs text-gray-400 mt-2">Em caso de incidente de segurança que envolva dados pessoais, os titulares afetados e a ANPD serão notificados conforme dispõe o Art. 48 da LGPD.</p>
+    </div>
+  </div>
+
+  <!-- 8. Atualizações -->
+  <div class="card">
+    <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+      <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">8</span>
+      Atualizações desta Política
+    </h3>
+    <p class="text-sm text-gray-600">Esta política pode ser revisada periodicamente. Alterações relevantes serão comunicadas aos colaboradores pelo sistema de comunicados interno. A versão vigente estará sempre disponível nesta página, com data de publicação indicada no cabeçalho.</p>
+  </div>
+
+  <!-- Ações -->
+  <div class="flex flex-wrap gap-3">
+    <a href="{% url 'core:lgpd_export' %}" class="btn-primary text-sm">Exportar meus dados</a>
+    <a href="{% url 'core:profile' %}" class="btn-secondary text-sm">Editar meu perfil</a>
+    <a href="mailto:ti@sinsaudesp.org.br" class="btn-secondary text-sm">Contatar o Encarregado</a>
+  </div>
+
 </div>
 {% endblock %}

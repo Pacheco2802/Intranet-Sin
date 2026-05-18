@@ -1,4 +1,5 @@
 from pathlib import Path
+import dj_database_url
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -6,6 +7,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in config('CSRF_TRUSTED_ORIGINS', default='').split(',') if o.strip()
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -14,6 +18,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'storages',
     'core',
     'comunicados',
     'mensagens',
@@ -23,6 +28,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -54,18 +60,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'intranet.wsgi.application'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='intranet'),
-        'USER': config('DB_USER', default='postgres'),
-        'PASSWORD': config('DB_PASSWORD', default=''),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
-        'CONN_MAX_AGE': 60,
-        'OPTIONS': {
-            'connect_timeout': 10,
-        },
-    }
+    'default': dj_database_url.config(
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+        conn_max_age=600,
+    )
 }
 
 AUTH_USER_MODEL = 'core.CustomUser'
@@ -82,12 +80,37 @@ TIME_ZONE = 'America/Sao_Paulo'
 USE_I18N = True
 USE_TZ = True
 
+# ── Arquivos estáticos ────────────────────────────────────────────────────────
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+STORAGES = {
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+}
+
+# ── Arquivos de mídia (Cloudflare R2 em produção) ────────────────────────────
+if config('USE_R2', default=False, cast=bool):
+    STORAGES['default'] = {
+        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+    }
+    AWS_ACCESS_KEY_ID       = config('R2_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY   = config('R2_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = config('R2_BUCKET_NAME')
+    AWS_S3_ENDPOINT_URL     = config('R2_ENDPOINT_URL')
+    AWS_S3_CUSTOM_DOMAIN    = config('R2_CUSTOM_DOMAIN', default=None)
+    AWS_DEFAULT_ACL         = None
+    AWS_S3_FILE_OVERWRITE   = False
+    AWS_QUERYSTRING_AUTH    = False
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/' if AWS_S3_CUSTOM_DOMAIN else f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/'
+else:
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -108,3 +131,12 @@ CSRF_COOKIE_HTTPONLY = True
 X_FRAME_OPTIONS = 'DENY'
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# ── Segurança adicional em produção ──────────────────────────────────────────
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 ano
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True

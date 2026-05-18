@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Acesso — {{ board.name }}{% endblock %}
+{% block page_title %}Controle de Acesso{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'kanban:board_detail' board.pk %}" class="btn-secondary text-xs">← {{ board.name }}</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+
+  <div class="card">
+    <div class="flex items-center gap-3 mb-1">
+      <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold"
+           style="background:{{ board.department.color|default:'#1e3a5f' }}">
+        {{ board.department.icon|default:"📋" }}
+      </div>
+      <div>
+        <p class="font-semibold text-gray-900">{{ board.name }}</p>
+        {% if board.department %}<p class="text-xs text-gray-400">{{ board.department }}</p>{% endif %}
+      </div>
+    </div>
+    <p class="text-sm text-gray-500 mt-3">
+      Por padrão cada usuário vê apenas o board do próprio departamento e o geral.
+      Aqui você concede acesso a boards específicos como <strong>exceção</strong>.
+    </p>
+  </div>
+
+  <!-- Adicionar acesso -->
+  <div class="card">
+    <h2 class="font-semibold text-gray-900 mb-4">Dar acesso a este board</h2>
+    {% if dept_users %}
+    <form method="post" class="flex gap-2 items-end">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add">
+      <div class="flex-1">
+        <label class="block text-xs text-gray-500 mb-1">Selecione o usuário</label>
+        <select name="user_id" class="form-input text-sm w-full">
+          <option value="">— Escolha —</option>
+          {% for u in dept_users %}
+          <option value="{{ u.pk }}">{{ u.get_full_name|default:u.email }} {% if u.department %}· {{ u.department }}{% endif %} ({{ u.get_role_display }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn-primary text-sm whitespace-nowrap">Dar acesso</button>
+    </form>
+    {% else %}
+    <p class="text-sm text-gray-400 italic">Todos os usuários já têm acesso a este board.</p>
+    {% endif %}
+  </div>
+
+  <!-- Quem já tem acesso de exceção -->
+  <div class="card">
+    <h2 class="font-semibold text-gray-900 mb-4">
+      Acessos de exceção
+      {% if current_members %}<span class="text-xs text-gray-400 font-normal ml-1">({{ current_members|length }})</span>{% endif %}
+    </h2>
+    {% if current_members %}
+    <div class="space-y-2">
+      {% for u in current_members %}
+      <div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+            {{ u.first_name|first|upper }}{{ u.last_name|first|upper }}
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-900">{{ u.get_full_name|default:u.email }}</p>
+            <p class="text-xs text-gray-400">{{ u.get_role_display }}{% if u.department %} · {{ u.department }}{% endif %}</p>
+          </div>
+        </div>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="remove">
+          <input type="hidden" name="user_id" value="{{ u.pk }}">
+          <button type="submit"
+                  class="text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
+                  onclick="return confirm('Remover acesso de {{ u.get_full_name|default:u.email }} a este board?')">
+            Remover
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-gray-400 italic">Nenhum acesso de exceção configurado.</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

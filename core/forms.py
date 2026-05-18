@@ -106,10 +106,29 @@ class TeamForm(forms.ModelForm):
         self.fields['name'].label = 'Nome da equipe'
 
 
+class ApproveUserForm(forms.Form):
+    role = forms.ChoiceField(
+        label='Cargo',
+        choices=CustomUser.Role.choices,
+        initial=CustomUser.Role.COLABORADOR,
+        widget=forms.Select(attrs={'class': 'form-input'}),
+    )
+    department = forms.ModelChoiceField(
+        label='Departamento',
+        queryset=Department.objects.all().order_by('name'),
+        required=False,
+        empty_label='Sem departamento',
+        widget=forms.Select(attrs={'class': 'form-input'}),
+    )
+
+
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = CustomUser
-        fields = ('first_name', 'last_name', 'email', 'phone', 'bio', 'avatar')
+        fields = ('first_name', 'last_name', 'email', 'phone', 'birth_date', 'bio', 'avatar')
+        widgets = {
+            'birth_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-input'}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

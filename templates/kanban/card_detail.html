@@ -248,6 +248,34 @@
       </div>
     </div>
 
+    <!-- Status Final -->
+    {% if is_status_final %}
+    <div class="card border-l-4 {% if card.final_status == 'concluido' %}border-l-green-400{% elif card.final_status == 'cancelado' %}border-l-gray-400{% elif card.final_status == 'nao_concluido' %}border-l-orange-400{% else %}border-l-blue-300{% endif %}">
+      <h3 class="font-semibold text-gray-900 mb-3 text-xs uppercase tracking-wide text-gray-500">Status Final</h3>
+      <form method="post" class="space-y-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="final_status">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Desfecho</label>
+          <select name="final_status"
+                  class="w-full rounded-lg border border-gray-200 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
+            <option value="">— Não definido —</option>
+            {% for val, label in final_status_choices %}
+            <option value="{{ val }}" {% if card.final_status == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Observações</label>
+          <textarea name="final_notes" rows="3"
+                    class="w-full rounded-lg border border-gray-200 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+                    placeholder="Descreva o motivo ou contexto…">{{ card.final_notes }}</textarea>
+        </div>
+        <button type="submit" class="btn-primary w-full text-xs py-1.5">Salvar desfecho</button>
+      </form>
+    </div>
+    {% endif %}
+
     <!-- Activity -->
     <div class="card">
       <h3 class="font-semibold text-gray-900 mb-3 text-xs uppercase tracking-wide text-gray-500">Histórico</h3>

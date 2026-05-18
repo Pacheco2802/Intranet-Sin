@@ -10,13 +10,13 @@ def _get_or_create_first_column(department, creator):
             is_auto=True,
             created_by=creator,
         )
-        Column.objects.create(board=board, name='A Fazer', order=0, color='#64748b')
-        Column.objects.create(board=board, name='Em Andamento', order=1, color='#f59e0b')
-        Column.objects.create(board=board, name='Concluído', order=2, color='#22c55e')
+        Column.objects.create(board=board, name='A Fazer',       order=0, color='#64748b', column_type=Column.ColumnType.A_FAZER)
+        Column.objects.create(board=board, name='Em Andamento',  order=1, color='#f59e0b', column_type=Column.ColumnType.EM_ANDAMENTO)
+        Column.objects.create(board=board, name='Status Final',  order=2, color='#22c55e', column_type=Column.ColumnType.STATUS_FINAL)
 
     column = board.columns.order_by('order').first()
     if not column:
-        column = Column.objects.create(board=board, name='A Fazer', order=0)
+        column = Column.objects.create(board=board, name='A Fazer', order=0, column_type=Column.ColumnType.A_FAZER)
     return column
 
 
@@ -43,11 +43,13 @@ def criar_card_automatico(department, title, description, creator, assignee=None
 
 
 def mover_card_para_ultima_coluna(card):
-    """Move o card para a coluna 'Concluído' (busca pelo nome, fallback para última)."""
+    """Move o card para a coluna de Status Final (busca por column_type, fallback por nome)."""
     try:
         board = card.column.board
         coluna = (
-            board.columns.filter(name__icontains='conclu').first()
+            board.columns.filter(column_type=Column.ColumnType.STATUS_FINAL).first()
+            or board.columns.filter(name__icontains='final').first()
+            or board.columns.filter(name__icontains='conclu').first()
             or board.columns.order_by('-order').first()
         )
         if coluna and card.column_id != coluna.pk:
@@ -58,11 +60,12 @@ def mover_card_para_ultima_coluna(card):
 
 
 def mover_card_para_primeira_coluna(card):
-    """Move o card para a primeira coluna que não seja 'Concluído'."""
+    """Move o card para a primeira coluna A Fazer."""
     try:
         board = card.column.board
         coluna = (
-            board.columns.exclude(name__icontains='conclu').order_by('order').first()
+            board.columns.filter(column_type=Column.ColumnType.A_FAZER).first()
+            or board.columns.exclude(column_type=Column.ColumnType.STATUS_FINAL).order_by('order').first()
             or board.columns.order_by('order').first()
         )
         if coluna and card.column_id != coluna.pk:

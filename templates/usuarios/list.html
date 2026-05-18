@@ -15,28 +15,58 @@
     </svg>
     <h3 class="font-semibold text-amber-800 text-sm">Cadastros aguardando aprovação ({{ pending|length }})</h3>
   </div>
-  <div class="space-y-2">
+  <div class="space-y-3">
     {% for u in pending %}
-    <div class="flex items-center justify-between bg-white rounded-lg px-4 py-3 border border-amber-100">
-      <div>
-        <p class="font-medium text-gray-900 text-sm">{{ u.get_full_name|default:u.email }}</p>
-        <p class="text-xs text-gray-500">{{ u.email }} &middot; Solicitado em {{ u.date_joined|date:"d/m/Y H:i" }}</p>
+    <div class="bg-white rounded-lg border border-amber-100 overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3">
+        <div>
+          <p class="font-medium text-gray-900 text-sm">{{ u.get_full_name|default:u.email }}</p>
+          <p class="text-xs text-gray-500">{{ u.email }} &middot; Solicitado em {{ u.date_joined|date:"d/m/Y H:i" }}</p>
+        </div>
+        <button type="button"
+                onclick="document.getElementById('approve-form-{{ u.pk }}').classList.toggle('hidden')"
+                class="text-xs text-amber-700 font-medium hover:text-amber-900 underline underline-offset-2">
+          Definir cargo →
+        </button>
       </div>
-      <div class="flex items-center gap-2">
-        <form method="post" action="{% url 'core:user_approve' u.pk %}" class="inline">
+      <div id="approve-form-{{ u.pk }}" class="hidden border-t border-amber-100 bg-amber-50 px-4 py-3">
+        <form method="post" action="{% url 'core:user_approve' u.pk %}">
           {% csrf_token %}
-          <button type="submit"
-            class="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors">
-            Aprovar
-          </button>
-        </form>
-        <form method="post" action="{% url 'core:user_reject' u.pk %}" class="inline"
-          onsubmit="return confirm('Rejeitar e remover o cadastro de {{ u.get_full_name|default:u.email }}?')">
-          {% csrf_token %}
-          <button type="submit"
-            class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded-lg font-medium transition-colors">
-            Rejeitar
-          </button>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Cargo</label>
+              <select name="role" class="form-input text-sm">
+                <option value="COLABORADOR">Colaborador</option>
+                <option value="LIDER">Líder</option>
+                <option value="GERENTE">Gerente</option>
+                <option value="PRESIDENTE">Presidente</option>
+                <option value="ADMIN_TI">Administrador TI</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Departamento</label>
+              <select name="department" class="form-input text-sm">
+                <option value="">Sem departamento</option>
+                {% for dept in departments %}
+                <option value="{{ dept.pk }}">{{ dept.icon }} {{ dept.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button type="submit"
+              class="text-xs bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg font-medium transition-colors">
+              Aprovar
+            </button>
+            <form method="post" action="{% url 'core:user_reject' u.pk %}"
+              onsubmit="return confirm('Rejeitar e remover o cadastro de {{ u.get_full_name|default:u.email }}?')">
+              {% csrf_token %}
+              <button type="submit"
+                class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-4 py-1.5 rounded-lg font-medium transition-colors">
+                Rejeitar
+              </button>
+            </form>
+          </div>
         </form>
       </div>
     </div>

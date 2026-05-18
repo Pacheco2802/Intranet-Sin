@@ -5,8 +5,10 @@ app_name = 'kanban'
 
 urlpatterns = [
     path('', views.board_list, name='board_list'),
+    path('analise/', views.analise, name='analise'),
     path('novo/', views.board_create, name='board_create'),
     path('<int:pk>/', views.board_detail, name='board_detail'),
+    path('<int:pk>/acesso/', views.board_access, name='board_access'),
     path('<int:board_pk>/card/novo/', views.card_create, name='card_create'),
     path('<int:board_pk>/card/<int:pk>/', views.card_detail, name='card_detail'),
     path('<int:board_pk>/card/<int:pk>/editar/', views.card_edit, name='card_edit'),

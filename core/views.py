@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .models import CustomUser, Department, Team, LGPDConsent, AuditLog, Notification
-from .forms import LoginForm, RegisterForm, UserCreateForm, UserEditForm, ProfileForm, TeamForm, DepartmentForm
+from .forms import LoginForm, RegisterForm, UserCreateForm, UserEditForm, ProfileForm, TeamForm, DepartmentForm, ApproveUserForm
 from .middleware import AuditMiddleware
 
 # ──────────────────────────────────────────────
@@ -174,26 +174,62 @@ def lgpd_export(request):
     user = request.user
     AuditLog.log(user, AuditLog.Action.DATA_EXPORT, ip=AuditMiddleware.get_client_ip(request))
     from mensagens.models import Message
-    from kanban.models import Card
+    from kanban.models import Card, CardComment
+    from django.utils import timezone as tz
+
+    consentimentos = list(
+        user.consents.values('policy_version', 'consent_date', 'ip_address')
+    )
+    for c in consentimentos:
+        if c['consent_date']:
+            c['consent_date'] = c['consent_date'].isoformat()
+
     data = {
-        'dados_pessoais': {
-            'username': user.username,
+        'exportacao': {
+            'gerada_em': tz.now().isoformat(),
+            'titular': user.get_full_name() or user.email,
+            'lei': 'Lei nº 13.709/2018 — LGPD',
+            'controlador': 'SINSAÚDE-SP',
+            'encarregado': 'ti@sinsaudesp.org.br',
+        },
+        'dados_cadastrais': {
             'nome': user.get_full_name(),
             'email': user.email,
-            'telefone': user.phone,
-            'bio': user.bio,
-            'departamento': str(user.department) if user.department else None,
+            'telefone': user.phone or None,
+            'data_de_nascimento': user.birth_date.isoformat() if user.birth_date else None,
+            'bio': user.bio or None,
+            'foto': user.avatar.url if user.avatar else None,
             'cargo': user.get_role_display(),
+            'departamento': str(user.department) if user.department else None,
             'data_cadastro': user.date_joined.isoformat(),
-            'lgpd_consentimento': user.lgpd_consent_date.isoformat() if user.lgpd_consent_date else None,
+            'ultimo_acesso': user.last_login.isoformat() if user.last_login else None,
         },
+        'consentimentos_lgpd': consentimentos,
         'mensagens_enviadas': list(
-            Message.objects.filter(sender=user, is_deleted=False).values('content', 'sent_at')
+            Message.objects.filter(sender=user, is_deleted=False)
+            .order_by('sent_at')
+            .values('content', 'sent_at')
         ),
-        'cards_criados': list(Card.objects.filter(creator=user).values('title', 'created_at')),
+        'cards_criados': list(
+            Card.objects.filter(creator=user)
+            .order_by('created_at')
+            .values('title', 'description', 'created_at')
+        ),
+        'cards_atribuidos': list(
+            Card.objects.filter(assignee=user)
+            .order_by('created_at')
+            .values('title', 'created_at')
+        ),
+        'comentarios': list(
+            CardComment.objects.filter(author=user)
+            .order_by('created_at')
+            .values('content', 'created_at')
+        ),
     }
     response = JsonResponse(data, json_dumps_params={'ensure_ascii': False, 'indent': 2})
-    response['Content-Disposition'] = 'attachment; filename="meus_dados_lgpd.json"'
+    response['Content-Disposition'] = (
+        f'attachment; filename="dados_lgpd_{user.pk}_{tz.now().strftime("%Y%m%d")}.json"'
+    )
     return response
 
 
@@ -217,7 +253,12 @@ def user_list(request):
         return HttpResponseForbidden()
     users = CustomUser.objects.filter(is_approved=True).select_related('department').order_by('first_name', 'last_name')
     pending = CustomUser.objects.filter(is_approved=False, is_active=False).order_by('date_joined')
-    return render(request, 'usuarios/list.html', {'users': users, 'pending': pending})
+    departments = Department.objects.all().order_by('name')
+    return render(request, 'usuarios/list.html', {
+        'users': users,
+        'pending': pending,
+        'departments': departments,
+    })
 
 
 @login_required
@@ -317,9 +358,13 @@ def user_approve(request, pk):
     if not request.user.can_manage_users:
         return HttpResponseForbidden()
     target = get_object_or_404(CustomUser, pk=pk, is_approved=False)
+    form = ApproveUserForm(request.POST)
+    if form.is_valid():
+        target.role = form.cleaned_data['role']
+        target.department = form.cleaned_data['department']
     target.is_active = True
     target.is_approved = True
-    target.save(update_fields=['is_active', 'is_approved'])
+    target.save(update_fields=['is_active', 'is_approved', 'role', 'department'])
     _add_to_teams(target)
     AuditLog.log(
         request.user, AuditLog.Action.USER_APPROVE,
@@ -327,7 +372,7 @@ def user_approve(request, pk):
         ip=AuditMiddleware.get_client_ip(request),
         target_email=target.email,
     )
-    messages.success(request, f'Usuário {target.get_full_name() or target.email} aprovado.')
+    messages.success(request, f'Usuário {target.get_full_name() or target.email} aprovado como {target.get_role_display()}.')
     return redirect('core:user_list')
 
 

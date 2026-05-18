@@ -3,6 +3,9 @@
 {% block page_title %}{{ board.name }}{% endblock %}
 {% block topbar_actions %}
 <a href="{% url 'kanban:board_list' %}" class="btn-secondary text-xs">← Quadros</a>
+{% if user.can_manage_users %}
+<a href="{% url 'kanban:board_access' board.pk %}" class="btn-secondary text-xs">Acessos</a>
+{% endif %}
 <a href="{% url 'kanban:card_create' board.pk %}" class="btn-primary text-xs">+ Card</a>
 {% endblock %}
 

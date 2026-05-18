@@ -1,52 +1,162 @@
 {% extends "base.html" %}
 {% block auth_content %}
 <div class="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-  <div class="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-8">
-    <div class="flex items-center gap-3 mb-6">
-      <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+  <div class="w-full max-w-2xl bg-white rounded-2xl shadow-lg overflow-hidden">
+
+    <!-- Cabeçalho -->
+    <div class="bg-gradient-to-r from-blue-700 to-blue-600 px-8 py-6 text-white">
+      <div class="flex items-center gap-3 mb-1">
+        <svg class="w-6 h-6 opacity-80 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+        <h1 class="text-xl font-bold">Aviso de Privacidade e Proteção de Dados</h1>
       </div>
-      <div>
-        <h1 class="text-xl font-bold text-gray-900">Política de Privacidade — LGPD</h1>
-        <p class="text-sm text-gray-500">Lei Geral de Proteção de Dados — Lei nº 13.709/2018</p>
-      </div>
+      <p class="text-blue-200 text-sm">SINSAÚDE-SP · Lei nº 13.709/2018 — LGPD · Versão 1.0 · Maio/2026</p>
     </div>
 
-    <div class="prose prose-sm text-gray-600 max-h-96 overflow-y-auto border border-gray-100 rounded-lg p-4 mb-6 bg-gray-50">
-      <h3>Coleta e uso de dados</h3>
-      <p>Esta intranet coleta e processa os seguintes dados pessoais para fins exclusivamente corporativos:</p>
-      <ul>
-        <li><strong>Nome completo e e-mail:</strong> identificação do colaborador</li>
-        <li><strong>Telefone e bio (opcionais):</strong> facilitar comunicação interna</li>
-        <li><strong>Mensagens trocadas:</strong> comunicação entre colaboradores</li>
-        <li><strong>Atividades no Kanban:</strong> acompanhamento de tarefas</li>
-        <li><strong>Logs de acesso:</strong> segurança e conformidade</li>
-      </ul>
-      <h3>Base legal</h3>
-      <p>O tratamento de dados ocorre com base no legítimo interesse do empregador (Art. 7º, IX da LGPD) para fins de gestão corporativa e comunicação interna.</p>
-      <h3>Seus direitos</h3>
-      <ul>
-        <li>Acessar e exportar seus dados (disponível em <em>LGPD › Exportar meus dados</em>)</li>
-        <li>Solicitar correção de dados incorretos</li>
-        <li>Solicitar anonimização ao TI</li>
-      </ul>
-      <h3>Retenção</h3>
-      <p>Os dados são mantidos durante o vínculo empregatício e pelo período exigido por lei após o encerramento.</p>
-      <h3>Controlador</h3>
-      <p>O controlador dos dados é a organização. Dúvidas: <strong>ti@sinsaudesp.org.br</strong></p>
-    </div>
+    <!-- Corpo -->
+    <div class="px-8 py-6">
+      <p class="text-sm text-gray-600 mb-4">
+        Antes de acessar o sistema, leia com atenção as informações abaixo sobre como o
+        <strong class="text-gray-800">SINSAÚDE-SP</strong> trata seus dados pessoais no âmbito desta intranet corporativa.
+      </p>
 
-    <form method="post">
-      {% csrf_token %}
-      <label class="flex items-start gap-3 mb-6 cursor-pointer group" x-data="{ checked: false }">
-        <input type="checkbox" name="accept" required x-model="checked" class="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-        <span class="text-sm text-gray-700">Li e concordo com a <strong>Política de Privacidade</strong> e autorizo o tratamento dos meus dados pessoais conforme descrito acima.</span>
-      </label>
-      <div class="flex gap-3">
-        <button type="submit" class="btn-primary flex-1 py-2.5 text-center">Concordar e continuar</button>
-        <a href="{% url 'core:logout' %}" class="btn-secondary flex-1 py-2.5 text-center">Sair</a>
+      <!-- Caixa rolável com a política resumida -->
+      <div id="policy-box"
+           class="max-h-64 overflow-y-auto border border-gray-200 rounded-xl p-5 mb-5 bg-gray-50 text-sm text-gray-600 space-y-4"
+           onscroll="checkScroll(this)">
+
+        <div>
+          <p class="font-semibold text-gray-800 mb-1">1. Quem é o responsável pelos seus dados?</p>
+          <p>O <strong>controlador</strong> é o SINSAÚDE-SP. O <strong>Encarregado (DPO)</strong> é o Setor de TI: <a href="mailto:ti@sinsaudesp.org.br" class="text-blue-600 underline">ti@sinsaudesp.org.br</a>.</p>
+        </div>
+
+        <div>
+          <p class="font-semibold text-gray-800 mb-1">2. Quais dados são coletados?</p>
+          <ul class="list-disc list-inside space-y-0.5 ml-1">
+            <li><strong>Obrigatórios:</strong> nome, e-mail, cargo e departamento</li>
+            <li><strong>Opcionais (com seu consentimento):</strong> telefone, foto, data de nascimento e bio</li>
+            <li><strong>Gerados pelo uso:</strong> mensagens, atividades em Kanban, atendimentos e logs de acesso (IP, horário)</li>
+          </ul>
+          <p class="mt-1 text-xs text-gray-400">Não coletamos dados sensíveis como saúde, biometria ou origem racial.</p>
+        </div>
+
+        <div>
+          <p class="font-semibold text-gray-800 mb-1">3. Para que os dados são usados?</p>
+          <ul class="list-disc list-inside space-y-0.5 ml-1">
+            <li>Identificação e autenticação no sistema (base: execução de contrato)</li>
+            <li>Comunicação interna entre equipes (base: execução de contrato)</li>
+            <li>Gestão de tarefas e atendimento a filiados (base: execução de contrato)</li>
+            <li>Segurança e auditoria de ações (base: legítimo interesse)</li>
+            <li>Dados opcionais do perfil (base: consentimento — revogável a qualquer momento)</li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="font-semibold text-gray-800 mb-1">4. Compartilhamento</p>
+          <p>Seus dados <strong>não são compartilhados com terceiros</strong> para fins comerciais. O acesso interno é restrito ao cargo de cada colaborador.</p>
+        </div>
+
+        <div>
+          <p class="font-semibold text-gray-800 mb-1">5. Por quanto tempo?</p>
+          <p>Durante o vínculo empregatício. Após o encerramento: dados funcionais por 5 anos (prazo trabalhista), logs por 2 anos. Dados opcionais eliminados ou anonimizados a seu pedido.</p>
+        </div>
+
+        <div>
+          <p class="font-semibold text-gray-800 mb-1">6. Seus direitos (Art. 18 da LGPD)</p>
+          <ul class="list-disc list-inside space-y-0.5 ml-1">
+            <li>Acessar e exportar seus dados (disponível no perfil)</li>
+            <li>Corrigir dados incompletos ou desatualizados</li>
+            <li>Solicitar anonimização ou eliminação dos dados opcionais</li>
+            <li>Revogar o consentimento para dados opcionais a qualquer momento</li>
+            <li>Peticionar à ANPD em caso de irregularidade</li>
+          </ul>
+          <p class="mt-1 text-xs text-gray-400">Prazo de resposta: até 15 dias úteis após solicitação ao Encarregado.</p>
+        </div>
+
+        <div class="border-t border-gray-200 pt-3">
+          <p class="text-xs text-gray-400">
+            Esta política está disponível integralmente em
+            <strong>Meu Perfil › Privacidade › Política de Privacidade</strong>
+            e pode ser atualizada. Alterações relevantes serão comunicadas pelo sistema de comunicados.
+          </p>
+        </div>
       </div>
-    </form>
+
+      <!-- Indicador de leitura -->
+      <div id="scroll-hint" class="flex items-center gap-1.5 text-xs text-amber-600 mb-4">
+        <svg class="w-3.5 h-3.5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+        Role até o final para habilitar a confirmação
+      </div>
+      <div id="scroll-done" class="hidden flex items-center gap-1.5 text-xs text-green-600 mb-4">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        Leitura concluída
+      </div>
+
+      <!-- Formulário -->
+      <form method="post" id="consent-form">
+        {% csrf_token %}
+        <label id="consent-label" class="flex items-start gap-3 mb-5 cursor-not-allowed opacity-40 select-none" id="consent-label">
+          <input type="checkbox" name="accept" id="accept-checkbox" required disabled
+                 class="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-not-allowed">
+          <span class="text-sm text-gray-700 leading-relaxed">
+            Li na íntegra e compreendi a <strong>Política de Privacidade e Proteção de Dados</strong> do SINSAÚDE-SP.
+            Autorizo o tratamento dos meus dados pessoais <strong>obrigatórios</strong> para fins de gestão e comunicação interna,
+            conforme a Lei nº 13.709/2018 (LGPD), e declaro estar ciente de que poderei exercer meus direitos
+            a qualquer momento pelo contato <a href="mailto:ti@sinsaudesp.org.br" class="text-blue-600 underline">ti@sinsaudesp.org.br</a>.
+          </span>
+        </label>
+        <div class="flex gap-3">
+          <button type="submit" id="submit-btn" disabled
+                  class="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-blue-200 text-blue-400 cursor-not-allowed transition-all duration-300"
+                  title="Role o texto até o final para confirmar">
+            Concordar e acessar o sistema
+          </button>
+          <a href="{% url 'core:logout' %}"
+             class="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors text-center">
+            Sair
+          </a>
+        </div>
+        <p class="text-xs text-gray-400 text-center mt-3">
+          Ao confirmar, fica registrado seu consentimento com data, hora e endereço IP para fins de conformidade legal.
+        </p>
+      </form>
+    </div>
   </div>
 </div>
+
+<script>
+function checkScroll(el) {
+  const scrolled = el.scrollHeight - el.scrollTop - el.clientHeight < 10;
+  const checkbox = document.getElementById('accept-checkbox');
+  const btn = document.getElementById('submit-btn');
+  const label = document.getElementById('consent-label');
+  const hint = document.getElementById('scroll-hint');
+  const done = document.getElementById('scroll-done');
+
+  if (scrolled) {
+    checkbox.disabled = false;
+    label.style.cursor = 'pointer';
+    label.classList.remove('opacity-40', 'cursor-not-allowed');
+    hint.classList.add('hidden');
+    done.classList.remove('hidden');
+
+    checkbox.addEventListener('change', function () {
+      if (this.checked) {
+        btn.disabled = false;
+        btn.classList.remove('bg-blue-200', 'text-blue-400', 'cursor-not-allowed');
+        btn.classList.add('bg-blue-600', 'hover:bg-blue-700', 'text-white', 'cursor-pointer');
+      } else {
+        btn.disabled = true;
+        btn.classList.add('bg-blue-200', 'text-blue-400', 'cursor-not-allowed');
+        btn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'text-white', 'cursor-pointer');
+      }
+    });
+  }
+}
+</script>
 {% endblock %}

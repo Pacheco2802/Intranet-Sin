@@ -40,8 +40,17 @@ class Board(models.Model):
 
 
 class Column(models.Model):
+    class ColumnType(models.TextChoices):
+        A_FAZER = 'a_fazer', 'A Fazer'
+        EM_ANDAMENTO = 'em_andamento', 'Em Andamento'
+        STATUS_FINAL = 'status_final', 'Status Final'
+
     board = models.ForeignKey(Board, on_delete=models.CASCADE, related_name='columns', verbose_name='Quadro')
     name = models.CharField('Nome', max_length=80)
+    column_type = models.CharField(
+        'Tipo', max_length=20, choices=ColumnType.choices,
+        default=ColumnType.A_FAZER,
+    )
     order = models.PositiveSmallIntegerField('Ordem', default=0)
     color = models.CharField('Cor', max_length=7, default='#64748b')
     wip_limit = models.PositiveSmallIntegerField('Limite WIP', default=0, help_text='0 = sem limite')
@@ -91,6 +100,14 @@ class Card(models.Model):
     source_atendimento_id = models.PositiveIntegerField(
         'ID do atendimento de origem', null=True, blank=True
     )
+    final_status = models.CharField('Status final', max_length=20, blank=True, default='',
+        choices=[
+            ('concluido', 'Concluído'),
+            ('nao_concluido', 'Não concluído'),
+            ('cancelado', 'Cancelado'),
+        ]
+    )
+    final_notes = models.TextField('Observações de conclusão', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

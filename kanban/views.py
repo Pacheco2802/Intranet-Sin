@@ -65,10 +65,9 @@ def board_create(request):
         board.save()
         form.save_m2m()
         Column.objects.bulk_create([
-            Column(board=board, name='A Fazer',      order=0, color='#64748b'),
-            Column(board=board, name='Em Andamento', order=1, color='#3b82f6'),
-            Column(board=board, name='Em Revisão',   order=2, color='#f59e0b'),
-            Column(board=board, name='Concluído',    order=3, color='#22c55e'),
+            Column(board=board, name='A Fazer',      order=0, color='#64748b', column_type=Column.ColumnType.A_FAZER),
+            Column(board=board, name='Em Andamento', order=1, color='#3b82f6', column_type=Column.ColumnType.EM_ANDAMENTO),
+            Column(board=board, name='Status Final', order=2, color='#22c55e', column_type=Column.ColumnType.STATUS_FINAL),
         ])
         messages.success(request, f'Quadro "{board.name}" criado.')
         return redirect('kanban:board_detail', pk=board.pk)
@@ -99,6 +98,18 @@ def card_detail(request, board_pk, pk):
                 c.save()
                 CardActivity.objects.create(card=card, user=request.user, action='Comentou no card')
                 return redirect('kanban:card_detail', board_pk=board.pk, pk=card.pk)
+        elif action == 'final_status':
+            new_status = request.POST.get('final_status', '')
+            valid = [c[0] for c in Card._meta.get_field('final_status').choices]
+            if new_status in valid or new_status == '':
+                card.final_status = new_status
+                card.final_notes = request.POST.get('final_notes', '')
+                card.save(update_fields=['final_status', 'final_notes'])
+                CardActivity.objects.create(
+                    card=card, user=request.user,
+                    action=f'Registrou status final: {card.get_final_status_display() or "—"}'
+                )
+            return redirect('kanban:card_detail', board_pk=board.pk, pk=card.pk)
         elif action == 'subtask':
             subtask_form = SubTaskForm(request.POST)
             if subtask_form.is_valid():
@@ -134,6 +145,8 @@ def card_detail(request, board_pk, pk):
 
     subtasks = card.subtasks.select_related('assignee', 'target_department').prefetch_related('anexos__enviado_por')
     done_count = subtasks.filter(is_done=True).count()
+    is_status_final = card.column.column_type == Column.ColumnType.STATUS_FINAL
+    final_status_choices = Card._meta.get_field('final_status').choices
     return render(request, 'kanban/card_detail.html', {
         'board': board,
         'card': card,
@@ -141,6 +154,8 @@ def card_detail(request, board_pk, pk):
         'subtask_form': subtask_form,
         'subtasks': subtasks,
         'done_count': done_count,
+        'is_status_final': is_status_final,
+        'final_status_choices': final_status_choices,
     })
 
 
@@ -296,6 +311,94 @@ def card_delete(request, board_pk, pk):
     card.delete()
     messages.success(request, 'Card excluído.')
     return redirect('kanban:board_detail', pk=board.pk)
+
+
+@login_required
+def board_access(request, pk):
+    """Gerencia quem tem acesso de exceção a um board (apenas ADMIN_TI)."""
+    if not request.user.can_manage_users:
+        return HttpResponseForbidden()
+    board = get_object_or_404(Board, pk=pk)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        user_id = request.POST.get('user_id')
+        if user_id:
+            from core.models import CustomUser as CU
+            target = get_object_or_404(CU, pk=user_id)
+            if action == 'add':
+                board.members.add(target)
+                messages.success(request, f'{target.get_full_name() or target.email} pode acessar "{board.name}".')
+            elif action == 'remove':
+                board.members.remove(target)
+                messages.success(request, f'Acesso de {target.get_full_name() or target.email} removido.')
+        return redirect('kanban:board_access', pk=pk)
+
+    from core.models import CustomUser as CU, Department
+    current_members = board.members.select_related('department').order_by('first_name')
+    dept_users = CU.objects.filter(
+        is_active=True, is_approved=True
+    ).exclude(
+        pk__in=board.members.values('pk')
+    ).select_related('department').order_by('first_name')
+    return render(request, 'kanban/board_access.html', {
+        'board': board,
+        'current_members': current_members,
+        'dept_users': dept_users,
+    })
+
+
+@login_required
+def analise(request):
+    if not (request.user.can_see_all or request.user.role in ('GERENTE', 'LIDER')):
+        return HttpResponseForbidden()
+
+    from django.utils import timezone
+    from core.models import Department
+
+    today = timezone.now().date()
+    CT = Column.ColumnType
+
+    all_cards = Card.objects.select_related('column')
+    total = all_cards.count()
+    a_fazer = all_cards.filter(column__column_type=CT.A_FAZER).count()
+    em_andamento = all_cards.filter(column__column_type=CT.EM_ANDAMENTO).count()
+    status_final = all_cards.filter(column__column_type=CT.STATUS_FINAL).count()
+
+    ativas_com_prazo = all_cards.exclude(column__column_type=CT.STATUS_FINAL).filter(due_date__isnull=False)
+    no_prazo = ativas_com_prazo.filter(due_date__gte=today).count()
+    vencidos = ativas_com_prazo.filter(due_date__lt=today).count()
+
+    concluidos = all_cards.filter(final_status='concluido').count()
+    nao_concluidos = all_cards.filter(final_status='nao_concluido').count()
+    cancelados = all_cards.filter(final_status='cancelado').count()
+
+    dept_stats = []
+    for dept in Department.objects.filter(boards__isnull=False).distinct().order_by('name'):
+        dc = Card.objects.filter(column__board__department=dept)
+        dept_stats.append({
+            'dept': dept,
+            'total': dc.count(),
+            'a_fazer': dc.filter(column__column_type=CT.A_FAZER).count(),
+            'em_andamento': dc.filter(column__column_type=CT.EM_ANDAMENTO).count(),
+            'status_final': dc.filter(column__column_type=CT.STATUS_FINAL).count(),
+            'vencidos': dc.exclude(column__column_type=CT.STATUS_FINAL).filter(
+                due_date__lt=today, due_date__isnull=False
+            ).count(),
+        })
+
+    return render(request, 'kanban/analise.html', {
+        'total': total,
+        'a_fazer': a_fazer,
+        'em_andamento': em_andamento,
+        'status_final': status_final,
+        'no_prazo': no_prazo,
+        'vencidos': vencidos,
+        'concluidos': concluidos,
+        'nao_concluidos': nao_concluidos,
+        'cancelados': cancelados,
+        'dept_stats': dept_stats,
+    })
 
 
 def _notify_subtask(subtask, actor):
