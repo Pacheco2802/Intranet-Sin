@@ -3,6 +3,21 @@ import re
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
+from core.encryption import EncryptedCharField, EncryptedDateField
+
+
+def _anonymize_ip(ip: str) -> str:
+    """Mascara os dois últimos octetos do IPv4 (ou últimos 80 bits do IPv6)."""
+    if not ip:
+        return ip
+    if ':' in ip:
+        # IPv6: zera a parte de host (últimos 5 grupos de 4 hex)
+        parts = ip.split(':')
+        return ':'.join(parts[:3] + ['0', '0', '0', '0', '0'])
+    parts = ip.split('.')
+    if len(parts) == 4:
+        return f'{parts[0]}.{parts[1]}.0.0'
+    return ip
 
 
 class Department(models.Model):
@@ -41,9 +56,9 @@ class CustomUser(AbstractUser):
     )
     role = models.CharField('Cargo', max_length=20, choices=Role.choices, default=Role.COLABORADOR)
     avatar = models.ImageField('Avatar', upload_to='avatars/', null=True, blank=True)
-    phone = models.CharField('Telefone', max_length=20, blank=True)
+    phone = EncryptedCharField('Telefone', max_length=200, blank=True)
     bio = models.TextField('Bio', blank=True)
-    birth_date = models.DateField('Data de nascimento', null=True, blank=True)
+    birth_date = EncryptedDateField('Data de nascimento', null=True, blank=True)
     is_approved = models.BooleanField('Aprovado', default=False)
     lgpd_consent = models.BooleanField('Consentimento LGPD', default=False)
     lgpd_consent_date = models.DateTimeField('Data do consentimento', null=True, blank=True)
@@ -209,7 +224,7 @@ class AuditLog(models.Model):
             action=action,
             resource_type=resource_type,
             resource_id=str(resource_id),
-            ip_address=ip,
+            ip_address=_anonymize_ip(ip) if ip else None,
             detail=detail,
         )
 

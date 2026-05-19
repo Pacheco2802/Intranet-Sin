@@ -1,8 +1,20 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.utils.text import slugify
 from .models import CustomUser, Department, Team
+
+_AVATAR_MAX_SIZE = 2 * 1024 * 1024  # 2 MB
+_AVATAR_ALLOWED = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
+
+
+def _validate_avatar(f):
+    if f and hasattr(f, 'content_type'):
+        if f.content_type not in _AVATAR_ALLOWED:
+            raise ValidationError('Apenas imagens JPEG, PNG, GIF ou WebP são permitidas.')
+        if f.size > _AVATAR_MAX_SIZE:
+            raise ValidationError('A imagem não pode exceder 2 MB.')
 
 
 class LoginForm(forms.Form):
@@ -27,6 +39,15 @@ class RegisterForm(forms.Form):
         if CustomUser.objects.filter(email__iexact=email).exists():
             raise ValidationError('Este e-mail já está cadastrado.')
         return email
+
+    def clean_password1(self):
+        password = self.cleaned_data.get('password1')
+        if password:
+            try:
+                validate_password(password)
+            except ValidationError as e:
+                raise ValidationError(e.messages)
+        return password
 
     def clean(self):
         cleaned = super().clean()
@@ -57,6 +78,11 @@ class UserEditForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs['class'] = 'form-input'
+
+    def clean_avatar(self):
+        avatar = self.cleaned_data.get('avatar')
+        _validate_avatar(avatar)
+        return avatar
 
 
 class DepartmentForm(forms.ModelForm):
@@ -134,3 +160,8 @@ class ProfileForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs['class'] = 'form-input'
+
+    def clean_avatar(self):
+        avatar = self.cleaned_data.get('avatar')
+        _validate_avatar(avatar)
+        return avatar

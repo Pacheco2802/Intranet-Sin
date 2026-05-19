@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
@@ -7,8 +8,9 @@ from django.utils.timezone import now
 
 from core.models import AuditLog, Notification, CustomUser
 from core.middleware import AuditMiddleware
+from core.validators import validate_file_extension, validate_file_size
 from kanban.utils import criar_card_automatico
-from .models import Atendimento, AtendimentoEtapa, AtendimentoAnexo
+from .models import Atendimento, AtendimentoEtapa, AtendimentoAnexo, _cpf_hash
 from .forms import (
     AtendimentoForm, EtapaNotaForm, EncaminharForm,
     ConcluirForm, AtendimentoFilterForm,
@@ -37,14 +39,17 @@ def _pode_agir(atendimento, user):
 
 
 def _salvar_anexo(arquivo, atendimento, etapa, user):
-    if arquivo:
-        AtendimentoAnexo.objects.create(
-            atendimento=atendimento,
-            etapa=etapa,
-            arquivo=arquivo,
-            nome_original=arquivo.name,
-            enviado_por=user,
-        )
+    if not arquivo:
+        return None
+    validate_file_extension(arquivo)
+    validate_file_size(arquivo)
+    return AtendimentoAnexo.objects.create(
+        atendimento=atendimento,
+        etapa=etapa,
+        arquivo=arquivo,
+        nome_original=arquivo.name,
+        enviado_por=user,
+    )
 
 
 def _notificar_encaminhamento(atendimento, para_dept, actor):
@@ -81,10 +86,7 @@ def atendimento_list(request):
 
         if cpf:
             cpf_filtro = cpf
-            cpf_limpo = ''.join(c for c in cpf if c.isdigit())
-            qs = _qs_visivel(request.user).filter(
-                Q(cpf__icontains=cpf) | Q(cpf__icontains=cpf_limpo)
-            ).distinct()
+            qs = _qs_visivel(request.user).filter(cpf_hash=_cpf_hash(cpf))
         if nome:
             qs = qs.filter(nome_filiado__icontains=nome)
         if status:
@@ -117,7 +119,12 @@ def atendimento_create(request):
             departamento=request.user.department,
             descricao=at.descricao or 'Atendimento aberto.',
         )
-        _salvar_anexo(request.FILES.get('arquivo'), at, etapa, request.user)
+        try:
+            _salvar_anexo(request.FILES.get('arquivo'), at, etapa, request.user)
+        except ValidationError as e:
+            messages.error(request, e.message)
+            at.delete()
+            return render(request, 'atendimento/form.html', {'form': form})
 
         criar_card_automatico(
             department=at.departamento_atual,

@@ -256,5 +256,22 @@
     <a href="mailto:ti@sinsaudesp.org.br" class="btn-secondary text-sm">Contatar o Encarregado</a>
   </div>
 
+  <!-- Solicitação de eliminação -->
+  <div class="card border-l-4 border-l-red-400 mt-2">
+    <h3 class="font-semibold text-gray-900 mb-2 text-sm">Solicitar eliminação de dados (Art. 18, VI da LGPD)</h3>
+    <p class="text-xs text-gray-500 mb-3">
+      Você pode solicitar a eliminação dos seus dados pessoais opcionais. Dados obrigatórios para fins legais e trabalhistas serão mantidos pelo prazo exigido em lei.
+    </p>
+    <form method="post" action="{% url 'core:lgpd_request_deletion' %}"
+          onsubmit="return confirm('Confirma a solicitação de eliminação de dados? O Encarregado entrará em contato em até 15 dias úteis.')">
+      {% csrf_token %}
+      <textarea name="motivo" rows="2" placeholder="Descreva o motivo (opcional)..."
+                class="form-input w-full text-sm mb-2"></textarea>
+      <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors">
+        Enviar solicitação de eliminação
+      </button>
+    </form>
+  </div>
+
 </div>
 {% endblock %}

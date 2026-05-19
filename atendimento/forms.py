@@ -1,6 +1,21 @@
+import re
 from django import forms
+from django.core.exceptions import ValidationError
 from core.models import Department, CustomUser
+from core.validators import validate_file_extension, validate_file_size
 from .models import Atendimento, AtendimentoEtapa, AtendimentoAnexo
+
+
+def _validate_cpf(cpf: str) -> bool:
+    digits = re.sub(r'\D', '', cpf)
+    if len(digits) != 11 or len(set(digits)) == 1:
+        return False
+    for pos in range(9, 11):
+        total = sum(int(d) * (pos + 1 - i) for i, d in enumerate(digits[:pos]))
+        expected = (total * 10 % 11) % 10
+        if expected != int(digits[pos]):
+            return False
+    return True
 
 
 class AtendimentoForm(forms.ModelForm):
@@ -19,6 +34,13 @@ class AtendimentoForm(forms.ModelForm):
             'descricao': forms.Textarea(attrs={'rows': 4, 'class': 'form-input', 'placeholder': 'Descreva o motivo do atendimento...'}),
         }
 
+    def clean_cpf(self):
+        cpf = self.cleaned_data.get('cpf', '')
+        if not _validate_cpf(cpf):
+            raise ValidationError('CPF inválido. Verifique os dígitos informados.')
+        digits = re.sub(r'\D', '', cpf)
+        return f'{digits[:3]}.{digits[3:6]}.{digits[6:9]}-{digits[9:]}'
+
 
 class EtapaNotaForm(forms.Form):
     descricao = forms.CharField(
@@ -28,7 +50,8 @@ class EtapaNotaForm(forms.Form):
     arquivo = forms.FileField(
         label='Anexar arquivo (opcional)',
         required=False,
-        widget=forms.FileInput(attrs={'class': 'form-input'})
+        widget=forms.FileInput(attrs={'class': 'form-input'}),
+        validators=[validate_file_extension, validate_file_size],
     )
 
 
@@ -54,7 +77,8 @@ class ConcluirForm(forms.Form):
     arquivo = forms.FileField(
         label='Anexar arquivo (opcional)',
         required=False,
-        widget=forms.FileInput(attrs={'class': 'form-input'})
+        widget=forms.FileInput(attrs={'class': 'form-input'}),
+        validators=[validate_file_extension, validate_file_size],
     )
 
 

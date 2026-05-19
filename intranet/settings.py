@@ -114,6 +114,11 @@ else:
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Chave de criptografia simétrica para campos sensíveis (CPF, telefone)
+# Deve ser uma chave Fernet de 32 bytes em base64. Gere com:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+FIELD_ENCRYPTION_KEY = config('FIELD_ENCRYPTION_KEY', default='')
+
 AUTHENTICATION_BACKENDS = [
     'core.backends.EmailBackend',
     'django.contrib.auth.backends.ModelBackend',
@@ -140,3 +145,4 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 31536000  # 1 ano
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True

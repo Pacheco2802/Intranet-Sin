@@ -13,6 +13,7 @@ urlpatterns = [
     path('lgpd/consentimento/', views.lgpd_consent, name='lgpd_consent'),
     path('lgpd/politica/', views.lgpd_policy, name='lgpd_policy'),
     path('lgpd/exportar/', views.lgpd_export, name='lgpd_export'),
+    path('lgpd/solicitar-exclusao/', views.lgpd_request_deletion, name='lgpd_request_deletion'),
 
     path('usuarios/', views.user_list, name='user_list'),
     path('usuarios/novo/', views.user_create, name='user_create'),

@@ -1,6 +1,7 @@
 import json
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.db.models import Count, Q
 from django.db.models import Prefetch
 from django.http import JsonResponse, HttpResponseForbidden
@@ -9,6 +10,7 @@ from django.views.decorators.http import require_POST
 
 from core.models import AuditLog, Notification, CustomUser
 from core.middleware import AuditMiddleware
+from core.validators import validate_file_extension, validate_file_size
 from .models import Board, Column, Card, CardComment, CardActivity, SubTask, SubTaskAnexo
 from .forms import BoardForm, ColumnForm, CardForm, CardCommentForm, SubTaskForm
 from .utils import criar_card_automatico, mover_card_para_ultima_coluna, mover_card_para_primeira_coluna
@@ -201,6 +203,12 @@ def subtask_attach(request, pk):
         return HttpResponseForbidden()
     arquivo = request.FILES.get('arquivo')
     if arquivo:
+        try:
+            validate_file_extension(arquivo)
+            validate_file_size(arquivo)
+        except ValidationError as e:
+            messages.error(request, e.message)
+            return redirect('kanban:card_detail', board_pk=board.pk, pk=st.card.pk)
         SubTaskAnexo.objects.create(
             subtask=st,
             arquivo=arquivo,

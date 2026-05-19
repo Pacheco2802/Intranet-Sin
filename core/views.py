@@ -3,11 +3,12 @@ from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponseForbidden
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404, resolve_url
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from .models import CustomUser, Department, Team, LGPDConsent, AuditLog, Notification
+from .models import CustomUser, Department, Team, LGPDConsent, AuditLog, Notification, _anonymize_ip
 from .forms import LoginForm, RegisterForm, UserCreateForm, UserEditForm, ProfileForm, TeamForm, DepartmentForm, ApproveUserForm
 from .middleware import AuditMiddleware
 
@@ -41,7 +42,10 @@ def login_view(request):
         if user:
             login(request, user)
             AuditLog.log(user, AuditLog.Action.LOGIN, ip=AuditMiddleware.get_client_ip(request))
-            return redirect(request.GET.get('next', '/'))
+            next_url = request.GET.get('next', '')
+            if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+                next_url = resolve_url('/')
+            return redirect(next_url)
         try:
             pending = CustomUser.objects.get(email__iexact=form.cleaned_data['email'])
             if not pending.is_approved:
@@ -154,8 +158,11 @@ def lgpd_consent(request):
     if request.user.lgpd_consent:
         return redirect('core:dashboard')
     if request.method == 'POST':
-        ip = AuditMiddleware.get_client_ip(request)
-        LGPDConsent.objects.create(user=request.user, ip_address=ip or '0.0.0.0')
+        if request.POST.get('accept') != 'on':
+            messages.error(request, 'Você precisa marcar a caixa de leitura para prosseguir.')
+            return render(request, 'lgpd/consent.html')
+        ip = _anonymize_ip(AuditMiddleware.get_client_ip(request) or '0.0.0.0')
+        LGPDConsent.objects.create(user=request.user, ip_address=ip)
         request.user.lgpd_consent = True
         request.user.lgpd_consent_date = timezone.now()
         request.user.save(update_fields=['lgpd_consent', 'lgpd_consent_date'])
@@ -170,8 +177,32 @@ def lgpd_policy(request):
 
 
 @login_required
+@require_POST
+def lgpd_request_deletion(request):
+    """Registra solicitação formal de eliminação de dados (Art. 18, VI da LGPD)."""
+    AuditLog.log(
+        request.user, AuditLog.Action.DATA_EXPORT,
+        resource_type='DeletionRequest',
+        ip=AuditMiddleware.get_client_ip(request),
+        motivo=request.POST.get('motivo', ''),
+    )
+    messages.success(
+        request,
+        'Sua solicitação de eliminação de dados foi registrada. '
+        'O Encarregado (ti@sinsaudesp.org.br) entrará em contato em até 15 dias úteis.',
+    )
+    return redirect('core:lgpd_policy')
+
+
+@login_required
 def lgpd_export(request):
+    from django.core.cache import cache
     user = request.user
+    cache_key = f'lgpd_export_{user.pk}'
+    if cache.get(cache_key):
+        messages.error(request, 'Aguarde antes de exportar novamente.')
+        return redirect('core:profile')
+    cache.set(cache_key, True, 120)
     AuditLog.log(user, AuditLog.Action.DATA_EXPORT, ip=AuditMiddleware.get_client_ip(request))
     from mensagens.models import Message
     from kanban.models import Card, CardComment
@@ -183,6 +214,15 @@ def lgpd_export(request):
     for c in consentimentos:
         if c['consent_date']:
             c['consent_date'] = c['consent_date'].isoformat()
+
+    audit_logs = list(
+        AuditLog.objects.filter(user=user)
+        .order_by('timestamp')
+        .values('action', 'resource_type', 'resource_id', 'timestamp')
+    )
+    for entry in audit_logs:
+        if entry['timestamp']:
+            entry['timestamp'] = entry['timestamp'].isoformat()
 
     data = {
         'exportacao': {
@@ -205,6 +245,7 @@ def lgpd_export(request):
             'ultimo_acesso': user.last_login.isoformat() if user.last_login else None,
         },
         'consentimentos_lgpd': consentimentos,
+        'logs_de_auditoria': audit_logs,
         'mensagens_enviadas': list(
             Message.objects.filter(sender=user, is_deleted=False)
             .order_by('sent_at')
@@ -588,6 +629,8 @@ def notification_list(request):
 def notification_mark_read(request, pk):
     Notification.objects.filter(pk=pk, user=request.user).update(is_read=True)
     next_url = request.POST.get('next', request.META.get('HTTP_REFERER', '/'))
+    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        next_url = '/'
     return redirect(next_url)
 
 
@@ -595,7 +638,10 @@ def notification_mark_read(request, pk):
 @require_POST
 def notification_mark_all_read(request):
     request.user.notifications.filter(is_read=False).update(is_read=True)
-    return redirect(request.META.get('HTTP_REFERER', '/'))
+    referer = request.META.get('HTTP_REFERER', '/')
+    if not url_has_allowed_host_and_scheme(referer, allowed_hosts={request.get_host()}):
+        referer = '/'
+    return redirect(referer)
 
 
 # ── Logs de Auditoria (ADMIN_TI only) ─────────

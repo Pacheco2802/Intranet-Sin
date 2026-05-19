@@ -1,6 +1,14 @@
+import hashlib
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from core.encryption import EncryptedCharField
+from core.validators import validate_file_extension, validate_file_size
+
+
+def _cpf_hash(cpf: str) -> str:
+    digits = ''.join(c for c in (cpf or '') if c.isdigit())
+    return hashlib.sha256(digits.encode()).hexdigest() if digits else ''
 
 
 class Atendimento(models.Model):
@@ -19,9 +27,10 @@ class Atendimento(models.Model):
         'CANCELADO': '#ef4444',
     }
 
-    cpf = models.CharField('CPF', max_length=14)
+    cpf = EncryptedCharField('CPF', max_length=200)
+    cpf_hash = models.CharField('Hash do CPF', max_length=64, blank=True, db_index=True)
     nome_filiado = models.CharField('Nome do filiado', max_length=200)
-    telefone = models.CharField('Telefone', max_length=20, blank=True)
+    telefone = EncryptedCharField('Telefone', max_length=200, blank=True)
     email_filiado = models.EmailField('E-mail do filiado', blank=True)
 
     assunto = models.CharField('Assunto', max_length=200)
@@ -52,6 +61,10 @@ class Atendimento(models.Model):
         verbose_name = 'Atendimento'
         verbose_name_plural = 'Atendimentos'
         ordering = ['-updated_at']
+
+    def save(self, *args, **kwargs):
+        self.cpf_hash = _cpf_hash(self.cpf)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f'{self.nome_filiado} — {self.assunto}'
@@ -119,7 +132,10 @@ class AtendimentoAnexo(models.Model):
         AtendimentoEtapa, on_delete=models.CASCADE, null=True, blank=True,
         related_name='anexos', verbose_name='Etapa'
     )
-    arquivo = models.FileField('Arquivo', upload_to='atendimentos/%Y/%m/')
+    arquivo = models.FileField(
+        'Arquivo', upload_to='atendimentos/%Y/%m/',
+        validators=[validate_file_extension, validate_file_size],
+    )
     nome_original = models.CharField('Nome do arquivo', max_length=255)
     enviado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,

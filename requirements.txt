@@ -7,3 +7,4 @@ django-storages[s3]==1.14.6
 boto3==1.43.9
 Pillow==12.2.0
 dj-database-url==3.1.2
+cryptography==48.0.0

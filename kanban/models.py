@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from core.validators import validate_file_extension, validate_file_size
 
 
 class Board(models.Model):
@@ -181,7 +182,10 @@ class CardComment(models.Model):
 
 class SubTaskAnexo(models.Model):
     subtask = models.ForeignKey(SubTask, on_delete=models.CASCADE, related_name='anexos', verbose_name='Sub-tarefa')
-    arquivo = models.FileField('Arquivo', upload_to='subtarefas/%Y/%m/')
+    arquivo = models.FileField(
+        'Arquivo', upload_to='subtarefas/%Y/%m/',
+        validators=[validate_file_extension, validate_file_size],
+    )
     nome_original = models.CharField('Nome do arquivo', max_length=255)
     enviado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name='Enviado por'
