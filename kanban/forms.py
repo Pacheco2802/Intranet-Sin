@@ -23,10 +23,13 @@ class BoardForm(forms.ModelForm):
 class ColumnForm(forms.ModelForm):
     class Meta:
         model = Column
-        fields = ('name', 'color', 'wip_limit')
+        fields = ('name', 'column_type', 'color', 'order', 'wip_limit')
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-input'}),
+            'column_type': forms.Select(attrs={'class': 'form-input'}),
             'color': forms.TextInput(attrs={'type': 'color', 'class': 'form-input'}),
+            'order': forms.NumberInput(attrs={'class': 'form-input', 'min': '0'}),
+            'wip_limit': forms.NumberInput(attrs={'class': 'form-input', 'min': '0'}),
         }
 
 

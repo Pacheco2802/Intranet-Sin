@@ -8,10 +8,27 @@
       <h3 class="font-semibold text-gray-700 text-sm">{{ col.name }}</h3>
       <span class="text-xs bg-gray-200 text-gray-600 rounded-full px-2">{{ col.cards.count }}</span>
     </div>
-    <a href="{% url 'kanban:card_create' board.pk %}?column={{ col.pk }}"
-       class="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded hover:bg-white">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-    </a>
+    <div class="flex items-center gap-1">
+      {% if user.is_admin_ti %}
+      <a href="{% url 'kanban:column_edit' board.pk col.pk %}"
+         title="Editar coluna"
+         class="text-gray-400 hover:text-yellow-600 transition-colors p-1 rounded hover:bg-white">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2a2 2 0 01.586-1.414z"/></svg>
+      </a>
+      <form method="post" action="{% url 'kanban:column_delete' board.pk col.pk %}" class="inline"
+            onsubmit="return confirm('Excluir a coluna &quot;{{ col.name }}&quot;?')">
+        {% csrf_token %}
+        <button type="submit" title="Excluir coluna"
+                class="text-gray-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-white">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </form>
+      {% endif %}
+      <a href="{% url 'kanban:card_create' board.pk %}?column={{ col.pk }}"
+         class="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded hover:bg-white">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      </a>
+    </div>
   </div>
 
   <!-- Cards -->

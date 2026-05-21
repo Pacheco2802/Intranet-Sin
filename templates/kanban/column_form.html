@@ -14,16 +14,9 @@
       {% for err in field.errors %}<p class="text-xs text-red-500 mt-1">{{ err }}</p>{% endfor %}
     </div>
     {% endfor %}
-    {% if not board %}
-    <p class="text-xs text-gray-400">As colunas padrão (A Fazer, Em Andamento, Status Final) serão criadas automaticamente.</p>
-    {% endif %}
     <div class="flex gap-3 pt-2">
-      <button type="submit" class="btn-primary">{% if board %}Salvar{% else %}Criar Quadro{% endif %}</button>
-      {% if board %}
+      <button type="submit" class="btn-primary">{% if column %}Salvar{% else %}Criar coluna{% endif %}</button>
       <a href="{% url 'kanban:board_detail' board.pk %}" class="btn-secondary">Cancelar</a>
-      {% else %}
-      <a href="{% url 'kanban:board_list' %}" class="btn-secondary">Cancelar</a>
-      {% endif %}
     </div>
   </form>
 </div>

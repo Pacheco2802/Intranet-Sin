@@ -3,7 +3,16 @@
 {% block page_title %}{{ board.name }}{% endblock %}
 {% block topbar_actions %}
 <a href="{% url 'kanban:board_list' %}" class="btn-secondary text-xs">← Quadros</a>
-{% if user.can_manage_users %}
+{% if user.is_admin_ti %}
+<a href="{% url 'kanban:board_access' board.pk %}" class="btn-secondary text-xs">Acessos</a>
+<a href="{% url 'kanban:board_edit' board.pk %}" class="btn-secondary text-xs">Editar quadro</a>
+<a href="{% url 'kanban:column_create' board.pk %}" class="btn-secondary text-xs">+ Coluna</a>
+<form method="post" action="{% url 'kanban:board_delete' board.pk %}" class="inline"
+      onsubmit="return confirm('Excluir o quadro &quot;{{ board.name }}&quot;? Esta ação não pode ser desfeita.')">
+  {% csrf_token %}
+  <button type="submit" class="btn-danger text-xs">Excluir quadro</button>
+</form>
+{% elif user.can_manage_users %}
 <a href="{% url 'kanban:board_access' board.pk %}" class="btn-secondary text-xs">Acessos</a>
 {% endif %}
 <a href="{% url 'kanban:card_create' board.pk %}" class="btn-primary text-xs">+ Card</a>

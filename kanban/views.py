@@ -322,6 +322,84 @@ def card_delete(request, board_pk, pk):
 
 
 @login_required
+def board_edit(request, pk):
+    if not request.user.is_admin_ti:
+        return HttpResponseForbidden()
+    board = get_object_or_404(Board, pk=pk)
+    form = BoardForm(request.POST or None, instance=board, user=request.user)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, f'Quadro "{board.name}" atualizado.')
+        return redirect('kanban:board_detail', pk=board.pk)
+    return render(request, 'kanban/board_form.html', {
+        'form': form, 'board': board, 'title': f'Editar: {board.name}'
+    })
+
+
+@login_required
+@require_POST
+def board_delete(request, pk):
+    if not request.user.is_admin_ti:
+        return HttpResponseForbidden()
+    board = get_object_or_404(Board, pk=pk)
+    name = board.name
+    board.delete()
+    messages.success(request, f'Quadro "{name}" excluído.')
+    return redirect('kanban:board_list')
+
+
+@login_required
+def column_create(request, board_pk):
+    if not request.user.is_admin_ti:
+        return HttpResponseForbidden()
+    board = get_object_or_404(Board, pk=board_pk)
+    form = ColumnForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        col = form.save(commit=False)
+        col.board = board
+        last = board.columns.order_by('-order').first()
+        col.order = (last.order + 1) if last else 0
+        col.save()
+        messages.success(request, f'Coluna "{col.name}" criada.')
+        return redirect('kanban:board_detail', pk=board.pk)
+    return render(request, 'kanban/column_form.html', {
+        'form': form, 'board': board, 'title': 'Nova Coluna'
+    })
+
+
+@login_required
+def column_edit(request, board_pk, pk):
+    if not request.user.is_admin_ti:
+        return HttpResponseForbidden()
+    board = get_object_or_404(Board, pk=board_pk)
+    column = get_object_or_404(Column, pk=pk, board=board)
+    form = ColumnForm(request.POST or None, instance=column)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, f'Coluna "{column.name}" atualizada.')
+        return redirect('kanban:board_detail', pk=board.pk)
+    return render(request, 'kanban/column_form.html', {
+        'form': form, 'board': board, 'column': column, 'title': f'Editar coluna: {column.name}'
+    })
+
+
+@login_required
+@require_POST
+def column_delete(request, board_pk, pk):
+    if not request.user.is_admin_ti:
+        return HttpResponseForbidden()
+    board = get_object_or_404(Board, pk=board_pk)
+    column = get_object_or_404(Column, pk=pk, board=board)
+    if column.cards.exists():
+        messages.error(request, f'A coluna "{column.name}" possui cards. Mova ou exclua os cards antes.')
+        return redirect('kanban:board_detail', pk=board.pk)
+    name = column.name
+    column.delete()
+    messages.success(request, f'Coluna "{name}" excluída.')
+    return redirect('kanban:board_detail', pk=board.pk)
+
+
+@login_required
 def board_access(request, pk):
     """Gerencia quem tem acesso de exceção a um board (apenas ADMIN_TI)."""
     if not request.user.can_manage_users:
