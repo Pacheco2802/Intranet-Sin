@@ -94,22 +94,26 @@ STORAGES = {
     },
 }
 
-# ── Arquivos de mídia (Cloudflare R2 em produção) ────────────────────────────
-if config('USE_R2', default=False, cast=bool):
+# ── Arquivos de mídia (Railway Object Storage em produção) ───────────────────
+if config('USE_S3', default=False, cast=bool):
     STORAGES['default'] = {
         'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
     }
-    AWS_ACCESS_KEY_ID       = config('R2_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY   = config('R2_SECRET_ACCESS_KEY')
-    AWS_STORAGE_BUCKET_NAME = config('R2_BUCKET_NAME')
-    AWS_S3_ENDPOINT_URL     = config('R2_ENDPOINT_URL')
-    AWS_S3_CUSTOM_DOMAIN    = config('R2_CUSTOM_DOMAIN', default=None)
+    AWS_ACCESS_KEY_ID       = config('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY   = config('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = config('AWS_S3_BUCKET_NAME')
+    AWS_S3_ENDPOINT_URL     = config('AWS_ENDPOINT_URL_S3')
+    AWS_S3_CUSTOM_DOMAIN    = config('AWS_S3_CUSTOM_DOMAIN', default=None)
     AWS_DEFAULT_ACL         = None
     AWS_S3_FILE_OVERWRITE   = False
     AWS_QUERYSTRING_AUTH    = False
-    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/' if AWS_S3_CUSTOM_DOMAIN else f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/'
+    MEDIA_URL = (
+        f'https://{AWS_S3_CUSTOM_DOMAIN}/'
+        if AWS_S3_CUSTOM_DOMAIN
+        else f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/'
+    )
 else:
-    MEDIA_URL = '/media/'
+    MEDIA_URL  = '/media/'
     MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

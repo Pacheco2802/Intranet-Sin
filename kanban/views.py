@@ -409,17 +409,55 @@ def analise(request):
     })
 
 
+_PRIORITY_LABEL = {
+    'LOW':    'Baixa',
+    'MEDIUM': 'Média',
+    'HIGH':   'Alta',
+    'URGENT': 'URGENTE',
+}
+
+_PRIORITY_PREFIX = {
+    'LOW':    '',
+    'MEDIUM': '',
+    'HIGH':   '[ALTA] ',
+    'URGENT': '[URGENTE] ',
+}
+
+
+def _card_body(card) -> str:
+    """Monta corpo da notificação com prioridade e prazo."""
+    from django.utils.timezone import now
+    parts = [card.title]
+    pri = card.priority
+    if pri in ('HIGH', 'URGENT'):
+        parts.append(f'Prioridade: {_PRIORITY_LABEL[pri]}')
+    if card.due_date:
+        today = now().date()
+        delta = (card.due_date - today).days
+        if delta < 0:
+            parts.append(f'Prazo: VENCIDO há {abs(delta)} dia(s)')
+        elif delta == 0:
+            parts.append('Prazo: HOJE')
+        elif delta <= 3:
+            parts.append(f'Prazo: em {delta} dia(s)')
+        else:
+            parts.append(f'Prazo: {card.due_date.strftime("%d/%m/%Y")}')
+    return ' · '.join(parts)
+
+
 def _notify_subtask(subtask, actor):
     card = subtask.card
     board = card.column.board
     link = f'/kanban/{board.pk}/card/{card.pk}/'
+    prefix = _PRIORITY_PREFIX.get(card.priority, '')
 
     if subtask.assignee and subtask.assignee != actor:
         Notification.send(
             user=subtask.assignee, actor=actor,
             ntype=Notification.Type.CARD_ASSIGNED,
-            title=f'Sub-tarefa atribuída a você em "{card.title}"',
-            body=subtask.title, link=link,
+            title=f'{prefix}Sub-tarefa atribuída a você em "{card.title}"',
+            body=f'{subtask.title} · {_card_body(card)}',
+            link=link,
         )
 
     if subtask.target_department:
@@ -434,24 +472,17 @@ def _notify_subtask(subtask, actor):
             Notification.send(
                 user=user, actor=actor,
                 ntype=Notification.Type.CARD_CROSS,
-                title=f'Nova sub-tarefa para {dept.name}',
-                body=f'"{subtask.title}" em "{card.title}"', link=link,
+                title=f'{prefix}Nova sub-tarefa para {dept.name}',
+                body=f'"{subtask.title}" em "{card.title}" · {_card_body(card)}',
+                link=link,
             )
 
 
 def _notify_card(card, actor, created: bool):
-    """
-    Envia notificações ao criar/reatribuir um card.
-
-    Regras:
-    - Se o card tem responsável (assignee) diferente do criador → notifica o responsável.
-    - Se o board pertence a um departamento diferente do criador → notifica os líderes
-      desse departamento (campo leader + usuários com role GERENTE no dept).
-    - Se o board é global e há responsável → apenas notifica o responsável.
-    """
     board = card.column.board
     link = f'/kanban/{board.pk}/card/{card.pk}/'
     verb = 'criou' if created else 'atualizou'
+    prefix = _PRIORITY_PREFIX.get(card.priority, '')
 
     targets = set()
 
@@ -461,8 +492,8 @@ def _notify_card(card, actor, created: bool):
             user=card.assignee,
             actor=actor,
             ntype=Notification.Type.CARD_ASSIGNED,
-            title=f'{actor.get_full_name() or actor.email} {verb} um card para você',
-            body=card.title,
+            title=f'{prefix}{actor.get_full_name() or actor.email} {verb} um card para você',
+            body=_card_body(card),
             link=link,
         )
         targets.add(card.assignee)
@@ -489,8 +520,8 @@ def _notify_card(card, actor, created: bool):
                     user=leader,
                     actor=actor,
                     ntype=Notification.Type.CARD_CROSS,
-                    title=f'Card cross-departamento em {dept.name}',
-                    body=f'{actor.get_full_name() or actor.email} {verb} o card "{card.title}"',
+                    title=f'{prefix}Card cross-departamento em {dept.name}',
+                    body=f'{actor.get_full_name() or actor.email} {verb} "{card.title}" · {_card_body(card)}',
                     link=link,
                 )
 
@@ -508,7 +539,7 @@ def _notify_card(card, actor, created: bool):
                     user=mgr,
                     actor=actor,
                     ntype=Notification.Type.CARD_DEPT,
-                    title=f'Novo card em {dept.name}',
-                    body=card.title,
+                    title=f'{prefix}Novo card em {dept.name}',
+                    body=_card_body(card),
                     link=link,
                 )
