@@ -101,8 +101,9 @@ if config('USE_S3', default=False, cast=bool):
     }
     AWS_ACCESS_KEY_ID       = config('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY   = config('AWS_SECRET_ACCESS_KEY')
-    AWS_STORAGE_BUCKET_NAME = config('AWS_S3_BUCKET_NAME')
-    AWS_S3_ENDPOINT_URL     = config('AWS_ENDPOINT_URL_S3')
+    AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_ENDPOINT_URL     = config('AWS_S3_ENDPOINT_URL')
+    AWS_S3_REGION_NAME      = config('AWS_S3_REGION_NAME', default='auto')
     AWS_S3_CUSTOM_DOMAIN    = config('AWS_S3_CUSTOM_DOMAIN', default=None)
     AWS_DEFAULT_ACL         = None
     AWS_S3_FILE_OVERWRITE   = False
