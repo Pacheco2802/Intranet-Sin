@@ -18,6 +18,7 @@ urlpatterns = [
     path('<int:board_pk>/card/<int:pk>/', views.card_detail, name='card_detail'),
     path('<int:board_pk>/card/<int:pk>/editar/', views.card_edit, name='card_edit'),
     path('<int:board_pk>/card/<int:pk>/excluir/', views.card_delete, name='card_delete'),
+    path('<int:board_pk>/card/<int:pk>/anexar/', views.card_attach, name='card_attach'),
     path('card/<int:pk>/mover/', views.card_move, name='card_move'),
     path('subtarefa/<int:pk>/toggle/', views.subtask_toggle, name='subtask_toggle'),
     path('subtarefa/<int:pk>/excluir/', views.subtask_delete, name='subtask_delete'),

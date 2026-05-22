@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     'mensagens',
     'kanban',
     'atendimento',
+    'agenda',
 ]
 
 MIDDLEWARE = [
@@ -82,7 +83,8 @@ USE_TZ = True
 
 # ── Arquivos estáticos ────────────────────────────────────────────────────────
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+_static_dir = BASE_DIR / 'static'
+STATICFILES_DIRS = [_static_dir] if _static_dir.exists() else []
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 STORAGES = {

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto card">
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Título *</label>
+      {{ form.title }}
+      {% for err in form.title.errors %}<p class="text-xs text-red-500 mt-1">{{ err }}</p>{% endfor %}
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Início *</label>
+        {{ form.start_datetime }}
+        {% for err in form.start_datetime.errors %}<p class="text-xs text-red-500 mt-1">{{ err }}</p>{% endfor %}
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Término</label>
+        {{ form.end_datetime }}
+        {% for err in form.end_datetime.errors %}<p class="text-xs text-red-500 mt-1">{{ err }}</p>{% endfor %}
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Local</label>
+      {{ form.location }}
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+      {{ form.description }}
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Participantes</label>
+      <p class="text-xs text-gray-400 mb-1">Segure Ctrl (ou Cmd) para selecionar vários.</p>
+      {{ form.participants }}
+      {% for err in form.participants.errors %}<p class="text-xs text-red-500 mt-1">{{ err }}</p>{% endfor %}
+    </div>
+
+    <div class="flex gap-3 pt-2">
+      <button type="submit" class="btn-primary">{% if event %}Salvar{% else %}Criar evento{% endif %}</button>
+      {% if event %}
+      <a href="{% url 'agenda:event_detail' event.pk %}" class="btn-secondary">Cancelar</a>
+      {% else %}
+      <a href="{% url 'agenda:event_list' %}" class="btn-secondary">Cancelar</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

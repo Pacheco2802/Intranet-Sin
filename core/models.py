@@ -234,6 +234,8 @@ class Notification(models.Model):
         CARD_ASSIGNED = 'CARD_ASSIGNED', 'Card atribuído a você'
         CARD_DEPT = 'CARD_DEPT', 'Card criado na sua área'
         CARD_CROSS = 'CARD_CROSS', 'Card entre departamentos'
+        EVENT_INVITE = 'EVENT_INVITE', 'Convite para evento'
+        EVENT_REMINDER = 'EVENT_REMINDER', 'Lembrete de evento'
 
     user = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE,

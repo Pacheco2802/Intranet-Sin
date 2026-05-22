@@ -151,6 +151,30 @@
       </div>
     </div>
 
+    <!-- Card Attachments -->
+    <div class="card">
+      <h3 class="font-semibold text-gray-900 mb-3">Anexos do Card</h3>
+      {% if card_anexos %}
+      <div class="space-y-1.5 mb-4">
+        {% for anexo in card_anexos %}
+        <div class="flex items-center gap-2 text-xs text-gray-500">
+          <svg class="w-3.5 h-3.5 flex-shrink-0 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+          <a href="{{ anexo.arquivo.url }}" target="_blank" class="hover:text-blue-600 truncate max-w-xs">{{ anexo.nome_original }}</a>
+          <span class="text-gray-300 flex-shrink-0">· {{ anexo.enviado_por.first_name }} {{ anexo.created_at|date:"d/m H:i" }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-400 italic mb-3">Nenhum anexo ainda.</p>
+      {% endif %}
+      <form method="post" action="{% url 'kanban:card_attach' board.pk card.pk %}" enctype="multipart/form-data"
+            class="flex items-center gap-2 pt-2 border-t border-gray-100">
+        {% csrf_token %}
+        <input type="file" name="arquivo" class="text-xs text-gray-400 file:mr-2 file:text-xs file:btn-secondary file:border-0 file:py-1 file:px-2 file:rounded flex-1">
+        <button type="submit" class="text-xs text-blue-500 hover:text-blue-700 whitespace-nowrap font-medium">Anexar</button>
+      </form>
+    </div>
+
     <!-- Comments -->
     <div class="card">
       <h3 class="font-semibold text-gray-900 mb-4">

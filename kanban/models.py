@@ -180,6 +180,27 @@ class CardComment(models.Model):
         return f'{self.author} em {self.card}'
 
 
+class CardAnexo(models.Model):
+    card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='anexos', verbose_name='Card')
+    arquivo = models.FileField(
+        'Arquivo', upload_to='cards/%Y/%m/',
+        validators=[validate_file_extension, validate_file_size],
+    )
+    nome_original = models.CharField('Nome do arquivo', max_length=255)
+    enviado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name='Enviado por'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Anexo de Card'
+        verbose_name_plural = 'Anexos de Card'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return self.nome_original
+
+
 class SubTaskAnexo(models.Model):
     subtask = models.ForeignKey(SubTask, on_delete=models.CASCADE, related_name='anexos', verbose_name='Sub-tarefa')
     arquivo = models.FileField(

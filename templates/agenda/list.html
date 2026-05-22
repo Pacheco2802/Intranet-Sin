@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Agenda{% endblock %}
+{% block page_title %}Agenda{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'agenda:event_create' %}" class="btn-primary text-xs">+ Novo evento</a>
+{% endblock %}
+
+{% block content %}
+
+{% if upcoming %}
+<h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Próximos eventos</h2>
+<div class="space-y-3 mb-8">
+  {% for event in upcoming %}
+  {% with my_ep=event.participants.all %}
+  <a href="{% url 'agenda:event_detail' event.pk %}"
+     class="card card-hover flex items-start gap-4 no-underline block">
+    <!-- Date block -->
+    <div class="flex-shrink-0 w-14 text-center">
+      <div class="text-xs font-semibold text-accent uppercase">{{ event.start_datetime|date:"M" }}</div>
+      <div class="text-2xl font-bold text-gray-800 leading-none">{{ event.start_datetime|date:"d" }}</div>
+      <div class="text-xs text-gray-400">{{ event.start_datetime|date:"H:i" }}</div>
+    </div>
+    <!-- Info -->
+    <div class="flex-1 min-w-0">
+      <p class="font-semibold text-gray-800 truncate">{{ event.title }}</p>
+      {% if event.location %}
+      <p class="text-xs text-gray-400 mt-0.5">📍 {{ event.location }}</p>
+      {% endif %}
+      {% if event.description %}
+      <p class="text-xs text-gray-500 mt-1 line-clamp-1">{{ event.description }}</p>
+      {% endif %}
+      <!-- Participants avatars -->
+      <div class="flex items-center gap-1 mt-2">
+        {% for ep in event.participants.all|slice:":5" %}
+        <div class="avatar w-6 h-6 text-[10px]" title="{{ ep.user.get_full_name }}">
+          {{ ep.user.first_name|first|upper }}{{ ep.user.last_name|first|upper }}
+        </div>
+        {% endfor %}
+        {% if event.participants.count > 5 %}
+        <span class="text-xs text-gray-400">+{{ event.participants.count|add:"-5" }}</span>
+        {% endif %}
+        {% if event.created_by == request.user %}
+        <span class="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Organizador</span>
+        {% endif %}
+      </div>
+    </div>
+    <!-- Status badge for participant -->
+    {% for ep in event.participants.all %}
+    {% if ep.user == request.user %}
+    <div class="flex-shrink-0">
+      {% if ep.status == 'CONFIRMED' %}
+      <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">✓ Confirmado</span>
+      {% elif ep.status == 'DECLINED' %}
+      <span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">✗ Recusado</span>
+      {% else %}
+      <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Pendente</span>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% endfor %}
+  </a>
+  {% endwith %}
+  {% endfor %}
+</div>
+{% else %}
+<div class="card text-center py-10 text-gray-400">
+  <svg class="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+  </svg>
+  <p class="text-sm">Nenhum evento próximo.</p>
+  <a href="{% url 'agenda:event_create' %}" class="btn-primary text-xs mt-3 inline-block">Criar evento</a>
+</div>
+{% endif %}
+
+{% if past %}
+<h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Eventos passados</h2>
+<div class="space-y-2">
+  {% for event in past %}
+  <a href="{% url 'agenda:event_detail' event.pk %}"
+     class="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-100 hover:border-gray-200 transition-colors opacity-60 hover:opacity-100">
+    <div class="flex-shrink-0 text-center w-10">
+      <div class="text-xs text-gray-400">{{ event.start_datetime|date:"d/m" }}</div>
+    </div>
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-medium text-gray-700 truncate">{{ event.title }}</p>
+    </div>
+    <span class="text-xs text-gray-300">{{ event.participants.count }} participante{{ event.participants.count|pluralize }}</span>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }}{% endblock %}
+{% block page_title %}{{ event.title }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'agenda:event_list' %}" class="btn-secondary text-xs">← Agenda</a>
+{% if can_edit %}
+<a href="{% url 'agenda:event_edit' event.pk %}" class="btn-secondary text-xs">Editar</a>
+<form method="post" action="{% url 'agenda:event_delete' event.pk %}" class="inline"
+      onsubmit="return confirm('Excluir este evento?')">
+  {% csrf_token %}
+  <button type="submit" class="btn-danger text-xs">Excluir</button>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Main info -->
+  <div class="lg:col-span-2 space-y-4">
+    <div class="card space-y-3">
+      <!-- Date & time -->
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-xl bg-accent/10 flex flex-col items-center justify-center flex-shrink-0">
+          <span class="text-xs font-bold text-accent uppercase">{{ event.start_datetime|date:"M" }}</span>
+          <span class="text-xl font-bold text-accent leading-none">{{ event.start_datetime|date:"d" }}</span>
+        </div>
+        <div>
+          <p class="font-semibold text-gray-800">{{ event.start_datetime|date:"l, d \d\e F \d\e Y" }}</p>
+          <p class="text-sm text-gray-500">
+            {{ event.start_datetime|date:"H:i" }}
+            {% if event.end_datetime %} → {{ event.end_datetime|date:"H:i" }}{% endif %}
+          </p>
+        </div>
+      </div>
+
+      {% if event.location %}
+      <div class="flex items-center gap-2 text-sm text-gray-600">
+        <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        {{ event.location }}
+      </div>
+      {% endif %}
+
+      {% if event.description %}
+      <div class="pt-2 border-t border-gray-100">
+        <p class="text-sm text-gray-700 whitespace-pre-line">{{ event.description }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Confirm / Decline for participant -->
+    {% if my_participation and not event.is_past %}
+    <div class="card bg-amber-50 border-amber-200">
+      <p class="text-sm font-medium text-amber-800 mb-3">Confirmar sua presença neste evento:</p>
+      <div class="flex gap-3">
+        {% if my_participation.status != 'CONFIRMED' %}
+        <form method="post" action="{% url 'agenda:event_confirm' event.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="confirm">
+          <button type="submit" class="btn-primary text-sm">✓ Confirmar presença</button>
+        </form>
+        {% endif %}
+        {% if my_participation.status != 'DECLINED' %}
+        <form method="post" action="{% url 'agenda:event_confirm' event.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="decline">
+          <button type="submit" class="btn-secondary text-sm">✗ Recusar</button>
+        </form>
+        {% endif %}
+        {% if my_participation.status == 'CONFIRMED' %}
+        <span class="text-sm text-emerald-700 font-medium self-center">✓ Você confirmou presença</span>
+        {% elif my_participation.status == 'DECLINED' %}
+        <span class="text-sm text-red-600 font-medium self-center">✗ Você recusou</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Sidebar: participants -->
+  <div class="space-y-4">
+    <div class="card">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">
+        Participantes ({{ event.participants.count }})
+      </h3>
+      {% if event.participants.all %}
+      <ul class="space-y-2">
+        {% for ep in event.participants.all %}
+        <li class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <div class="avatar w-7 h-7 text-[11px] flex-shrink-0">
+              {{ ep.user.first_name|first|upper }}{{ ep.user.last_name|first|upper }}
+            </div>
+            <span class="text-sm text-gray-700 truncate">{{ ep.user.get_full_name|default:ep.user.email }}</span>
+          </div>
+          {% if ep.status == 'CONFIRMED' %}
+          <span class="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full flex-shrink-0">✓</span>
+          {% elif ep.status == 'DECLINED' %}
+          <span class="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full flex-shrink-0">✗</span>
+          {% else %}
+          <span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full flex-shrink-0">?</span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-xs text-gray-400">Nenhum participante além do organizador.</p>
+      {% endif %}
+
+      <div class="mt-3 pt-3 border-t border-gray-100">
+        <div class="flex items-center gap-2">
+          <div class="avatar w-7 h-7 text-[11px] flex-shrink-0">
+            {{ event.created_by.first_name|first|upper }}{{ event.created_by.last_name|first|upper }}
+          </div>
+          <div class="min-w-0">
+            <span class="text-sm text-gray-700 truncate block">{{ event.created_by.get_full_name|default:event.created_by.email }}</span>
+            <span class="text-xs text-gray-400">Organizador</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

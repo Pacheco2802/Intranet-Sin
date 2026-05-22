@@ -581,6 +581,25 @@ def _add_to_teams(user):
 
 # ── Departamentos ─────────────────────────────
 
+def _setup_department(dept, created_by):
+    """Cria board com colunas padrão e equipe para o departamento."""
+    from kanban.models import Board, Column
+    board, board_created = Board.objects.get_or_create(
+        department=dept,
+        is_auto=True,
+        defaults={'name': dept.name, 'created_by': created_by},
+    )
+    if board_created:
+        Column.objects.bulk_create([
+            Column(board=board, name='A Fazer',      order=0, color='#64748b', column_type=Column.ColumnType.A_FAZER),
+            Column(board=board, name='Em Andamento', order=1, color='#3b82f6', column_type=Column.ColumnType.EM_ANDAMENTO),
+            Column(board=board, name='Status Final', order=2, color='#22c55e', column_type=Column.ColumnType.STATUS_FINAL),
+        ])
+    Team.objects.get_or_create(
+        department=dept,
+        defaults={'name': dept.name, 'is_protected': True},
+    )
+
 @login_required
 def department_list(request):
     if not request.user.can_manage_users:
@@ -596,6 +615,7 @@ def department_create(request):
     form = DepartmentForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         dept = form.save()
+        _setup_department(dept, request.user)
         messages.success(request, f'Departamento "{dept.name}" criado. Board e equipe gerados automaticamente.')
         return redirect('core:department_list')
     return render(request, 'departamentos/form.html', {'form': form, 'title': 'Novo Departamento'})

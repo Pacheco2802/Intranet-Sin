@@ -11,7 +11,7 @@ from django.views.decorators.http import require_POST
 from core.models import AuditLog, Notification, CustomUser
 from core.middleware import AuditMiddleware
 from core.validators import validate_file_extension, validate_file_size
-from .models import Board, Column, Card, CardComment, CardActivity, SubTask, SubTaskAnexo
+from .models import Board, Column, Card, CardComment, CardActivity, SubTask, SubTaskAnexo, CardAnexo
 from .forms import BoardForm, ColumnForm, CardForm, CardCommentForm, SubTaskForm
 from .utils import criar_card_automatico, mover_card_para_ultima_coluna, mover_card_para_primeira_coluna
 
@@ -147,6 +147,7 @@ def card_detail(request, board_pk, pk):
 
     subtasks = card.subtasks.select_related('assignee', 'target_department').prefetch_related('anexos__enviado_por')
     done_count = subtasks.filter(is_done=True).count()
+    card_anexos = card.anexos.select_related('enviado_por').all()
     is_status_final = card.column.column_type == Column.ColumnType.STATUS_FINAL
     final_status_choices = Card._meta.get_field('final_status').choices
     return render(request, 'kanban/card_detail.html', {
@@ -158,6 +159,7 @@ def card_detail(request, board_pk, pk):
         'done_count': done_count,
         'is_status_final': is_status_final,
         'final_status_choices': final_status_choices,
+        'card_anexos': card_anexos,
     })
 
 
@@ -220,6 +222,34 @@ def subtask_attach(request, pk):
             action=f'Anexou documento na sub-tarefa: {st.title}'
         )
     return redirect('kanban:card_detail', board_pk=board.pk, pk=st.card.pk)
+
+
+@login_required
+@require_POST
+def card_attach(request, board_pk, pk):
+    board = get_object_or_404(Board, pk=board_pk)
+    if not board.can_access(request.user):
+        return HttpResponseForbidden()
+    card = get_object_or_404(Card, pk=pk, column__board=board)
+    arquivo = request.FILES.get('arquivo')
+    if arquivo:
+        try:
+            validate_file_extension(arquivo)
+            validate_file_size(arquivo)
+        except ValidationError as e:
+            messages.error(request, e.message)
+            return redirect('kanban:card_detail', board_pk=board.pk, pk=card.pk)
+        CardAnexo.objects.create(
+            card=card,
+            arquivo=arquivo,
+            nome_original=arquivo.name,
+            enviado_por=request.user,
+        )
+        CardActivity.objects.create(
+            card=card, user=request.user,
+            action=f'Anexou documento: {arquivo.name}'
+        )
+    return redirect('kanban:card_detail', board_pk=board.pk, pk=card.pk)
 
 
 @login_required
