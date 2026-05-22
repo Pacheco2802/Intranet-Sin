@@ -24,7 +24,9 @@ def _qs_visivel(user):
     if user.can_see_all:
         return qs
     return qs.filter(
-        Q(criado_por=user) | Q(departamento_atual=user.department)
+        Q(criado_por=user) |
+        Q(departamento_atual=user.department) |
+        Q(departamento_atual__leader=user)
     ).distinct()
 
 
@@ -34,6 +36,8 @@ def _pode_agir(atendimento, user):
     if atendimento.criado_por == user:
         return True
     if user.department and atendimento.departamento_atual == user.department:
+        return True
+    if atendimento.departamento_atual and atendimento.departamento_atual.leader == user:
         return True
     return False
 
@@ -57,11 +61,11 @@ def _notificar_encaminhamento(atendimento, para_dept, actor):
     targets = set()
     if para_dept.leader and para_dept.leader != actor:
         targets.add(para_dept.leader)
-    for mgr in CustomUser.objects.filter(
-        role=CustomUser.Role.GERENTE, department=para_dept, is_active=True
+    for member in CustomUser.objects.filter(
+        department=para_dept, is_active=True, is_approved=True
     ):
-        if mgr != actor:
-            targets.add(mgr)
+        if member != actor:
+            targets.add(member)
     for user in targets:
         Notification.send(
             user=user, actor=actor,

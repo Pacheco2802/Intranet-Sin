@@ -35,6 +35,7 @@ urlpatterns = [
     path('equipes/<int:pk>/remover/<int:user_id>/', views.team_remove_member, name='team_remove_member'),
 
     path('notificacoes/', views.notification_list, name='notification_list'),
+    path('notificacoes/contagem/', views.topbar_counts, name='topbar_counts'),
     path('notificacoes/<int:pk>/lida/', views.notification_mark_read, name='notification_mark_read'),
     path('notificacoes/marcar-todas/', views.notification_mark_all_read, name='notification_mark_all_read'),
 

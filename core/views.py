@@ -637,6 +637,24 @@ def department_edit(request, pk):
 # ── Notificações ──────────────────────────────
 
 @login_required
+def topbar_counts(request):
+    from mensagens.models import Conversation
+    unread = 0
+    try:
+        for conv in Conversation.objects.filter(participants=request.user):
+            unread += conv.messages.filter(
+                is_deleted=False
+            ).exclude(reads__user=request.user).exclude(sender=request.user).count()
+    except Exception:
+        pass
+    notif_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    return render(request, 'partials/topbar_counts.html', {
+        'notification_count': notif_count,
+        'unread_messages_count': unread,
+    })
+
+
+@login_required
 def notification_list(request):
     notifs = request.user.notifications.select_related('actor').order_by('-created_at')[:50]
     # Mark all as read
