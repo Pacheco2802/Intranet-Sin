@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from core.validators import validate_file_extension, validate_file_size
 
 
 class Conversation(models.Model):
@@ -67,6 +68,26 @@ class Message(models.Model):
 
     def __str__(self):
         return f'{self.sender}: {self.content[:50]}'
+
+
+class MessageAnexo(models.Model):
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='anexos', verbose_name='Mensagem')
+    arquivo = models.FileField(
+        'Arquivo', upload_to='mensagens/%Y/%m/',
+        validators=[validate_file_extension, validate_file_size],
+    )
+    nome_original = models.CharField('Nome do arquivo', max_length=255)
+    enviado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name='Enviado por'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Anexo de Mensagem'
+        verbose_name_plural = 'Anexos de Mensagem'
+
+    def __str__(self):
+        return self.nome_original
 
 
 class MessageRead(models.Model):

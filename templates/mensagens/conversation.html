@@ -21,27 +21,40 @@
   <form hx-post="{% url 'mensagens:send_message' conv.pk %}"
         hx-target="#messages-container"
         hx-swap="innerHTML"
+        hx-encoding="multipart/form-data"
         hx-on::after-request="this.reset(); document.getElementById('messages-container').scrollTop = document.getElementById('messages-container').scrollHeight"
-        class="flex gap-2 items-end bg-white rounded-xl border border-gray-200 p-3">
+        class="bg-white rounded-xl border border-gray-200 p-3 space-y-2">
     {% csrf_token %}
-    <textarea name="content" rows="1" placeholder="Digite sua mensagem..."
-      class="flex-1 border-0 resize-none text-sm focus:outline-none focus:ring-0 leading-relaxed"
-      x-data
-      @keydown.enter.prevent="if (!$event.shiftKey) { $el.closest('form').dispatchEvent(new Event('submit', {bubbles: true})) }"></textarea>
-    <button type="submit" class="bg-primary hover:bg-primary-light text-white rounded-xl p-2.5 transition-colors flex-shrink-0">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-    </button>
+    <div class="flex gap-2 items-end">
+      <textarea name="content" rows="1" placeholder="Digite sua mensagem..."
+        class="flex-1 border-0 resize-none text-sm focus:outline-none focus:ring-0 leading-relaxed"
+        x-data
+        @keydown.enter.prevent="if (!$event.shiftKey) { $el.closest('form').dispatchEvent(new Event('submit', {bubbles: true})) }"></textarea>
+      <button type="submit" class="bg-accent hover:bg-blue-700 text-white rounded-xl p-2.5 transition-colors flex-shrink-0">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+      </button>
+    </div>
+    <div class="flex items-center gap-2 pt-1 border-t border-gray-100">
+      <label class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-blue-500 cursor-pointer transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+        Anexar arquivo
+        <input type="file" name="arquivo" class="hidden">
+      </label>
+      <span id="file-name" class="text-xs text-gray-400 truncate max-w-[200px]"></span>
+    </div>
   </form>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-  // auto scroll to bottom on load
   const container = document.getElementById('messages-container');
   container.scrollTop = container.scrollHeight;
   document.body.addEventListener('htmx:afterSwap', e => {
     if (e.target.id === 'messages-container') container.scrollTop = container.scrollHeight;
+  });
+  document.querySelector('input[name="arquivo"]').addEventListener('change', function() {
+    document.getElementById('file-name').textContent = this.files[0] ? this.files[0].name : '';
   });
 </script>
 {% endblock %}

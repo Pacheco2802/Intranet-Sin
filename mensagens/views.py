@@ -5,7 +5,7 @@ from django.views.decorators.http import require_POST
 
 from core.models import CustomUser, AuditLog
 from core.middleware import AuditMiddleware
-from .models import Conversation, Message, MessageRead
+from .models import Conversation, Message, MessageRead, MessageAnexo
 from .forms import NewConversationForm, MessageForm
 
 
@@ -35,7 +35,7 @@ def conversation(request, pk):
         MessageRead.objects.get_or_create(message=msg, user=request.user)
 
     form = MessageForm()
-    messages_qs = conv.messages.filter(is_deleted=False).select_related('sender')
+    messages_qs = conv.messages.filter(is_deleted=False).select_related('sender').prefetch_related('anexos')
     return render(request, 'mensagens/conversation.html', {
         'conv': conv,
         'display_name': conv.get_display_name(request.user),
@@ -70,21 +70,36 @@ def send_message(request, pk):
         return HttpResponseForbidden()
 
     form = MessageForm(request.POST)
-    if form.is_valid():
+    arquivo = request.FILES.get('arquivo')
+    if form.is_valid() and (form.cleaned_data.get('content') or arquivo):
         msg = Message.objects.create(
             conversation=conv,
             sender=request.user,
-            content=form.cleaned_data['content'],
+            content=form.cleaned_data.get('content', ''),
         )
+        if arquivo:
+            from core.validators import validate_file_extension, validate_file_size
+            from django.core.exceptions import ValidationError
+            try:
+                validate_file_extension(arquivo)
+                validate_file_size(arquivo)
+                MessageAnexo.objects.create(
+                    message=msg,
+                    arquivo=arquivo,
+                    nome_original=arquivo.name,
+                    enviado_por=request.user,
+                )
+            except ValidationError:
+                pass
         MessageRead.objects.create(message=msg, user=request.user)
-        conv.save()  # updates updated_at
+        conv.save()
         AuditLog.log(
             request.user, AuditLog.Action.MSG_SEND,
             resource_type='Conversation', resource_id=conv.pk,
             ip=AuditMiddleware.get_client_ip(request),
         )
 
-    messages_qs = conv.messages.filter(is_deleted=False).select_related('sender')
+    messages_qs = conv.messages.filter(is_deleted=False).select_related('sender').prefetch_related('anexos')
     return render(request, 'mensagens/partials/messages_list.html', {
         'messages_qs': messages_qs,
         'conv': conv,
