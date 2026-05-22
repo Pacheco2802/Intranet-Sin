@@ -604,8 +604,15 @@ def _setup_department(dept, created_by):
 def department_list(request):
     if not request.user.can_manage_users:
         return HttpResponseForbidden()
-    depts = Department.objects.select_related('leader').prefetch_related('users').order_by('name')
-    return render(request, 'departamentos/list.html', {'depts': depts})
+    depts = Department.objects.select_related('leader').prefetch_related('users', 'boards', 'team').order_by('name')
+    dept_data = []
+    for dept in depts:
+        dept_data.append({
+            'dept': dept,
+            'has_auto_board': dept.boards.filter(is_auto=True).exists(),
+            'auto_board': dept.boards.filter(is_auto=True).first(),
+        })
+    return render(request, 'departamentos/list.html', {'dept_data': dept_data})
 
 
 @login_required
@@ -632,6 +639,35 @@ def department_edit(request, pk):
         messages.success(request, f'Departamento "{dept.name}" atualizado.')
         return redirect('core:department_list')
     return render(request, 'departamentos/form.html', {'form': form, 'title': f'Editar: {dept.name}', 'dept': dept})
+
+
+@login_required
+@require_POST
+def department_delete(request, pk):
+    if not request.user.can_manage_users:
+        return HttpResponseForbidden()
+    dept = get_object_or_404(Department, pk=pk)
+    if dept.users.exists():
+        messages.error(request, f'Não é possível excluir "{dept.name}": há usuários neste departamento. Remova-os primeiro.')
+        return redirect('core:department_list')
+    name = dept.name
+    dept.delete()
+    messages.success(request, f'Departamento "{name}" excluído.')
+    return redirect('core:department_list')
+
+
+@login_required
+@require_POST
+def department_create_board(request, pk):
+    if not request.user.can_manage_users:
+        return HttpResponseForbidden()
+    dept = get_object_or_404(Department, pk=pk)
+    if dept.boards.filter(is_auto=True).exists():
+        messages.error(request, f'O departamento "{dept.name}" já possui um kanban.')
+        return redirect('core:department_list')
+    _setup_department(dept, request.user)
+    messages.success(request, f'Kanban criado para "{dept.name}".')
+    return redirect('core:department_list')
 
 
 # ── Notificações ──────────────────────────────

@@ -25,6 +25,8 @@ urlpatterns = [
     path('departamentos/', views.department_list, name='department_list'),
     path('departamentos/novo/', views.department_create, name='department_create'),
     path('departamentos/<int:pk>/editar/', views.department_edit, name='department_edit'),
+    path('departamentos/<int:pk>/excluir/', views.department_delete, name='department_delete'),
+    path('departamentos/<int:pk>/criar-board/', views.department_create_board, name='department_create_board'),
 
     path('equipes/', views.team_list, name='team_list'),
     path('equipes/nova/', views.team_create, name='team_create'),

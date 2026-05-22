@@ -7,7 +7,8 @@
 
 {% block content %}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-  {% for dept in depts %}
+  {% for item in dept_data %}
+  {% with dept=item.dept %}
   <div class="card border border-gray-100 hover:border-blue-200 transition-all">
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-3">
@@ -20,10 +21,19 @@
           <p class="text-xs text-gray-400 mt-0.5">{{ dept.users.count }} usuário{{ dept.users.count|pluralize:"s" }}</p>
         </div>
       </div>
-      <a href="{% url 'core:department_edit' dept.pk %}"
-         class="text-xs text-gray-400 hover:text-blue-600 font-medium px-2 py-1 rounded hover:bg-gray-50 transition-colors">
-        Editar
-      </a>
+      <div class="flex items-center gap-1">
+        <a href="{% url 'core:department_edit' dept.pk %}"
+           class="text-xs text-gray-400 hover:text-blue-600 font-medium px-2 py-1 rounded hover:bg-gray-50 transition-colors">
+          Editar
+        </a>
+        <form method="post" action="{% url 'core:department_delete' dept.pk %}"
+              onsubmit="return confirm('Excluir o departamento {{ dept.name }}? Esta ação não pode ser desfeita.')">
+          {% csrf_token %}
+          <button type="submit" class="text-xs text-gray-400 hover:text-red-600 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors">
+            Excluir
+          </button>
+        </form>
+      </div>
     </div>
 
     {% if dept.description %}
@@ -38,18 +48,22 @@
         <span class="text-gray-400 italic">Sem líder definido</span>
         {% endif %}
       </span>
-      <div class="flex gap-2">
+      <div class="flex gap-2 items-center">
         {% if dept.team %}
         <a href="{% url 'core:team_list' %}" class="text-blue-500 hover:underline">Equipe</a>
         {% endif %}
-        {% for board in dept.boards.all %}
-        {% if board.is_auto %}
-        <a href="{% url 'kanban:board_detail' board.pk %}" class="text-purple-500 hover:underline">Kanban</a>
+        {% if item.has_auto_board %}
+        <a href="{% url 'kanban:board_detail' item.auto_board.pk %}" class="text-purple-500 hover:underline">Kanban</a>
+        {% else %}
+        <form method="post" action="{% url 'core:department_create_board' dept.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="text-green-600 hover:underline">+ Criar Kanban</button>
+        </form>
         {% endif %}
-        {% endfor %}
       </div>
     </div>
   </div>
+  {% endwith %}
   {% empty %}
   <div class="col-span-3 card text-center py-16 text-gray-400">
     <div class="text-4xl mb-3">🏢</div>
