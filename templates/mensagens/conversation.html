@@ -30,7 +30,7 @@
         class="flex-1 border-0 resize-none text-sm focus:outline-none focus:ring-0 leading-relaxed"
         x-data
         @keydown.enter.prevent="if (!$event.shiftKey) { $el.closest('form').dispatchEvent(new Event('submit', {bubbles: true})) }"></textarea>
-      <button type="submit" class="bg-accent hover:bg-blue-700 text-white rounded-xl p-2.5 transition-colors flex-shrink-0">
+      <button type="submit" class="bg-accent hover:bg-[#15593a] text-white rounded-xl p-2.5 transition-colors flex-shrink-0">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
       </button>
     </div>

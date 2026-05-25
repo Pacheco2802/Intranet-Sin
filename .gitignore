@@ -42,3 +42,4 @@ backup.json
 
 # Claude Code
 .claude/
+.interface-design/

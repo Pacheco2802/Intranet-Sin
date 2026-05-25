@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}Intranet{% endblock %} — Intranet</title>
+  <title>{% block title %}Intranet{% endblock %} — SINSAÚDE-SP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -13,10 +13,11 @@
         extend: {
           fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
           colors: {
-            rail:   '#1c1c1e',
-            panel:  '#252526',
-            accent: '#2563eb',
-            surf:   '#f3f2f1',
+            rail:    '#1b2c4a',
+            panel:   '#22375e',
+            accent:  '#1a6b45',
+            primary: '#1a6b45',
+            surf:    '#f5f3ef',
           }
         }
       }
@@ -25,81 +26,172 @@
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <style>
-    [x-cloak]  { display: none !important; }
-
-    /* ── global resets ── */
+    [x-cloak] { display: none !important; }
     *, *::before, *::after { box-sizing: border-box; }
     body { font-family: 'Inter', system-ui, sans-serif; }
 
-    /* ── utility classes ── */
-    .form-input  { display:block; width:100%; border:1px solid #d1d5db; border-radius:.5rem; padding:.5rem .75rem; font-size:.875rem; transition: border-color .15s, box-shadow .15s; outline:none; }
-    .form-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
-    .btn-primary   { display:inline-flex; align-items:center; gap:.375rem; background:#2563eb; color:#fff; padding:.4rem 1rem; border-radius:.5rem; font-size:.8125rem; font-weight:600; cursor:pointer; transition: background .15s, box-shadow .15s; border:none; }
-    .btn-primary:hover { background:#1d4ed8; box-shadow:0 2px 8px rgba(37,99,235,.35); }
-    .btn-secondary { display:inline-flex; align-items:center; gap:.375rem; background:#efefef; color:#374151; padding:.4rem 1rem; border-radius:.5rem; font-size:.8125rem; font-weight:600; cursor:pointer; transition: background .15s; border:none; }
-    .btn-secondary:hover { background:#e2e2e2; }
-    .btn-danger    { display:inline-flex; align-items:center; gap:.375rem; background:#dc2626; color:#fff; padding:.4rem 1rem; border-radius:.5rem; font-size:.8125rem; font-weight:600; cursor:pointer; transition: background .15s; border:none; }
-    .btn-danger:hover { background:#b91c1c; }
-    .card  { background:#fff; border-radius:.875rem; border:1px solid #e5e7eb; padding:1.25rem; }
-    .card-hover { transition: border-color .15s, box-shadow .15s; }
-    .card-hover:hover { border-color:#bfdbfe; box-shadow:0 2px 12px rgba(37,99,235,.1); }
+    /* ── Design tokens ── */
+    :root {
+      --ink-1:       #141a24;
+      --ink-2:       #374151;
+      --ink-3:       #6b7280;
+      --ink-4:       #9ca3af;
+      --surf-canvas: #f5f3ef;
+      --surf-card:   #ffffff;
+      --surf-raised: #faf9f7;
+      --accent:      #1a6b45;
+      --accent-hover:#155a38;
+      --border-soft: rgba(0,0,0,.06);
+      --border-std:  rgba(0,0,0,.10);
+      --border-em:   rgba(0,0,0,.18);
+      --shadow-card: 0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+      --shadow-up:   0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.05);
+      --radius-sm:   5px;
+      --radius-md:   8px;
+      --radius-lg:   12px;
+    }
 
-    /* ── rail ── */
+    /* ── Utility classes ── */
+    .form-input {
+      display: block; width: 100%;
+      background: rgba(0,0,0,.03);
+      border: 1px solid var(--border-std);
+      border-radius: var(--radius-sm);
+      padding: .5rem .75rem;
+      font-size: .875rem;
+      color: var(--ink-1);
+      transition: border-color .15s, box-shadow .15s, background .15s;
+      outline: none;
+    }
+    .form-input:focus {
+      background: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(26,107,69,.12);
+    }
+    .form-input::placeholder { color: var(--ink-4); }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: .375rem;
+      background: var(--accent); color: #fff;
+      padding: .45rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: .8125rem; font-weight: 600;
+      cursor: pointer; border: none;
+      transition: background .15s, box-shadow .15s;
+      text-decoration: none;
+    }
+    .btn-primary:hover { background: var(--accent-hover); box-shadow: 0 2px 8px rgba(26,107,69,.28); }
+
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: .375rem;
+      background: #fff; color: var(--ink-2);
+      padding: .45rem 1rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-std);
+      font-size: .8125rem; font-weight: 500;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+      text-decoration: none;
+    }
+    .btn-secondary:hover { background: var(--surf-raised); border-color: var(--border-em); }
+
+    .btn-danger {
+      display: inline-flex; align-items: center; gap: .375rem;
+      background: #dc2626; color: #fff;
+      padding: .45rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: .8125rem; font-weight: 600;
+      cursor: pointer; border: none;
+      transition: background .15s;
+      text-decoration: none;
+    }
+    .btn-danger:hover { background: #b91c1c; }
+
+    .card {
+      background: var(--surf-card);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-soft);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-card);
+    }
+    .card-hover {
+      transition: border-color .15s, box-shadow .15s, transform .15s;
+    }
+    .card-hover:hover {
+      border-color: rgba(26,107,69,.2);
+      box-shadow: var(--shadow-up);
+      transform: translateY(-1px);
+    }
+
+    /* ── Rail ── */
     .rail-btn {
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:.2rem; width:60px; padding:.65rem 0; border-radius:.5rem; cursor:pointer;
-      color:rgba(255,255,255,.65); transition: color .15s, background .15s;
-      text-decoration:none; position:relative;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: .25rem;
+      width: 64px; padding: .6rem 0;
+      border-radius: 8px; cursor: pointer;
+      color: rgba(255,255,255,.5);
+      transition: color .15s, background .15s;
+      text-decoration: none; position: relative;
     }
-    .rail-btn:hover { color:#fff; background:rgba(255,255,255,.08); }
-    .rail-btn.active { color:#fff; }
+    .rail-btn:hover { color: rgba(255,255,255,.9); background: rgba(255,255,255,.07); }
+    .rail-btn.active { color: #fff; background: rgba(26,107,69,.2); }
     .rail-btn.active::before {
-      content:''; position:absolute; left:0; top:50%; transform:translateY(-50%);
-      width:3px; height:60%; background:#2563eb; border-radius:0 3px 3px 0;
+      content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+      width: 3px; height: 56%; background: #4ade80;
+      border-radius: 0 3px 3px 0;
     }
-    .rail-btn svg { width:22px; height:22px; flex-shrink:0; }
-    .rail-label { font-size:.6rem; font-weight:500; letter-spacing:.02em; white-space:nowrap; }
+    .rail-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .rail-label { font-size: .6rem; font-weight: 500; letter-spacing: .03em; white-space: nowrap; }
 
-    /* ── panel nav ── */
+    /* ── Panel nav ── */
     .nav-item {
-      display:flex; align-items:center; gap:.625rem; padding:.5rem .75rem;
-      border-radius:.5rem; font-size:.8125rem; font-weight:500; color:rgba(255,255,255,.75);
-      text-decoration:none; transition: color .15s, background .15s;
+      display: flex; align-items: center; gap: .625rem;
+      padding: .45rem .75rem;
+      border-radius: 6px;
+      font-size: .8125rem; font-weight: 500;
+      color: rgba(255,255,255,.65);
+      text-decoration: none;
+      transition: color .15s, background .15s;
     }
-    .nav-item:hover { color:#fff; background:rgba(255,255,255,.08); }
-    .nav-item.active { color:#fff; background:rgba(37,99,235,.25); }
-    .nav-item svg { width:16px; height:16px; flex-shrink:0; opacity:.85; }
-    .nav-item.active svg { opacity:1; }
+    .nav-item:hover { color: rgba(255,255,255,.95); background: rgba(255,255,255,.07); }
+    .nav-item.active { color: #fff; background: rgba(26,107,69,.22); }
+    .nav-item svg { width: 15px; height: 15px; flex-shrink: 0; opacity: .8; }
+    .nav-item.active svg { opacity: 1; }
 
-    /* ── avatar ── */
+    /* ── Avatar ── */
     .avatar {
-      border-radius:50%; object-fit:cover; flex-shrink:0;
-      display:flex; align-items:center; justify-content:center;
-      font-weight:700; color:#fff; background:#2563eb; user-select:none;
+      border-radius: 50%; object-fit: cover; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; color: #fff; background: var(--accent); user-select: none;
     }
 
-    /* ── toast ── */
-    @keyframes slideIn { from { transform:translateY(-8px); opacity:0; } to { transform:translateY(0); opacity:1; } }
-    .toast { animation: slideIn .2s ease; }
+    /* ── Badge ── */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: .125rem .5rem;
+      border-radius: 999px;
+      font-size: .7rem; font-weight: 600; letter-spacing: .02em;
+    }
+
+    /* ── Toast ── */
+    @keyframes slideDown { from { transform: translateY(-6px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .toast { animation: slideDown .2s ease; }
   </style>
   {% block extra_head %}{% endblock %}
 </head>
 
-<body class="bg-surf text-gray-800 antialiased">
+<body class="bg-surf text-gray-800 antialiased" style="background: var(--surf-canvas);">
 
 {% if user.is_authenticated %}
-<!-- ══════════════════════════════════════════════
-     APP SHELL — Teams-style layout
-     [rail 60px] [panel 0/240px] [main]
-═══════════════════════════════════════════════ -->
 <div class="flex h-screen overflow-hidden">
 
   <!-- ── ICON RAIL ── -->
-  <nav class="flex flex-col items-center bg-rail w-[60px] flex-shrink-0 py-3 gap-1 z-20">
+  <nav class="flex flex-col items-center bg-rail w-[64px] flex-shrink-0 py-3 gap-0.5 z-20">
 
     <!-- Logo mark -->
-    <div class="w-9 h-9 rounded-xl bg-accent flex items-center justify-center mb-3 flex-shrink-0">
-      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="w-8 h-8 rounded-lg flex items-center justify-center mb-4 flex-shrink-0"
+         style="background: rgba(26,107,69,.9); box-shadow: 0 2px 8px rgba(26,107,69,.4);">
+      <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
       </svg>
@@ -118,7 +210,7 @@
       <div class="relative" id="rail-chat-badge">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
         {% if unread_messages_count > 0 %}
-        <span class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5 leading-none">{{ unread_messages_count }}</span>
+        <span class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none">{{ unread_messages_count }}</span>
         {% endif %}
       </div>
       <span class="rail-label">Chat</span>
@@ -158,6 +250,7 @@
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       <span class="rail-label">Equipes</span>
     </a>
+
     {% if user.can_manage_users %}
     <a href="{% url 'core:department_list' %}"
        class="rail-btn {% if 'departamentos' in request.path %}active{% endif %}"
@@ -170,7 +263,7 @@
        title="Usuários">
       <div class="relative">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-        {% if pending_count %}<span class="absolute -top-1 -right-1 bg-amber-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{{ pending_count }}</span>{% endif %}
+        {% if pending_count %}<span class="absolute -top-1 -right-1 bg-amber-400 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{{ pending_count }}</span>{% endif %}
       </div>
       <span class="rail-label">Usuários</span>
     </a>
@@ -182,10 +275,8 @@
     </a>
     {% endif %}
 
-    <!-- spacer -->
     <div class="flex-1"></div>
 
-    <!-- Profile + logout at bottom -->
     <a href="{% url 'core:profile' %}" class="rail-btn" title="{{ user.get_full_name|default:user.username }}">
       {% if user.avatar %}
         <img src="{{ user.avatar.url }}" class="avatar w-8 h-8">
@@ -195,66 +286,80 @@
       <span class="rail-label">Perfil</span>
     </a>
 
-    <a href="{% url 'core:logout' %}" class="rail-btn hover:!text-red-400" title="Sair">
+    <a href="{% url 'core:logout' %}" class="rail-btn" style="color:rgba(255,255,255,.4);"
+       onmouseenter="this.style.color='#f87171'" onmouseleave="this.style.color='rgba(255,255,255,.4)'"
+       title="Sair">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
       <span class="rail-label">Sair</span>
     </a>
   </nav>
 
-  <!-- ── SIDE PANEL (context nav — Teams-style) ── -->
-  <div class="bg-panel flex-shrink-0 overflow-hidden transition-all duration-200 ease-out border-r border-white/5"
-       :style="panelOpen ? 'width:240px' : 'width:0px'">
-    <div class="w-[240px] h-full flex flex-col py-4 px-3" x-cloak>
+  <!-- ── SIDE PANEL ── -->
+  <div class="bg-panel flex-shrink-0 overflow-hidden transition-all duration-200 ease-out"
+       style="border-right: 1px solid rgba(255,255,255,.06);"
+       :style="panelOpen ? 'width:248px' : 'width:0px'">
+    <div class="w-[248px] h-full flex flex-col py-5 px-3" x-cloak>
+
       <!-- Panel header -->
-      <div class="px-2 mb-4">
-        <p class="text-white font-semibold text-sm">{{ user.get_full_name|default:user.username }}</p>
-        <p class="text-white/40 text-xs mt-0.5">{{ user.get_role_display }}{% if user.department %} · {{ user.department }}{% endif %}</p>
+      <div class="px-2 mb-5">
+        <p class="text-white font-semibold text-sm leading-tight">{{ user.get_full_name|default:user.username }}</p>
+        <p class="text-[11px] mt-0.5" style="color:rgba(255,255,255,.4);">
+          {{ user.get_role_display }}{% if user.department %} · {{ user.department }}{% endif %}
+        </p>
       </div>
+
       <!-- Panel nav -->
       <nav class="space-y-0.5 flex-1 overflow-y-auto">
         <a href="{% url 'core:dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
           Dashboard
         </a>
+
         <a href="{% url 'mensagens:inbox' %}" class="nav-item {% if 'mensagens' in request.path %}active{% endif %}">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
           Chat
           {% if unread_messages_count > 0 %}
-          <span class="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 rounded-full">{{ unread_messages_count }}</span>
+          <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style="background:rgba(239,68,68,.8); color:#fff;">{{ unread_messages_count }}</span>
           {% endif %}
         </a>
-        <a href="{% url 'mensagens:new_conversation' %}" class="nav-item pl-8 text-white/50 hover:text-white/80 text-xs">
+        <a href="{% url 'mensagens:new_conversation' %}" class="nav-item pl-8 text-xs" style="color:rgba(255,255,255,.38);">
           + Nova conversa
         </a>
+
         <a href="{% url 'comunicados:list' %}" class="nav-item {% if 'comunicados' in request.path %}active{% endif %}">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
           Comunicados
         </a>
+
         <a href="{% url 'agenda:event_list' %}" class="nav-item {% if 'agenda' in request.path %}active{% endif %}">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           Agenda
         </a>
-        <a href="{% url 'agenda:event_create' %}" class="nav-item pl-8 text-white/50 hover:text-white/80 text-xs">
+        <a href="{% url 'agenda:event_create' %}" class="nav-item pl-8 text-xs" style="color:rgba(255,255,255,.38);">
           + Novo evento
         </a>
+
         <a href="{% url 'atendimento:list' %}" class="nav-item {% if 'atendimento' in request.path %}active{% endif %}">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
           Atendimentos
         </a>
-        <a href="{% url 'atendimento:create' %}" class="nav-item pl-8 text-white/50 hover:text-white/80 text-xs">
+        <a href="{% url 'atendimento:create' %}" class="nav-item pl-8 text-xs" style="color:rgba(255,255,255,.38);">
           + Novo atendimento
         </a>
+
         <a href="{% url 'kanban:board_list' %}" class="nav-item {% if 'kanban' in request.path %}active{% endif %}">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
           Kanban
         </a>
+
         <a href="{% url 'core:team_list' %}" class="nav-item {% if 'equipes' in request.path %}active{% endif %}">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           Equipes
         </a>
+
         {% if user.can_manage_users %}
-        <div class="pt-3 pb-1 px-2">
-          <p class="text-white/30 text-[10px] font-semibold uppercase tracking-widest">Administração</p>
+        <div class="pt-4 pb-1 px-2">
+          <p class="text-[10px] font-semibold uppercase tracking-widest" style="color:rgba(255,255,255,.25);">Administração</p>
         </div>
         <a href="{% url 'core:department_list' %}" class="nav-item {% if 'departamentos' in request.path %}active{% endif %}">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
@@ -263,7 +368,7 @@
         <a href="{% url 'core:user_list' %}" class="nav-item {% if 'usuarios' in request.path %}active{% endif %}">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
           Usuários
-          {% if pending_count %}<span class="ml-auto bg-amber-500 text-white text-[10px] font-bold px-1.5 rounded-full">{{ pending_count }}</span>{% endif %}
+          {% if pending_count %}<span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style="background:rgba(245,158,11,.85);color:#fff;">{{ pending_count }}</span>{% endif %}
         </a>
         <a href="{% url 'core:audit_log_list' %}" class="nav-item {% if 'logs' in request.path %}active{% endif %}">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -272,9 +377,9 @@
         {% endif %}
       </nav>
 
-      <!-- LGPD links -->
-      <div class="mt-auto pt-3 border-t border-white/10 space-y-0.5">
-        <a href="{% url 'core:lgpd_policy' %}" class="nav-item text-white/40 hover:text-white/70 text-xs">
+      <!-- LGPD -->
+      <div class="mt-auto pt-3 space-y-0.5" style="border-top:1px solid rgba(255,255,255,.08);">
+        <a href="{% url 'core:lgpd_policy' %}" class="nav-item text-xs" style="color:rgba(255,255,255,.3);">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
           Política LGPD
         </a>
@@ -286,25 +391,29 @@
   <div class="flex-1 flex flex-col overflow-hidden">
 
     <!-- Topbar -->
-    <header class="h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0 shadow-sm">
-      <!-- Panel toggle -->
+    <header class="h-[52px] bg-white flex items-center px-4 gap-3 flex-shrink-0"
+            style="border-bottom:1px solid rgba(0,0,0,.07); box-shadow:0 1px 3px rgba(0,0,0,.04);">
+
       <button @click="panelOpen = !panelOpen"
-              class="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors flex-shrink-0">
+              class="p-1.5 rounded-md transition-colors flex-shrink-0"
+              style="color:var(--ink-3);"
+              onmouseenter="this.style.background='rgba(0,0,0,.05)';this.style.color='var(--ink-1)'"
+              onmouseleave="this.style.background='transparent';this.style.color='var(--ink-3)'">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
 
-      <!-- Breadcrumb / title -->
+      <!-- Title -->
       <div class="flex items-center gap-1.5 text-sm flex-1 min-w-0">
-        <span class="text-gray-400 hidden sm:block">Intranet</span>
-        <span class="text-gray-300 hidden sm:block">/</span>
-        <span class="font-semibold text-gray-800 truncate">{% block page_title %}{% endblock %}</span>
+        <span class="hidden sm:block text-xs font-medium" style="color:var(--ink-4);">SINSAÚDE-SP</span>
+        <span class="hidden sm:block" style="color:var(--ink-4);">/</span>
+        <span class="font-semibold truncate" style="color:var(--ink-1); font-size:.875rem;">{% block page_title %}{% endblock %}</span>
       </div>
 
       <!-- Actions -->
       <div class="flex items-center gap-2 flex-shrink-0">
         {% block topbar_actions %}{% endblock %}
 
-        <!-- Live badges (polling a cada 30s) -->
+        <!-- Live badges -->
         <div id="topbar-live"
              class="flex items-center gap-1"
              hx-get="{% url 'core:topbar_counts' %}"
@@ -314,41 +423,46 @@
         </div>
 
         <!-- User pill -->
-        <a href="{% url 'core:profile' %}" class="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full hover:bg-gray-100 transition-colors">
+        <a href="{% url 'core:profile' %}"
+           class="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full transition-colors"
+           style="color:var(--ink-2);"
+           onmouseenter="this.style.background='rgba(0,0,0,.05)'"
+           onmouseleave="this.style.background='transparent'">
           {% if user.avatar %}
             <img src="{{ user.avatar.url }}" class="avatar w-6 h-6 text-[10px]">
           {% else %}
             <div class="avatar w-6 h-6 text-[10px]">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
           {% endif %}
-          <span class="text-xs font-medium text-gray-700 hidden sm:block">{{ user.first_name|default:user.username }}</span>
+          <span class="text-xs font-medium hidden sm:block">{{ user.first_name|default:user.username }}</span>
         </a>
       </div>
     </header>
 
     <!-- Toast notifications -->
     {% if messages %}
-    <div class="absolute top-14 right-4 z-50 space-y-2 w-80">
+    <div class="absolute top-[60px] right-4 z-50 space-y-2 w-80">
       {% for msg in messages %}
       <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4500)"
            x-transition:enter="transition ease-out duration-200"
-           x-transition:enter-start="opacity-0 translate-y-1"
+           x-transition:enter-start="opacity-0 -translate-y-1"
            x-transition:enter-end="opacity-100 translate-y-0"
            x-transition:leave="transition ease-in duration-150"
            x-transition:leave-start="opacity-100"
            x-transition:leave-end="opacity-0"
-           class="toast flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg text-sm border
-           {% if msg.tags == 'error' %}bg-red-50 text-red-800 border-red-200
-           {% elif msg.tags == 'success' %}bg-emerald-50 text-emerald-800 border-emerald-200
-           {% else %}bg-blue-50 text-blue-800 border-blue-200{% endif %}">
+           class="toast flex items-start gap-3 px-4 py-3 rounded-xl text-sm"
+           style="box-shadow: 0 4px 16px rgba(0,0,0,.12); border: 1px solid;
+           {% if msg.tags == 'error' %}background:#fef2f2; color:#991b1b; border-color:#fecaca;
+           {% elif msg.tags == 'success' %}background:#f0fdf4; color:#166534; border-color:#bbf7d0;
+           {% else %}background:#eff6ff; color:#1e40af; border-color:#bfdbfe;{% endif %}">
         <span class="flex-1 leading-snug">{{ msg }}</span>
-        <button @click="show = false" class="opacity-40 hover:opacity-80 mt-0.5">✕</button>
+        <button @click="show = false" class="opacity-40 hover:opacity-70 mt-0.5 text-xs">✕</button>
       </div>
       {% endfor %}
     </div>
     {% endif %}
 
     <!-- Page content -->
-    <main class="flex-1 overflow-y-auto">
+    <main class="flex-1 overflow-y-auto" style="background:var(--surf-canvas);">
       <div class="p-5">
         {% block content %}{% endblock %}
       </div>
