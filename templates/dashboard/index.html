@@ -25,6 +25,21 @@
     </div>
   </div>
 
+  <!-- Visão Executiva (só para can_see_all) -->
+  {% if user.can_see_all %}
+  <a href="{% url 'core:visao_executiva' %}"
+     class="flex items-center gap-4 px-5 py-4 rounded-xl border border-violet-200 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 transition-all group">
+    <div class="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center flex-shrink-0">
+      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    </div>
+    <div class="flex-1">
+      <p class="font-semibold text-violet-900 text-sm group-hover:text-violet-700 transition-colors">Visão Executiva</p>
+      <p class="text-xs text-violet-500 mt-0.5">Atendimentos, saúde dos departamentos e atividade das últimas 24h</p>
+    </div>
+    <svg class="w-4 h-4 text-violet-400 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+  </a>
+  {% endif %}
+
   <!-- Stats -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <a href="{% url 'mensagens:inbox' %}" class="card card-hover group">

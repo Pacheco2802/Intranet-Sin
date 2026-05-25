@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block title %}Visão Executiva{% endblock %}
+{% block page_title %}Visão Executiva{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+
+  <!-- ── ATENDIMENTO AO FILIADO ─────────────────── -->
+  <div>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">Atendimento ao Filiado — {{ mes_inicio|date:"F Y" }}</h2>
+      <a href="{% url 'atendimento:list' %}" class="text-xs text-gray-400 hover:text-gray-600">Ver todos →</a>
+    </div>
+
+    <!-- Números do mês -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+      <div class="card text-center">
+        <p class="text-3xl font-bold" style="color:var(--ink-1);">{{ at_total_mes }}</p>
+        <p class="text-xs text-gray-400 mt-1">Abertos no mês</p>
+      </div>
+      <div class="card text-center border-t-4 border-emerald-400">
+        <p class="text-3xl font-bold text-emerald-600">{{ at_concluidos_mes }}</p>
+        <p class="text-xs text-gray-400 mt-1">Concluídos</p>
+      </div>
+      <div class="card text-center border-t-4 border-red-300">
+        <p class="text-3xl font-bold text-red-500">{{ at_cancelados_mes }}</p>
+        <p class="text-xs text-gray-400 mt-1">Cancelados</p>
+      </div>
+      <div class="card text-center border-t-4 border-blue-300">
+        {% if tempo_medio_horas %}
+        <p class="text-3xl font-bold text-blue-600">{{ tempo_medio_horas }}h</p>
+        <p class="text-xs text-gray-400 mt-1">Tempo médio conclusão</p>
+        {% else %}
+        <p class="text-2xl font-bold text-gray-300">—</p>
+        <p class="text-xs text-gray-400 mt-1">Tempo médio conclusão</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Fila atual + por área -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+      <!-- Fila agora -->
+      <div class="card">
+        <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-4">Fila agora — {{ at_ativos }} ativo{{ at_ativos|pluralize }}</h3>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-slate-400 flex-shrink-0"></span>
+              <span class="text-sm text-gray-700">Na Recepção</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="h-2 rounded-full bg-slate-200 overflow-hidden" style="width:120px;">
+                {% if at_ativos %}<div class="h-full bg-slate-400 rounded-full" style="width:{% widthratio at_recepcao at_ativos 100 %}%"></div>{% endif %}
+              </div>
+              <span class="text-sm font-semibold text-gray-900 w-6 text-right">{{ at_recepcao }}</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-400 flex-shrink-0"></span>
+              <span class="text-sm text-gray-700">Encaminhados</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="h-2 rounded-full bg-blue-100 overflow-hidden" style="width:120px;">
+                {% if at_ativos %}<div class="h-full bg-blue-400 rounded-full" style="width:{% widthratio at_encaminhados at_ativos 100 %}%"></div>{% endif %}
+              </div>
+              <span class="text-sm font-semibold text-gray-900 w-6 text-right">{{ at_encaminhados }}</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0"></span>
+              <span class="text-sm text-gray-700">Em Andamento</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="h-2 rounded-full bg-amber-100 overflow-hidden" style="width:120px;">
+                {% if at_ativos %}<div class="h-full bg-amber-400 rounded-full" style="width:{% widthratio at_em_andamento at_ativos 100 %}%"></div>{% endif %}
+              </div>
+              <span class="text-sm font-semibold text-gray-900 w-6 text-right">{{ at_em_andamento }}</span>
+            </div>
+          </div>
+        </div>
+        {% if not at_ativos %}
+        <p class="text-sm text-gray-400 italic">Nenhum atendimento em aberto.</p>
+        {% endif %}
+      </div>
+
+      <!-- Por área -->
+      <div class="card">
+        <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-4">Ativos por área</h3>
+        {% if at_por_dept %}
+        <div class="space-y-2.5">
+          {% for d in at_por_dept %}
+          <div class="flex items-center gap-3">
+            <span class="text-base w-5 text-center flex-shrink-0">{{ d.departamento_atual__icon|default:"🏢" }}</span>
+            <span class="text-sm text-gray-700 flex-1 truncate">{{ d.departamento_atual__name }}</span>
+            <span class="text-sm font-semibold text-gray-900">{{ d.total }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-400 italic">Nenhum atendimento ativo com área definida.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SAÚDE OPERACIONAL (KANBAN) ─────────────── -->
+  <div>
+    <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Saúde Operacional — Kanban</h2>
+
+    <!-- Semáforo por departamento -->
+    <div class="card mb-4 p-0 overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-100 bg-gray-50">
+            <th class="text-left text-xs font-semibold text-gray-400 uppercase tracking-wide px-4 py-3">Departamento</th>
+            <th class="text-center text-xs font-semibold text-gray-400 uppercase tracking-wide px-4 py-3">Ativos</th>
+            <th class="text-center text-xs font-semibold text-gray-400 uppercase tracking-wide px-4 py-3">Em Andamento</th>
+            <th class="text-center text-xs font-semibold text-gray-400 uppercase tracking-wide px-4 py-3">Concluídos</th>
+            <th class="text-center text-xs font-semibold text-gray-400 uppercase tracking-wide px-4 py-3">Vencidos</th>
+            <th class="text-center text-xs font-semibold text-gray-400 uppercase tracking-wide px-4 py-3">Situação</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for s in dept_saude %}
+          <tr class="hover:bg-gray-50 transition-colors">
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                <span class="text-base">{{ s.dept.icon|default:"🏢" }}</span>
+                <span class="font-medium text-gray-800">{{ s.dept.name }}</span>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-center text-gray-600">{{ s.ativos }}</td>
+            <td class="px-4 py-3 text-center text-blue-600 font-medium">{{ s.em_andamento }}</td>
+            <td class="px-4 py-3 text-center text-emerald-600 font-medium">{{ s.concluidos }}</td>
+            <td class="px-4 py-3 text-center">
+              {% if s.vencidos %}
+              <span class="font-semibold text-red-600">{{ s.vencidos }}</span>
+              {% else %}
+              <span class="text-gray-300">—</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-center">
+              {% if s.saude == 'green' %}
+              <span class="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Em dia
+              </span>
+              {% elif s.saude == 'yellow' %}
+              <span class="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full">
+                <span class="w-2 h-2 rounded-full bg-amber-400"></span> Atenção
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 text-xs font-medium text-red-700 bg-red-50 px-2.5 py-1 rounded-full">
+                <span class="w-2 h-2 rounded-full bg-red-500"></span> Crítico
+              </span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="px-4 py-8 text-center text-sm text-gray-400 italic">Nenhum departamento com cards cadastrados.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Urgentes + Vencidos lado a lado -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+      <!-- Cards urgentes/alta -->
+      <div class="card">
+        <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-4">
+          Cards Urgentes e Alta Prioridade — {{ urgentes|length }} ativo{{ urgentes|length|pluralize }}
+        </h3>
+        {% if urgentes %}
+        <div class="space-y-2">
+          {% for card in urgentes %}
+          <a href="{% url 'kanban:card_detail' card.column.board.pk card.pk %}"
+             class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors group">
+            <span class="text-xs px-2 py-0.5 rounded font-semibold flex-shrink-0
+              {% if card.priority == 'URGENT' %}bg-violet-100 text-violet-700{% else %}bg-red-100 text-red-700{% endif %}">
+              {% if card.priority == 'URGENT' %}URGENTE{% else %}ALTA{% endif %}
+            </span>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-800 truncate group-hover:text-accent">{{ card.title }}</p>
+              <p class="text-xs text-gray-400 truncate">
+                {{ card.column.board.department.name|default:"Sem área" }}
+                {% if card.assignee %} · {{ card.assignee.first_name }}{% endif %}
+              </p>
+            </div>
+            {% if card.due_date %}
+            <span class="text-xs flex-shrink-0 {% if card.is_overdue %}text-red-500 font-semibold{% else %}text-gray-400{% endif %}">
+              {{ card.due_date|date:"d/m" }}
+            </span>
+            {% endif %}
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-6">
+          <p class="text-2xl mb-2">✅</p>
+          <p class="text-sm text-gray-400">Nenhum card urgente ou alta em aberto.</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Cards vencidos -->
+      <div class="card">
+        <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-4">
+          Cards com Prazo Vencido — {{ vencidos_lista|length }}{% if vencidos_lista|length == 20 %}+{% endif %}
+        </h3>
+        {% if vencidos_lista %}
+        <div class="space-y-2">
+          {% for card in vencidos_lista %}
+          <a href="{% url 'kanban:card_detail' card.column.board.pk card.pk %}"
+             class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-red-50 transition-colors group">
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-800 truncate group-hover:text-red-700">{{ card.title }}</p>
+              <p class="text-xs text-gray-400 truncate">
+                {{ card.column.board.department.name|default:"Sem área" }}
+                {% if card.assignee %} · {{ card.assignee.first_name }}{% endif %}
+              </p>
+            </div>
+            <span class="text-xs text-red-500 font-semibold flex-shrink-0">{{ card.due_date|date:"d/m/Y" }}</span>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-6">
+          <p class="text-2xl mb-2">🎯</p>
+          <p class="text-sm text-gray-400">Nenhum card com prazo vencido.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ATIVIDADE DAS ÚLTIMAS 24H ──────────────── -->
+  <div>
+    <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Últimas 24 horas</h2>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+      <!-- Atendimentos recentes -->
+      <div class="card">
+        <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-4">Atendimentos</h3>
+        {% if etapas_recentes %}
+        <div class="space-y-2.5">
+          {% for etapa in etapas_recentes %}
+          <div class="flex items-start gap-3">
+            <span class="text-base leading-none mt-0.5 flex-shrink-0">{{ etapa.tipo_icon }}</span>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm text-gray-800 truncate">
+                <span class="font-medium">{{ etapa.get_tipo_display }}</span>
+                — <a href="{% url 'atendimento:detail' etapa.atendimento.pk %}"
+                     class="hover:text-accent transition-colors">{{ etapa.atendimento.nome_filiado }}</a>
+              </p>
+              <p class="text-xs text-gray-400 mt-0.5">
+                {{ etapa.autor.first_name|default:"Sistema" }} · {{ etapa.created_at|date:"H:i" }}
+              </p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-400 italic py-4 text-center">Nenhuma movimentação nas últimas 24h.</p>
+        {% endif %}
+      </div>
+
+      <!-- Kanban recente -->
+      <div class="card">
+        <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-4">Kanban</h3>
+        {% if atividade_kanban %}
+        <div class="space-y-2.5">
+          {% for act in atividade_kanban %}
+          <div class="flex items-start gap-3">
+            <div class="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0 mt-2"></div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm text-gray-800">
+                <span class="font-medium">{{ act.user.first_name|default:"Sistema" }}</span>
+                <span class="text-gray-500"> {{ act.action }}</span>
+              </p>
+              <p class="text-xs text-gray-400 mt-0.5 truncate">
+                {{ act.card.title }} · {{ act.timestamp|date:"H:i" }}
+              </p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-400 italic py-4 text-center">Nenhuma atividade kanban nas últimas 24h.</p>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

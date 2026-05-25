@@ -769,3 +769,131 @@ def audit_log_list(request):
             'date_to': date_to,
         },
     })
+
+
+@login_required
+def visao_executiva(request):
+    if not request.user.can_see_all:
+        return HttpResponseForbidden()
+
+    from datetime import timedelta
+    from django.db.models import Count, Q
+    from atendimento.models import Atendimento, AtendimentoEtapa
+    from kanban.models import Card, Column, CardActivity
+
+    now = timezone.now()
+    today = now.date()
+    mes_inicio = today.replace(day=1)
+    h24_atras = now - timedelta(hours=24)
+
+    # ── Atendimentos ──────────────────────────────
+    ats_mes = Atendimento.objects.filter(created_at__date__gte=mes_inicio)
+    at_total_mes      = ats_mes.count()
+    at_concluidos_mes = ats_mes.filter(status='CONCLUIDO').count()
+    at_cancelados_mes = ats_mes.filter(status='CANCELADO').count()
+    at_ativos         = Atendimento.objects.exclude(status__in=['CONCLUIDO', 'CANCELADO']).count()
+    at_recepcao       = Atendimento.objects.filter(status='TRIAGEM').count()
+    at_encaminhados   = Atendimento.objects.filter(status='ENCAMINHADO').count()
+    at_em_andamento   = Atendimento.objects.filter(status='EM_ANDAMENTO').count()
+
+    # Tempo médio de conclusão (horas) — mês atual
+    concluidos_mes = ats_mes.filter(status='CONCLUIDO', concluido_em__isnull=False)
+    tempo_medio_horas = None
+    if concluidos_mes.exists():
+        total_seg = sum(
+            (a.concluido_em - a.created_at).total_seconds()
+            for a in concluidos_mes
+        )
+        tempo_medio_horas = round(total_seg / concluidos_mes.count() / 3600, 1)
+
+    # Atendimentos ativos por departamento
+    at_por_dept = (
+        Atendimento.objects
+        .exclude(status__in=['CONCLUIDO', 'CANCELADO'])
+        .exclude(departamento_atual__isnull=True)
+        .values('departamento_atual__name', 'departamento_atual__icon', 'departamento_atual__pk')
+        .annotate(total=Count('id'))
+        .order_by('-total')
+    )
+
+    # ── Kanban ────────────────────────────────────
+    CT = Column.ColumnType
+    cards_ativos = Card.objects.exclude(column__column_type=CT.STATUS_FINAL)
+
+    urgentes = (
+        cards_ativos
+        .filter(priority__in=['URGENT', 'HIGH'])
+        .select_related('column__board__department', 'assignee')
+        .order_by('priority', 'due_date')[:12]
+    )
+
+    vencidos_lista = (
+        cards_ativos
+        .filter(due_date__lt=today, due_date__isnull=False)
+        .select_related('column__board__department', 'assignee')
+        .order_by('due_date')[:20]
+    )
+
+    # Saúde por departamento
+    dept_saude = []
+    for dept in Department.objects.order_by('name'):
+        dc = Card.objects.filter(column__board__department=dept)
+        total_dept   = dc.count()
+        ativos_dept  = dc.exclude(column__column_type=CT.STATUS_FINAL).count()
+        venc_dept    = dc.exclude(column__column_type=CT.STATUS_FINAL).filter(
+            due_date__lt=today, due_date__isnull=False
+        ).count()
+        em_and_dept  = dc.filter(column__column_type=CT.EM_ANDAMENTO).count()
+        concl_dept   = dc.filter(column__column_type=CT.STATUS_FINAL).count()
+
+        if total_dept == 0:
+            continue
+
+        if venc_dept == 0:
+            saude = 'green'
+        elif ativos_dept > 0 and venc_dept / ativos_dept >= 0.3:
+            saude = 'red'
+        else:
+            saude = 'yellow'
+
+        dept_saude.append({
+            'dept': dept,
+            'ativos': ativos_dept,
+            'vencidos': venc_dept,
+            'em_andamento': em_and_dept,
+            'concluidos': concl_dept,
+            'saude': saude,
+        })
+
+    # ── Atividade 24h ─────────────────────────────
+    atividade_kanban = (
+        CardActivity.objects
+        .filter(timestamp__gte=h24_atras)
+        .select_related('card__column__board', 'user')
+        .order_by('-timestamp')[:20]
+    )
+
+    etapas_recentes = (
+        AtendimentoEtapa.objects
+        .filter(created_at__gte=h24_atras, tipo__in=['ABERTURA', 'CONCLUSAO', 'CANCELAMENTO'])
+        .select_related('atendimento', 'autor')
+        .order_by('-created_at')[:20]
+    )
+
+    return render(request, 'core/visao_executiva.html', {
+        'at_total_mes':      at_total_mes,
+        'at_concluidos_mes': at_concluidos_mes,
+        'at_cancelados_mes': at_cancelados_mes,
+        'at_ativos':         at_ativos,
+        'at_recepcao':       at_recepcao,
+        'at_encaminhados':   at_encaminhados,
+        'at_em_andamento':   at_em_andamento,
+        'tempo_medio_horas': tempo_medio_horas,
+        'at_por_dept':       at_por_dept,
+        'urgentes':          urgentes,
+        'vencidos_lista':    vencidos_lista,
+        'dept_saude':        dept_saude,
+        'atividade_kanban':  atividade_kanban,
+        'etapas_recentes':   etapas_recentes,
+        'mes_inicio':        mes_inicio,
+    })

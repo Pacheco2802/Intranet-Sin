@@ -234,6 +234,8 @@ class Notification(models.Model):
         CARD_ASSIGNED = 'CARD_ASSIGNED', 'Card atribuído a você'
         CARD_DEPT = 'CARD_DEPT', 'Card criado na sua área'
         CARD_CROSS = 'CARD_CROSS', 'Card entre departamentos'
+        CARD_COMMENT = 'CARD_COMMENT', 'Comentário em card'
+        CARD_MOVED = 'CARD_MOVED', 'Card movido de coluna'
         EVENT_INVITE = 'EVENT_INVITE', 'Convite para evento'
         EVENT_REMINDER = 'EVENT_REMINDER', 'Lembrete de evento'
 

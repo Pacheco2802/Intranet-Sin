@@ -65,6 +65,32 @@
 </div>
 {% endif %}
 
+<!-- Projetos (cross-departamento) -->
+{% if project_boards %}
+<div class="mb-6">
+  <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Projetos — Entre Áreas</h2>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    {% for board in project_boards %}
+    <a href="{% url 'kanban:board_detail' board.pk %}"
+       class="card hover:border-violet-300 hover:shadow-md transition-all group cursor-pointer border border-violet-100">
+      <div class="flex items-start justify-between mb-3">
+        <div class="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600 text-xl flex-shrink-0">
+          🤝
+        </div>
+        <span class="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">Projeto</span>
+      </div>
+      <h3 class="font-semibold text-gray-900 group-hover:text-violet-600 transition-colors text-sm">{{ board.name }}</h3>
+      <p class="text-xs text-gray-400 mt-1">{{ board.members.count }} participante{{ board.members.count|pluralize }}</p>
+      <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+        <span class="text-xs text-gray-400">{{ board.columns.count }} colunas</span>
+        <span class="text-xs text-gray-400">{{ board.created_by.first_name }}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 <!-- Boards manuais -->
 {% if manual_boards %}
 <div>
@@ -78,9 +104,6 @@
              style="background:{{ board.department.color|default:'#1e3a5f' }}">
           {{ board.department.icon|default:"📋" }}
         </div>
-        {% if board.is_cross_department %}
-        <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Entre áreas</span>
-        {% endif %}
       </div>
       <h3 class="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{{ board.name }}</h3>
       {% if board.department %}

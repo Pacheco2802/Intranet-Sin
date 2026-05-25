@@ -31,11 +31,13 @@ def board_list(request):
     # Separate global board for easier template use
     global_board = boards.filter(is_global=True).first()
     dept_boards = boards.filter(is_global=False, is_cross_department=False, is_auto=True)
-    manual_boards = boards.filter(is_global=False, is_auto=False)
+    project_boards = boards.filter(is_global=False, is_cross_department=True)
+    manual_boards = boards.filter(is_global=False, is_auto=False, is_cross_department=False)
     return render(request, 'kanban/list.html', {
         'boards': boards,
         'global_board': global_board,
         'dept_boards': dept_boards,
+        'project_boards': project_boards,
         'manual_boards': manual_boards,
     })
 
@@ -99,6 +101,7 @@ def card_detail(request, board_pk, pk):
                 c.author = request.user
                 c.save()
                 CardActivity.objects.create(card=card, user=request.user, action='Comentou no card')
+                _notify_comment(c, request.user)
                 return redirect('kanban:card_detail', board_pk=board.pk, pk=card.pk)
         elif action == 'final_status':
             new_status = request.POST.get('final_status', '')
@@ -330,6 +333,16 @@ def card_move(request, pk):
             resource_type='Card', resource_id=card.pk,
             ip=AuditMiddleware.get_client_ip(request),
         )
+        if card.assignee_id and card.assignee_id != request.user.pk:
+            card.refresh_from_db(fields=['assignee'])
+            Notification.send(
+                user=card.assignee,
+                actor=request.user,
+                ntype=Notification.Type.CARD_MOVED,
+                title=f'Card movido para "{col.name}"',
+                body=card.title,
+                link=f'/kanban/{board.pk}/card/{card.pk}/',
+            )
     return JsonResponse({'status': 'ok'})
 
 
@@ -570,20 +583,34 @@ def _notify_subtask(subtask, actor):
 
     if subtask.target_department:
         dept = subtask.target_department
-        targets = set()
-        if dept.leader and dept.leader != actor:
-            targets.add(dept.leader)
-        for mgr in CustomUser.objects.filter(role=CustomUser.Role.GERENTE, department=dept, is_active=True):
-            if mgr != actor:
-                targets.add(mgr)
-        for user in targets:
-            Notification.send(
-                user=user, actor=actor,
-                ntype=Notification.Type.CARD_CROSS,
-                title=f'{prefix}Nova sub-tarefa para {dept.name}',
-                body=f'"{subtask.title}" em "{card.title}" · {_card_body(card)}',
-                link=link,
-            )
+        for member in CustomUser.objects.filter(department=dept, is_active=True, is_approved=True):
+            if member != actor:
+                Notification.send(
+                    user=member, actor=actor,
+                    ntype=Notification.Type.CARD_CROSS,
+                    title=f'{prefix}Nova sub-tarefa para {dept.name}',
+                    body=f'"{subtask.title}" em "{card.title}" · {_card_body(card)}',
+                    link=link,
+                )
+
+
+def _notify_comment(comment, actor):
+    card = comment.card
+    board = card.column.board
+    link = f'/kanban/{board.pk}/card/{card.pk}/'
+    targets = set()
+    if card.assignee and card.assignee != actor:
+        targets.add(card.assignee)
+    if card.creator and card.creator != actor:
+        targets.add(card.creator)
+    for user in targets:
+        Notification.send(
+            user=user, actor=actor,
+            ntype=Notification.Type.CARD_COMMENT,
+            title=f'{actor.get_full_name() or actor.email} comentou em "{card.title}"',
+            body=comment.content[:120],
+            link=link,
+        )
 
 
 def _notify_card(card, actor, created: bool):

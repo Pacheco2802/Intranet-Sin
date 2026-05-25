@@ -42,4 +42,5 @@ urlpatterns = [
     path('notificacoes/marcar-todas/', views.notification_mark_all_read, name='notification_mark_all_read'),
 
     path('logs/', views.audit_log_list, name='audit_log_list'),
+    path('visao-executiva/', views.visao_executiva, name='visao_executiva'),
 ]
