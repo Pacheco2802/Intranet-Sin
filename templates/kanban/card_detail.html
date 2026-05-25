@@ -12,6 +12,40 @@
   <!-- Main column -->
   <div class="lg:col-span-2 space-y-4">
 
+    <!-- Desfecho destacado (quando já definido) -->
+    {% if card.final_status %}
+    <div class="rounded-xl px-5 py-4
+      {% if card.final_status == 'concluido' %}bg-emerald-50 border border-emerald-200
+      {% elif card.final_status == 'cancelado' %}bg-gray-100 border border-gray-300
+      {% else %}bg-orange-50 border border-orange-200{% endif %}">
+      <div class="flex items-start gap-3">
+        <div class="text-2xl leading-none mt-0.5">
+          {% if card.final_status == 'concluido' %}✅
+          {% elif card.final_status == 'cancelado' %}🚫
+          {% else %}⚠️{% endif %}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-semibold uppercase tracking-wide mb-0.5
+            {% if card.final_status == 'concluido' %}text-emerald-600
+            {% elif card.final_status == 'cancelado' %}text-gray-500
+            {% else %}text-orange-600{% endif %}">Desfecho</p>
+          <p class="font-bold text-base
+            {% if card.final_status == 'concluido' %}text-emerald-800
+            {% elif card.final_status == 'cancelado' %}text-gray-700
+            {% else %}text-orange-800{% endif %}">
+            {{ card.get_final_status_display }}
+          </p>
+          {% if card.final_notes %}
+          <p class="text-sm mt-2 leading-relaxed
+            {% if card.final_status == 'concluido' %}text-emerald-700
+            {% elif card.final_status == 'cancelado' %}text-gray-600
+            {% else %}text-orange-700{% endif %}">{{ card.final_notes }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Card info -->
     <div class="card">
       <div class="flex items-center gap-2 mb-4 flex-wrap">
@@ -20,7 +54,15 @@
           {{ card.get_priority_display }}
         </span>
         <span class="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">{{ card.column.name }}</span>
-        {% if card.is_overdue %}
+        {% if card.final_status %}
+        <span class="text-xs px-2.5 py-1 rounded-full font-medium
+          {% if card.final_status == 'concluido' %}bg-emerald-100 text-emerald-700
+          {% elif card.final_status == 'cancelado' %}bg-gray-200 text-gray-600
+          {% else %}bg-orange-100 text-orange-700{% endif %}">
+          {{ card.get_final_status_display }}
+        </span>
+        {% endif %}
+        {% if card.is_overdue and not card.final_status %}
         <span class="text-xs bg-red-100 text-red-600 px-2.5 py-1 rounded-full font-medium">⚠ Vencido</span>
         {% endif %}
       </div>
@@ -274,29 +316,64 @@
 
     <!-- Status Final -->
     {% if is_status_final %}
-    <div class="card border-l-4 {% if card.final_status == 'concluido' %}border-l-green-400{% elif card.final_status == 'cancelado' %}border-l-gray-400{% elif card.final_status == 'nao_concluido' %}border-l-orange-400{% else %}border-l-blue-300{% endif %}">
-      <h3 class="font-semibold text-gray-900 mb-3 text-xs uppercase tracking-wide text-gray-500">Status Final</h3>
-      <form method="post" class="space-y-3">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="final_status">
-        <div>
-          <label class="block text-xs text-gray-400 mb-1">Desfecho</label>
-          <select name="final_status"
-                  class="w-full rounded-lg border border-gray-200 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
-            <option value="">— Não definido —</option>
-            {% for val, label in final_status_choices %}
-            <option value="{{ val }}" {% if card.final_status == val %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs text-gray-400 mb-1">Observações</label>
-          <textarea name="final_notes" rows="3"
-                    class="w-full rounded-lg border border-gray-200 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
-                    placeholder="Descreva o motivo ou contexto…">{{ card.final_notes }}</textarea>
-        </div>
-        <button type="submit" class="btn-primary w-full text-xs py-1.5">Salvar desfecho</button>
-      </form>
+    <div class="card" x-data="{ editing: {% if not card.final_status %}true{% else %}false{% endif %} }">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold">Desfecho</h3>
+        {% if card.final_status %}
+        <button type="button" @click="editing = !editing"
+                class="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+          <span x-show="!editing">Editar</span>
+          <span x-show="editing" x-cloak>Cancelar</span>
+        </button>
+        {% endif %}
+      </div>
+
+      <!-- Current status display -->
+      {% if card.final_status %}
+      <div x-show="!editing" class="rounded-lg px-3 py-3 mb-1
+        {% if card.final_status == 'concluido' %}bg-emerald-50 border border-emerald-200
+        {% elif card.final_status == 'cancelado' %}bg-gray-100 border border-gray-200
+        {% else %}bg-orange-50 border border-orange-200{% endif %}">
+        <p class="font-semibold text-sm
+          {% if card.final_status == 'concluido' %}text-emerald-800
+          {% elif card.final_status == 'cancelado' %}text-gray-700
+          {% else %}text-orange-800{% endif %}">
+          {% if card.final_status == 'concluido' %}✅{% elif card.final_status == 'cancelado' %}🚫{% else %}⚠️{% endif %}
+          {{ card.get_final_status_display }}
+        </p>
+        {% if card.final_notes %}
+        <p class="text-xs mt-1.5 leading-relaxed
+          {% if card.final_status == 'concluido' %}text-emerald-700
+          {% elif card.final_status == 'cancelado' %}text-gray-500
+          {% else %}text-orange-700{% endif %}">{{ card.final_notes }}</p>
+        {% else %}
+        <p class="text-xs mt-1 text-gray-400 italic">Sem justificativa registrada.</p>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Edit form -->
+      <div x-show="editing" {% if card.final_status %}x-cloak{% endif %}>
+        <form method="post" class="space-y-3">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="final_status">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Desfecho</label>
+            <select name="final_status" class="form-input w-full text-sm">
+              <option value="">— Não definido —</option>
+              {% for val, label in final_status_choices %}
+              <option value="{{ val }}" {% if card.final_status == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Justificativa</label>
+            <textarea name="final_notes" rows="3" class="form-input w-full resize-none"
+                      placeholder="Descreva o motivo ou contexto…">{{ card.final_notes }}</textarea>
+          </div>
+          <button type="submit" class="btn-primary w-full text-xs py-1.5">Salvar desfecho</button>
+        </form>
+      </div>
     </div>
     {% endif %}
 
