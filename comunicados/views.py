@@ -8,7 +8,7 @@ from .forms import ComunicadoForm
 
 
 def _pode_gerenciar(user):
-    return user.role in (user.Role.PRESIDENTE, user.Role.ADMIN_TI)
+    return user.role in (user.Role.PRESIDENTE, user.Role.DIRETOR, user.Role.ADMIN_TI)
 
 
 @login_required

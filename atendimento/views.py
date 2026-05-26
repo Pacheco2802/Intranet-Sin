@@ -11,7 +11,7 @@ from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.timezone import now, localdate
 
-from core.models import AuditLog, Notification, CustomUser
+from core.models import AuditLog, Notification, CustomUser, Department
 from core.middleware import AuditMiddleware
 from core.validators import validate_file_extension, validate_file_size
 from .models import Atendimento, AtendimentoEtapa, AtendimentoAnexo, _cpf_hash
@@ -78,6 +78,44 @@ def _notificar_encaminhamento(atendimento, para_dept, actor):
             body=f'{atendimento.nome_filiado} — {atendimento.assunto}',
             link=link,
         )
+
+
+# Mapeamento fila NextQS → nome do departamento destino
+_FILA_PARA_DEPT = {
+    'J': 'Jurídico',
+    'P': 'Jurídico',
+    'T': 'Jurídico',
+    'A': 'Jurídico',
+    'M': 'Saúde do Trabalhador',
+}
+
+
+def _encaminhar_automatico(at, criador):
+    """Encaminha automaticamente o atendimento para o departamento correto conforme a fila."""
+    if not at.nextqs_fila:
+        return
+    nome_dept = _FILA_PARA_DEPT.get(at.nextqs_fila)
+    if not nome_dept:
+        return
+    # Não encaminha se já está no departamento correto
+    if at.departamento_atual and at.departamento_atual.name == nome_dept:
+        return
+    try:
+        dept = Department.objects.get(name=nome_dept)
+    except Department.DoesNotExist:
+        return
+    AtendimentoEtapa.objects.create(
+        atendimento=at,
+        tipo=AtendimentoEtapa.Tipo.ENCAMINHAMENTO,
+        autor=criador,
+        departamento=at.departamento_atual,
+        para_departamento=dept,
+        descricao=f'Encaminhado automaticamente para {dept.name}.',
+    )
+    at.departamento_atual = dept
+    at.status = Atendimento.Status.ENCAMINHADO
+    at.save(update_fields=['departamento_atual', 'status', 'updated_at'])
+    _notificar_encaminhamento(at, dept, criador)
 
 
 def _fmt_min(minutes):
@@ -177,6 +215,9 @@ def atendimento_create(request):
             messages.error(request, e.message)
             at.delete()
             return render(request, 'atendimento/create.html', {'form': form})
+
+        # Encaminhamento automático baseado na fila
+        _encaminhar_automatico(at, request.user)
 
         if at.nextqs_fila:
             from .nextqs import emitir_senha
@@ -354,6 +395,11 @@ def nextqs_chamar(request, pk):
     agent_id = request.user.nextqs_agent_id
     if not agent_id:
         messages.error(request, 'Configure seu Agent ID NextQS no seu perfil antes de chamar senhas.')
+        return redirect('atendimento:detail', pk=pk)
+
+    agent_id = request.user.nextqs_agent_id or getattr(settings, 'NEXTQS_SYSTEM_AGENT_ID', '')
+    if not agent_id:
+        messages.error(request, 'Agent ID não configurado. Contate o administrador do sistema.')
         return redirect('atendimento:detail', pk=pk)
 
     from .nextqs import chamar_senha

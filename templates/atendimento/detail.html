@@ -269,7 +269,6 @@
         🖨️ Imprimir senha
       </a>
       {% if pode_agir and ativo and at.status != 'EM_ANDAMENTO' %}
-      {% if user.nextqs_agent_id %}
       <form method="post" action="{% url 'atendimento:nextqs_chamar' at.pk %}">
         {% csrf_token %}
         <button type="submit"
@@ -277,11 +276,6 @@
           📢 Chamar no display
         </button>
       </form>
-      {% else %}
-      <p class="text-xs text-center text-amber-600">
-        Configure seu <a href="{% url 'core:profile' %}" class="underline font-medium">Agent ID NextQS no perfil</a> para chamar senhas.
-      </p>
-      {% endif %}
       {% elif at.status == 'EM_ANDAMENTO' %}
       <p class="text-xs text-center text-emerald-600 font-medium">✓ Em atendimento</p>
       {% endif %}

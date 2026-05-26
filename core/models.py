@@ -44,6 +44,7 @@ class Department(models.Model):
 class CustomUser(AbstractUser):
     class Role(models.TextChoices):
         PRESIDENTE = 'PRESIDENTE', 'Presidente'
+        DIRETOR = 'DIRETOR', 'Diretor'
         ADMIN_TI = 'ADMIN_TI', 'Administrador TI'
         LIDER = 'LIDER', 'Líder'
         GERENTE = 'GERENTE', 'Gerente'
@@ -93,7 +94,7 @@ class CustomUser(AbstractUser):
 
     @property
     def can_see_all(self):
-        return self.role in (self.Role.ADMIN_TI, self.Role.PRESIDENTE)
+        return self.role in (self.Role.ADMIN_TI, self.Role.PRESIDENTE, self.Role.DIRETOR)
 
     def anonymize(self):
         uid = hashlib.sha256(str(self.pk).encode()).hexdigest()[:8]
