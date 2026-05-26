@@ -21,18 +21,34 @@ def _validate_cpf(cpf: str) -> bool:
 class AtendimentoForm(forms.ModelForm):
     class Meta:
         model = Atendimento
-        fields = ('cpf', 'nome_filiado', 'telefone', 'email_filiado', 'assunto', 'descricao')
+        fields = (
+            'cpf', 'nome_filiado', 'telefone', 'email_filiado',
+            'nextqs_fila', 'is_retorno',
+            'assunto', 'descricao',
+        )
         widgets = {
             'cpf': forms.TextInput(attrs={
                 'class': 'form-input', 'placeholder': '000.000.000-00',
                 'x-mask': '999.999.999-99',
+                'hx-get': '/atendimento/cpf-lookup/',
+                'hx-trigger': 'blur',
+                'hx-target': '#cpf-lookup-result',
+                'hx-include': 'this',
+                'name': 'cpf',
             }),
-            'nome_filiado': forms.TextInput(attrs={'class': 'form-input'}),
-            'telefone': forms.TextInput(attrs={'class': 'form-input', 'placeholder': '(00) 00000-0000'}),
-            'email_filiado': forms.EmailInput(attrs={'class': 'form-input'}),
+            'nome_filiado': forms.TextInput(attrs={'class': 'form-input', 'id': 'id_nome_filiado'}),
+            'telefone': forms.TextInput(attrs={'class': 'form-input', 'placeholder': '(00) 00000-0000', 'id': 'id_telefone'}),
+            'email_filiado': forms.EmailInput(attrs={'class': 'form-input', 'id': 'id_email_filiado'}),
+            'nextqs_fila': forms.Select(attrs={'class': 'form-input'}),
+            'is_retorno': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-accent rounded'}),
             'assunto': forms.TextInput(attrs={'class': 'form-input'}),
             'descricao': forms.Textarea(attrs={'rows': 4, 'class': 'form-input', 'placeholder': 'Descreva o motivo do atendimento...'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['nextqs_fila'].required = False
+        self.fields['is_retorno'].required = False
 
     def clean_cpf(self):
         cpf = self.cleaned_data.get('cpf', '')

@@ -3,6 +3,7 @@
 {% block page_title %}Novo Atendimento{% endblock %}
 {% block topbar_actions %}
 <a href="{% url 'atendimento:list' %}" class="btn-secondary text-xs">← Voltar</a>
+<a href="{% url 'atendimento:painel' %}" class="btn-secondary text-xs">📋 Painel do Dia</a>
 {% endblock %}
 
 {% block content %}
@@ -13,6 +14,10 @@
     <!-- Dados do filiado -->
     <div class="card mb-4">
       <h3 class="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">👤 Dados do filiado</h3>
+
+      <!-- Resultado do lookup de CPF -->
+      <div id="cpf-lookup-result" class="mb-4"></div>
+
       <div class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -36,6 +41,32 @@
             {{ form.email_filiado }}
           </div>
         </div>
+
+        <!-- Retorno (mostrado via JS após lookup) -->
+        <div id="retorno-section" class="hidden space-y-3 pt-2 border-t border-gray-100">
+          <div class="flex items-center gap-2">
+            {{ form.is_retorno }}
+            <label class="text-sm font-medium text-gray-700 cursor-pointer" for="{{ form.is_retorno.id_for_label }}">
+              É um retorno de atendimento anterior?
+            </label>
+          </div>
+          <div id="retorno-select-wrap" class="hidden">
+            <label class="block text-xs font-medium text-gray-500 mb-1">Atendimento de origem</label>
+            <select name="retorno_de" id="id_retorno_de" class="form-input">
+              <option value="">Selecionar atendimento anterior</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fila NextQS -->
+    <div class="card mb-4">
+      <h3 class="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">🎫 Fila — NextQS</h3>
+      <p class="text-xs text-gray-400 mb-3">Selecionar a fila vai emitir a senha e acionará a impressão automática do ticket.</p>
+      <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Fila de atendimento</label>
+        {{ form.nextqs_fila }}
       </div>
     </div>
 
@@ -65,4 +96,53 @@
     </div>
   </form>
 </div>
+
+<script>
+document.addEventListener('htmx:afterRequest', function(e) {
+  if (!e.detail.target || e.detail.target.id !== 'cpf-lookup-result') return;
+  try {
+    const data = JSON.parse(e.detail.xhr.responseText);
+    const resultDiv = document.getElementById('cpf-lookup-result');
+    const retornoSection = document.getElementById('retorno-section');
+    if (data.found) {
+      resultDiv.innerHTML = `
+        <div class="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-50 border border-blue-200 text-sm">
+          <span class="text-blue-600 text-lg">🔍</span>
+          <div class="flex-1">
+            <p class="font-medium text-blue-800">Filiado encontrado — ${data.total} atendimento${data.total > 1 ? 's' : ''} anterior${data.total > 1 ? 'es' : ''}.</p>
+            <a href="/atendimento/filiado/${data.cpf_hash}/" target="_blank" class="text-xs text-blue-600 hover:underline">Ver histórico completo →</a>
+          </div>
+        </div>`;
+      if (data.nome) document.getElementById('id_nome_filiado').value = data.nome;
+      if (data.telefone) document.getElementById('id_telefone').value = data.telefone;
+      if (data.email) document.getElementById('id_email_filiado').value = data.email;
+      retornoSection.classList.remove('hidden');
+      // populate retorno_de select
+      const sel = document.getElementById('id_retorno_de');
+      sel.innerHTML = '<option value="">Selecionar atendimento anterior</option>';
+      (data.anteriores || []).forEach(function(a) {
+        const opt = document.createElement('option');
+        opt.value = a.pk;
+        opt.textContent = `#${a.pk} — ${a.assunto} (${a.created_at})`;
+        sel.appendChild(opt);
+      });
+    } else {
+      resultDiv.innerHTML = `
+        <div class="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-50 border border-gray-200 text-sm text-gray-500">
+          <span>✨</span> Novo filiado — sem histórico encontrado.
+        </div>`;
+      retornoSection.classList.add('hidden');
+    }
+  } catch(err) {
+    console.error('CPF lookup parse error:', err);
+  }
+});
+
+const isRetornoChk = document.getElementById('{{ form.is_retorno.id_for_label }}');
+if (isRetornoChk) {
+  isRetornoChk.addEventListener('change', function() {
+    document.getElementById('retorno-select-wrap').classList.toggle('hidden', !this.checked);
+  });
+}
+</script>
 {% endblock %}

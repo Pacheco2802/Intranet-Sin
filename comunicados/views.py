@@ -13,9 +13,13 @@ def _pode_gerenciar(user):
 
 @login_required
 def comunicado_list(request):
-    comunicados = Comunicado.objects.filter(is_published=True)
+    publicados = Comunicado.objects.filter(is_published=True)
+    rascunhos = None
+    if _pode_gerenciar(request.user):
+        rascunhos = Comunicado.objects.filter(is_published=False).order_by('-created_at')
     return render(request, 'comunicados/list.html', {
-        'comunicados': comunicados,
+        'comunicados': publicados,
+        'rascunhos': rascunhos,
         'pode_gerenciar': _pode_gerenciar(request.user),
     })
 
@@ -31,20 +35,43 @@ def comunicado_detail(request, pk):
     })
 
 
+def _salvar_comunicado(request, form, comunicado=None):
+    """Processa salvar/publicar a partir dos botões do formulário."""
+    obj = form.save(commit=False)
+    if comunicado is None:
+        obj.author = request.user
+
+    publicar = request.POST.get('publicar') == '1'
+    if publicar:
+        obj.is_published = True
+        if not obj.published_at:
+            obj.published_at = timezone.now()
+    else:
+        obj.is_published = False
+
+    # Limpar imagem se solicitado
+    if request.POST.get('remover_imagem') == '1' and obj.cover_image:
+        obj.cover_image.delete(save=False)
+        obj.cover_image = None
+
+    obj.save()
+    form.save_m2m()
+    return obj
+
+
 @login_required
 def comunicado_create(request):
     if not _pode_gerenciar(request.user):
         return HttpResponseForbidden()
     if request.method == 'POST':
-        form = ComunicadoForm(request.POST)
+        form = ComunicadoForm(request.POST, request.FILES)
         if form.is_valid():
-            comunicado = form.save(commit=False)
-            comunicado.author = request.user
-            if comunicado.is_published and not comunicado.published_at:
-                comunicado.published_at = timezone.now()
-            comunicado.save()
-            form.save_m2m()
-            return redirect('comunicados:list')
+            obj = _salvar_comunicado(request, form)
+            if obj.is_published:
+                messages.success(request, 'Comunicado publicado com sucesso.')
+            else:
+                messages.info(request, 'Comunicado salvo como rascunho.')
+            return redirect('comunicados:detail', pk=obj.pk)
     else:
         form = ComunicadoForm()
     return render(request, 'comunicados/form.html', {'form': form, 'title': 'Novo Comunicado'})
@@ -56,17 +83,21 @@ def comunicado_edit(request, pk):
         return HttpResponseForbidden()
     comunicado = get_object_or_404(Comunicado, pk=pk)
     if request.method == 'POST':
-        form = ComunicadoForm(request.POST, instance=comunicado)
+        form = ComunicadoForm(request.POST, request.FILES, instance=comunicado)
         if form.is_valid():
-            c = form.save(commit=False)
-            if c.is_published and not c.published_at:
-                c.published_at = timezone.now()
-            c.save()
-            form.save_m2m()
-            return redirect('comunicados:list')
+            obj = _salvar_comunicado(request, form, comunicado=comunicado)
+            if obj.is_published:
+                messages.success(request, 'Comunicado publicado.')
+            else:
+                messages.info(request, 'Rascunho salvo.')
+            return redirect('comunicados:detail', pk=obj.pk)
     else:
         form = ComunicadoForm(instance=comunicado)
-    return render(request, 'comunicados/form.html', {'form': form, 'title': 'Editar Comunicado'})
+    return render(request, 'comunicados/form.html', {
+        'form': form,
+        'title': 'Editar Comunicado',
+        'comunicado': comunicado,
+    })
 
 
 @login_required
@@ -76,5 +107,6 @@ def comunicado_delete(request, pk):
     comunicado = get_object_or_404(Comunicado, pk=pk)
     if request.method == 'POST':
         comunicado.delete()
+        messages.success(request, 'Comunicado excluído.')
         return redirect('comunicados:list')
-    return render(request, 'comunicados/detail.html', {'comunicado': comunicado})
+    return render(request, 'comunicados/detail.html', {'comunicado': comunicado, 'pode_gerenciar': True})

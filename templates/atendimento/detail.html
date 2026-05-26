@@ -3,7 +3,7 @@
 {% block page_title %}Atendimento #{{ at.pk }}{% endblock %}
 {% block topbar_actions %}
 <a href="{% url 'atendimento:list' %}" class="btn-secondary text-xs">← Atendimentos</a>
-<a href="{% url 'atendimento:list' %}?cpf={{ at.cpf }}" class="btn-secondary text-xs">Histórico do filiado</a>
+<a href="{% url 'atendimento:filiado' at.cpf_hash %}" class="btn-secondary text-xs">Histórico do filiado</a>
 {% endblock %}
 
 {% block content %}
@@ -16,13 +16,30 @@
     <div class="card">
       <div class="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h2 class="text-lg font-bold text-gray-900">{{ at.nome_filiado }}</h2>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h2 class="text-lg font-bold text-gray-900">{{ at.nome_filiado }}</h2>
+            {% if at.nextqs_fila and at.numero_senha %}
+            <span class="inline-flex items-center gap-1 text-sm font-bold px-2.5 py-0.5 rounded-lg bg-blue-100 text-blue-700 tracking-wide font-mono">
+              🎫 {{ at.nextqs_fila }}{{ at.numero_senha }}
+            </span>
+            {% endif %}
+            {% if at.is_retorno %}
+            <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+              🔁 RETORNO
+            </span>
+            {% endif %}
+          </div>
           <p class="text-sm text-gray-500 font-mono mt-0.5">CPF: {{ at.cpf }}</p>
           {% if at.telefone or at.email_filiado %}
           <div class="flex flex-wrap gap-3 mt-2 text-sm text-gray-500">
             {% if at.telefone %}<span>📞 {{ at.telefone }}</span>{% endif %}
             {% if at.email_filiado %}<span>✉ {{ at.email_filiado }}</span>{% endif %}
           </div>
+          {% endif %}
+          {% if at.is_retorno and at.retorno_de %}
+          <p class="text-xs text-amber-600 mt-1">
+            Retorno do atendimento <a href="{% url 'atendimento:detail' at.retorno_de.pk %}" class="underline hover:text-amber-800">#{{ at.retorno_de.pk }}</a>
+          </p>
           {% endif %}
         </div>
         <span class="text-sm px-3 py-1 rounded-full text-white font-medium"
@@ -114,10 +131,32 @@
           <p class="text-xs text-gray-400">Aberto em</p>
           <p class="text-gray-800 mt-0.5">{{ at.created_at|date:"d/m/Y H:i" }}</p>
         </div>
+        {% if at.iniciado_em %}
+        <div>
+          <p class="text-xs text-gray-400">Iniciado em</p>
+          <p class="text-gray-800 mt-0.5">{{ at.iniciado_em|date:"d/m/Y H:i" }}</p>
+        </div>
+        {% endif %}
         {% if at.concluido_em %}
         <div>
           <p class="text-xs text-gray-400">Concluído em</p>
           <p class="text-gray-800 mt-0.5">{{ at.concluido_em|date:"d/m/Y H:i" }}</p>
+        </div>
+        {% endif %}
+        {% if tempo_espera != '—' or tempo_atendimento != '—' %}
+        <div class="pt-2 border-t border-gray-100 space-y-2">
+          {% if tempo_espera != '—' %}
+          <div>
+            <p class="text-xs text-gray-400">Tempo de espera</p>
+            <p class="text-gray-800 mt-0.5 font-mono text-sm">{{ tempo_espera }}</p>
+          </div>
+          {% endif %}
+          {% if tempo_atendimento != '—' %}
+          <div>
+            <p class="text-xs text-gray-400">Duração do atendimento</p>
+            <p class="text-gray-800 mt-0.5 font-mono text-sm">{{ tempo_atendimento }}</p>
+          </div>
+          {% endif %}
         </div>
         {% endif %}
       </div>
@@ -216,11 +255,44 @@
     </div>
     {% endif %}
 
-    <!-- Buscar outros atendimentos deste filiado -->
-    <a href="{% url 'atendimento:list' %}?cpf={{ at.cpf }}"
+    <!-- Chamar senha NextQS -->
+    {% if at.nextqs_fila and at.numero_senha %}
+    <div class="card">
+      <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-3">NextQS — Fila</h3>
+      <div class="text-center mb-3">
+        <p class="text-3xl font-bold tracking-widest text-blue-700 font-mono">{{ at.nextqs_fila }}{{ at.numero_senha }}</p>
+        <p class="text-xs text-gray-400 mt-1">{{ at.get_nextqs_fila_display }}</p>
+      </div>
+      <a href="{% url 'atendimento:imprimir_senha' at.pk %}" target="_blank"
+         onclick="window.open(this.href,'_blank','width=340,height=480,toolbar=no,menubar=no'); return false;"
+         class="w-full py-2 px-4 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600 text-sm font-medium transition-colors flex items-center justify-center gap-2 mb-1">
+        🖨️ Imprimir senha
+      </a>
+      {% if pode_agir and ativo and at.status != 'EM_ANDAMENTO' %}
+      {% if user.nextqs_agent_id %}
+      <form method="post" action="{% url 'atendimento:nextqs_chamar' at.pk %}">
+        {% csrf_token %}
+        <button type="submit"
+                class="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+          📢 Chamar no display
+        </button>
+      </form>
+      {% else %}
+      <p class="text-xs text-center text-amber-600">
+        Configure seu <a href="{% url 'core:profile' %}" class="underline font-medium">Agent ID NextQS no perfil</a> para chamar senhas.
+      </p>
+      {% endif %}
+      {% elif at.status == 'EM_ANDAMENTO' %}
+      <p class="text-xs text-center text-emerald-600 font-medium">✓ Em atendimento</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Histórico do filiado -->
+    <a href="{% url 'atendimento:filiado' at.cpf_hash %}"
        class="card block hover:bg-blue-50 border border-transparent hover:border-blue-200 transition-all text-center">
-      <p class="text-sm font-medium text-blue-700">🔍 Ver todos os atendimentos</p>
-      <p class="text-xs text-blue-400 mt-0.5">CPF {{ at.cpf }}</p>
+      <p class="text-sm font-medium text-blue-700">🔍 Histórico completo do filiado</p>
+      <p class="text-xs text-blue-400 mt-0.5">{{ at.nome_filiado }}</p>
     </a>
 
   </div>

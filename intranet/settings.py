@@ -153,3 +153,17 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000  # 1 ano
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+
+# ── NextQS — Gestão de Filas ─────────────────────────────────────────────────
+NEXTQS_API_BASE        = 'https://api.nextqs.com'
+NEXTQS_API_KEY         = config('NEXTQS_API_KEY', default='')
+NEXTQS_SYSTEM_AGENT_ID = config('NEXTQS_SYSTEM_AGENT_ID', default='')
+NEXTQS_SERVICE_DESK    = config('NEXTQS_SERVICE_DESK', default='68963e077804cac0600bfcc2')
+NEXTQS_KIOSK_ID        = config('NEXTQS_KIOSK_ID', default='6878fd1f4a7dcacce60bf687')
+NEXTQS_QUEUES = {
+    'J': {'id': '6878f8de0ec8db66f50bc415', 'label': 'Jurídico'},
+    'P': {'id': '69fcebfed8b1da6f24097e97', 'label': 'Previdenciário'},
+    'T': {'id': '69fceca7f5a07c100b05d99c', 'label': 'Trabalhista'},
+    'A': {'id': '69fcecd3f5a07c100b05d9a3', 'label': 'Andamento de Processo'},
+    'M': {'id': '6878f94166fd09b66604af9b', 'label': 'Médico do Trabalho'},
+}

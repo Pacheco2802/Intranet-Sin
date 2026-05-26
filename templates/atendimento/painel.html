@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Painel do Dia — Atendimentos{% endblock %}
+{% block page_title %}Painel do Dia{% endblock %}
+{% block topbar_actions %}
+<span class="text-xs text-gray-400">{{ hoje|date:"d \d\e F \d\e Y" }}</span>
+<a href="{% url 'atendimento:metricas' %}" class="btn-secondary text-xs">📊 Métricas</a>
+<a href="{% url 'atendimento:create' %}" class="btn-primary text-xs">+ Novo Atendimento</a>
+<a href="{% url 'atendimento:list' %}" class="btn-secondary text-xs">← Lista</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+
+  {% if fila_sem_atendimento %}
+  <div class="card border-l-4 border-amber-400">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-amber-500 text-lg">⚠️</span>
+      <h2 class="text-sm font-semibold text-amber-700">Senhas na fila NextQS sem atendimento no sistema</h2>
+      <span class="ml-auto text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">{{ fila_sem_atendimento|length }}</span>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      {% for t in fila_sem_atendimento %}
+      <div class="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+        <span class="font-bold font-mono text-amber-800 text-lg">{{ t.senha }}</span>
+        {% if t.nome %}<span class="text-xs text-gray-500">{{ t.nome }}</span>{% endif %}
+        <a href="{% url 'atendimento:create' %}"
+           class="text-xs bg-amber-500 hover:bg-amber-600 text-white px-2 py-0.5 rounded transition-colors ml-1">
+          Abrir atendimento
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if fila_ao_vivo %}
+  <div class="flex items-center gap-3 text-xs text-gray-400">
+    <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+    Fila NextQS ao vivo: {{ fila_ao_vivo|length }} senha{{ fila_ao_vivo|length|pluralize }} na fila
+    {% for t in fila_ao_vivo %}
+    <span class="font-mono font-semibold text-gray-600">{{ t.senha }}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+
+    <!-- Na Recepção -->
+    <div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="w-2.5 h-2.5 rounded-full bg-slate-400 flex-shrink-0"></span>
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">Na Recepção</h2>
+        <span class="ml-auto text-xs bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-full">{{ triagem|length }}</span>
+      </div>
+      <div class="space-y-2">
+        {% for at in triagem %}
+        <a href="{% url 'atendimento:detail' at.pk %}"
+           class="card block hover:border-slate-300 border border-transparent transition-all p-3 hover:shadow-sm">
+          {% if at.nextqs_fila and at.numero_senha %}
+          <span class="text-base font-bold font-mono text-blue-700">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
+          {% endif %}
+          <p class="font-medium text-gray-800 text-sm truncate mt-0.5">{{ at.nome_filiado }}</p>
+          <p class="text-xs text-gray-400 truncate">{{ at.assunto }}</p>
+          <p class="text-xs text-gray-300 mt-1">{{ at.created_at|date:"H:i" }}</p>
+        </a>
+        {% empty %}
+        <div class="card text-center py-8 text-gray-300 text-sm">Nenhum</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Encaminhados -->
+    <div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="w-2.5 h-2.5 rounded-full bg-blue-400 flex-shrink-0"></span>
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">Encaminhados</h2>
+        <span class="ml-auto text-xs bg-blue-50 text-blue-600 font-semibold px-2 py-0.5 rounded-full">{{ encaminhados|length }}</span>
+      </div>
+      <div class="space-y-2">
+        {% for at in encaminhados %}
+        <a href="{% url 'atendimento:detail' at.pk %}"
+           class="card block hover:border-blue-300 border border-transparent transition-all p-3 hover:shadow-sm">
+          {% if at.nextqs_fila and at.numero_senha %}
+          <span class="text-base font-bold font-mono text-blue-700">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
+          {% endif %}
+          <p class="font-medium text-gray-800 text-sm truncate mt-0.5">{{ at.nome_filiado }}</p>
+          <p class="text-xs text-gray-400 truncate">{{ at.assunto }}</p>
+          {% if at.departamento_atual %}
+          <p class="text-xs text-blue-500 mt-1">→ {{ at.departamento_atual.name }}</p>
+          {% endif %}
+          <p class="text-xs text-gray-300 mt-0.5">{{ at.created_at|date:"H:i" }}</p>
+        </a>
+        {% empty %}
+        <div class="card text-center py-8 text-gray-300 text-sm">Nenhum</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Em Andamento -->
+    <div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0"></span>
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">Em Andamento</h2>
+        <span class="ml-auto text-xs bg-amber-50 text-amber-600 font-semibold px-2 py-0.5 rounded-full">{{ em_andamento|length }}</span>
+      </div>
+      <div class="space-y-2">
+        {% for at in em_andamento %}
+        <a href="{% url 'atendimento:detail' at.pk %}"
+           class="card block hover:border-amber-300 border border-transparent transition-all p-3 hover:shadow-sm">
+          {% if at.nextqs_fila and at.numero_senha %}
+          <span class="text-base font-bold font-mono text-blue-700">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
+          {% endif %}
+          <p class="font-medium text-gray-800 text-sm truncate mt-0.5">{{ at.nome_filiado }}</p>
+          <p class="text-xs text-gray-400 truncate">{{ at.assunto }}</p>
+          {% if at.responsavel %}
+          <p class="text-xs text-amber-600 mt-1">● {{ at.responsavel.first_name }}</p>
+          {% endif %}
+          <div class="flex items-center justify-between mt-1">
+            <p class="text-xs text-gray-300">{{ at.created_at|date:"H:i" }}</p>
+            {% if at.espera_min is not None %}
+            <span class="text-xs font-mono {% if at.espera_min > 30 %}text-red-400{% elif at.espera_min > 15 %}text-amber-400{% else %}text-gray-300{% endif %}">
+              {{ at.espera_min }}min
+            </span>
+            {% endif %}
+          </div>
+        </a>
+        {% empty %}
+        <div class="card text-center py-8 text-gray-300 text-sm">Nenhum</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Concluídos hoje -->
+    <div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 flex-shrink-0"></span>
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">Concluídos hoje</h2>
+        <span class="ml-auto text-xs bg-emerald-50 text-emerald-600 font-semibold px-2 py-0.5 rounded-full">{{ concluidos|length }}</span>
+      </div>
+      <div class="space-y-2">
+        {% for at in concluidos %}
+        <a href="{% url 'atendimento:detail' at.pk %}"
+           class="card block hover:border-emerald-300 border border-transparent transition-all p-3 hover:shadow-sm opacity-80">
+          {% if at.nextqs_fila and at.numero_senha %}
+          <span class="text-sm font-bold font-mono text-emerald-700">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
+          {% endif %}
+          <p class="font-medium text-gray-700 text-sm truncate mt-0.5">{{ at.nome_filiado }}</p>
+          <p class="text-xs text-gray-400 truncate">{{ at.assunto }}</p>
+          {% if at.concluido_em %}
+          <p class="text-xs text-gray-300 mt-1">✅ {{ at.concluido_em|date:"H:i" }}</p>
+          {% endif %}
+        </a>
+        {% empty %}
+        <div class="card text-center py-8 text-gray-300 text-sm">Nenhum</div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+{% endblock %}

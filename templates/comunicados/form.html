@@ -6,21 +6,222 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto card">
-  <form method="post" class="space-y-4">
-    {% csrf_token %}
-    {% for field in form %}
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
-      {{ field }}
-      {% if field.help_text %}<p class="text-xs text-gray-400 mt-1">{{ field.help_text }}</p>{% endif %}
-      {% for err in field.errors %}<p class="text-xs text-red-500 mt-1">{{ err }}</p>{% endfor %}
+<form method="post" enctype="multipart/form-data" class="max-w-5xl mx-auto">
+  {% csrf_token %}
+  <input type="hidden" name="publicar" id="input-publicar" value="0">
+  <input type="hidden" name="remover_imagem" id="input-remover-imagem" value="0">
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+    <!-- Editor principal -->
+    <div class="lg:col-span-2 space-y-4">
+
+      <!-- Título -->
+      <div class="card">
+        {{ form.title }}
+        {% for err in form.title.errors %}<p class="text-red-500 text-xs mt-1">{{ err }}</p>{% endfor %}
+      </div>
+
+      <!-- Imagem de capa -->
+      <div class="card" x-data="imageUpload()" x-init="init()">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Imagem de capa</p>
+
+        <!-- Preview -->
+        <div x-show="preview || hasExisting" class="relative mb-3">
+          <img :src="preview || existingUrl" alt="" class="w-full rounded-lg object-cover max-h-48">
+          <button type="button" @click="remove()"
+                  class="absolute top-2 right-2 bg-white/90 hover:bg-white text-gray-600 hover:text-red-600 rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors text-sm font-bold">
+            ✕
+          </button>
+        </div>
+
+        <!-- Upload zone -->
+        <div x-show="!preview && !hasExisting"
+             @click="document.getElementById('id_cover_image').click()"
+             @dragover.prevent="dragover = true"
+             @dragleave="dragover = false"
+             @drop.prevent="onDrop($event)"
+             :class="dragover ? 'border-accent bg-blue-50' : 'border-gray-200 hover:border-accent hover:bg-gray-50'"
+             class="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors">
+          <p class="text-gray-400 text-sm">Clique ou arraste uma imagem aqui</p>
+          <p class="text-gray-300 text-xs mt-1">JPG, PNG, GIF, WEBP • máx. 5 MB</p>
+        </div>
+
+        <div x-show="!preview && !hasExisting" class="mt-2">
+          {{ form.cover_image }}
+        </div>
+        {% for err in form.cover_image.errors %}<p class="text-red-500 text-xs mt-1">{{ err }}</p>{% endfor %}
+      </div>
+
+      <!-- Conteúdo -->
+      <div class="card space-y-2">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Conteúdo</p>
+          <!-- Emoji picker -->
+          <div class="relative" x-data="{ open: false }">
+            <button type="button" @click="open = !open"
+                    class="text-lg hover:scale-110 transition-transform select-none" title="Inserir emoji">😊</button>
+            <div x-show="open" @click.outside="open = false" x-cloak
+                 class="absolute right-0 bottom-8 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20 w-72">
+              <p class="text-xs text-gray-400 mb-2 font-medium">Clique para inserir</p>
+              <div class="grid grid-cols-10 gap-0.5" id="emoji-grid"></div>
+            </div>
+          </div>
+        </div>
+        {{ form.content }}
+        {% for err in form.content.errors %}<p class="text-red-500 text-xs mt-1">{{ err }}</p>{% endfor %}
+      </div>
+
     </div>
-    {% endfor %}
-    <div class="flex gap-3 pt-2">
-      <button type="submit" class="btn-primary">Salvar</button>
-      <a href="{% url 'comunicados:list' %}" class="btn-secondary">Cancelar</a>
+
+    <!-- Sidebar de opções -->
+    <div class="space-y-4">
+
+      <!-- Publicação -->
+      <div class="card space-y-3">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Publicação</p>
+
+        <!-- Botões de ação -->
+        <button type="button" onclick="submitAs(0)"
+                class="btn-secondary w-full text-sm flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+          Salvar rascunho
+        </button>
+        <button type="button" onclick="submitAs(1)"
+                class="btn-primary w-full text-sm flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          Publicar agora
+        </button>
+
+        {% if comunicado and comunicado.is_published %}
+        <div class="flex items-center gap-2 text-xs text-emerald-600 pt-1">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          Publicado em {{ comunicado.published_at|date:"d/m/Y H:i" }}
+        </div>
+        {% elif comunicado %}
+        <div class="flex items-center gap-2 text-xs text-amber-600 pt-1">
+          <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+          Rascunho
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Opções -->
+      <div class="card space-y-4">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Opções</p>
+
+        <label class="flex items-center gap-3 cursor-pointer">
+          {{ form.is_pinned }}
+          <span class="text-sm text-gray-700">📌 Fixar no topo</span>
+        </label>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">Expira em (opcional)</label>
+          {{ form.expires_at }}
+        </div>
+      </div>
+
+      <!-- Destinatários -->
+      <div class="card">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Destinatários</p>
+        <p class="text-xs text-gray-400 mb-3">Sem seleção = todos os departamentos</p>
+        <div class="space-y-2">
+          {% for choice in form.departments %}
+          <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-700 hover:text-gray-900">
+            {{ choice.tag }}
+            <span>{{ choice.choice_label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
     </div>
-  </form>
-</div>
+  </div>
+</form>
+
+<script>
+// Emojis
+const EMOJIS = [
+  '😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊',
+  '😇','🥰','😍','🤩','😘','😋','😛','😜','🤪','😝',
+  '🤗','🤔','😐','😑','😶','😏','😒','🙄','😬','😔',
+  '😪','😴','😷','🤒','🤕','🤢','🥳','🎉','🎊','👏',
+  '🙌','👍','❤️','🔥','✨','💡','📢','📣','⚠️','✅',
+  '❌','🚀','📅','📌','💬','📝','🏆','🎯','💼','📊',
+  '👥','🤝','💪','🧠','📋','🗓️','🔔','⭐','💫','🌟',
+  '👋','🙏','💯','✔️','➕','🔑','📎','🗂️','📁','🖊️',
+];
+(function() {
+  const grid = document.getElementById('emoji-grid');
+  if (grid) {
+    EMOJIS.forEach(function(e) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = e;
+      btn.className = 'text-lg hover:bg-gray-100 rounded p-0.5 transition-colors leading-none';
+      btn.onclick = function() { insertEmoji(e); };
+      grid.appendChild(btn);
+    });
+  }
+
+  // Conectar o input de arquivo do form ao preview Alpine
+  const fileInput = document.getElementById('id_cover_image');
+  if (fileInput) {
+    fileInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      // Encontrar o componente Alpine e atualizar preview
+      const comp = document.querySelector('[x-data^="imageUpload"]');
+      if (comp && comp._x_dataStack) {
+        comp._x_dataStack[0].preview = URL.createObjectURL(file);
+      }
+    });
+  }
+})();
+
+function submitAs(publicar) {
+  document.getElementById('input-publicar').value = publicar;
+  document.querySelector('form').submit();
+}
+
+function insertEmoji(emoji) {
+  const el = document.getElementById('id_content');
+  if (!el) return;
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  el.value = el.value.slice(0, start) + emoji + el.value.slice(end);
+  el.selectionStart = el.selectionEnd = start + emoji.length;
+  el.focus();
+}
+
+function imageUpload() {
+  return {
+    preview: null,
+    hasExisting: {% if comunicado and comunicado.cover_image %}true{% else %}false{% endif %},
+    existingUrl: '{% if comunicado and comunicado.cover_image %}{{ comunicado.cover_image.url }}{% endif %}',
+    dragover: false,
+    init() {},
+    onFile(e) {
+      const file = e.target.files[0];
+      if (file) this.preview = URL.createObjectURL(file);
+    },
+    onDrop(e) {
+      this.dragover = false;
+      const file = e.dataTransfer.files[0];
+      if (!file || !file.type.startsWith('image/')) return;
+      const input = document.getElementById('id_cover_image');
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+      this.preview = URL.createObjectURL(file);
+    },
+    remove() {
+      this.preview = null;
+      this.hasExisting = false;
+      document.getElementById('id_cover_image').value = '';
+      document.getElementById('input-remover-imagem').value = '1';
+    }
+  }
+}
+</script>
 {% endblock %}

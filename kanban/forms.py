@@ -49,6 +49,11 @@ class CardForm(forms.ModelForm):
 
     def __init__(self, *args, board=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['due_date'].required = False
+        self.fields['assignee'].required = False
+        self.fields['assignee'].empty_label = 'Sem responsável'
+        self.fields['tags'].required = False
+        self.fields['description'].required = False
         if board:
             self.fields['column'].queryset = Column.objects.filter(board=board)
             if board.is_global or board.is_cross_department:

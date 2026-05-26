@@ -151,7 +151,7 @@ class ApproveUserForm(forms.Form):
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = CustomUser
-        fields = ('first_name', 'last_name', 'email', 'phone', 'birth_date', 'bio', 'avatar')
+        fields = ('first_name', 'last_name', 'email', 'phone', 'birth_date', 'bio', 'avatar', 'nextqs_agent_id')
         widgets = {
             'birth_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-input'}),
         }

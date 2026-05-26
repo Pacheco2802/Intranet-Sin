@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Senha {{ at.nextqs_fila }}{{ at.numero_senha }}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Courier New', monospace;
+    background: #fff;
+    display: flex;
+    justify-content: center;
+    padding: 8px;
+  }
+
+  .ticket {
+    width: 72mm;
+    text-align: center;
+    padding: 4mm 2mm;
+  }
+
+  .org {
+    font-size: 9pt;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 2mm;
+  }
+
+  .divider {
+    border-top: 1px dashed #000;
+    margin: 3mm 0;
+  }
+
+  .fila-label {
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 1mm;
+    color: #444;
+  }
+
+  .senha {
+    font-size: 36pt;
+    font-weight: bold;
+    letter-spacing: 4px;
+    line-height: 1;
+    margin: 2mm 0;
+  }
+
+  .nome {
+    font-size: 9pt;
+    margin-top: 2mm;
+    word-break: break-word;
+  }
+
+  .info {
+    font-size: 7.5pt;
+    color: #555;
+    margin-top: 1mm;
+  }
+
+  .data {
+    font-size: 7.5pt;
+    color: #555;
+    margin-top: 3mm;
+  }
+
+  .rodape {
+    font-size: 7pt;
+    color: #888;
+    margin-top: 3mm;
+    line-height: 1.4;
+  }
+
+  @media print {
+    body { padding: 0; }
+    .no-print { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="ticket">
+
+  <div class="org">Sinsaudesp</div>
+
+  <div class="divider"></div>
+
+  <div class="fila-label">{{ at.get_nextqs_fila_display|default:at.nextqs_fila }}</div>
+
+  <div class="senha">{{ at.nextqs_fila }}{{ at.numero_senha }}</div>
+
+  <div class="divider"></div>
+
+  <div class="nome">{{ at.nome_filiado }}</div>
+  <div class="info">{{ at.assunto }}</div>
+
+  {% if at.is_retorno %}
+  <div class="info" style="margin-top:2mm; font-weight:bold;">⚑ RETORNO</div>
+  {% endif %}
+
+  <div class="data">{{ at.created_at|date:"d/m/Y H:i" }}</div>
+
+  <div class="divider"></div>
+
+  <div class="rodape">
+    Aguarde ser chamado<br>
+    Obrigado pela preferência
+  </div>
+
+</div>
+
+<script>
+  window.onload = function() { window.print(); }
+</script>
+</body>
+</html>

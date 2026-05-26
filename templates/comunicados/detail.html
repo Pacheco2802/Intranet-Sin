@@ -3,39 +3,81 @@
 {% block page_title %}Comunicado{% endblock %}
 {% block topbar_actions %}
 <a href="{% url 'comunicados:list' %}" class="btn-secondary text-xs">← Voltar</a>
-{% if user.role == 'PRESIDENTE' or user.role == 'ADMIN_TI' %}
+{% if pode_gerenciar %}
 <a href="{% url 'comunicados:edit' comunicado.pk %}" class="btn-primary text-xs">Editar</a>
 {% endif %}
 {% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto card">
-  <div class="flex items-start justify-between mb-4">
-    <div class="flex flex-wrap gap-2">
-      {% if comunicado.is_pinned %}<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">📌 Fixado</span>{% endif %}
-      {% if not comunicado.departments.exists %}
-        <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Todos os departamentos</span>
-      {% else %}
-        {% for dept in comunicado.departments.all %}
-        <span class="text-xs px-2 py-0.5 rounded-full text-white" style="background:{{ dept.color }}">{{ dept.name }}</span>
-        {% endfor %}
+<article class="max-w-2xl mx-auto space-y-5">
+
+  <!-- Imagem de capa -->
+  {% if comunicado.cover_image %}
+  <div class="rounded-2xl overflow-hidden shadow-sm">
+    <img src="{{ comunicado.cover_image.url }}" alt="{{ comunicado.title }}" class="w-full max-h-72 object-cover">
+  </div>
+  {% endif %}
+
+  <div class="card">
+
+    <!-- Tags e status -->
+    <div class="flex flex-wrap items-center gap-2 mb-4">
+      {% if comunicado.is_pinned %}
+      <span class="text-xs bg-yellow-100 text-yellow-700 px-2.5 py-1 rounded-full font-medium">📌 Fixado</span>
       {% endif %}
-      {% if not comunicado.is_published %}<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">Rascunho</span>{% endif %}
+      {% if not comunicado.is_published %}
+      <span class="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-medium">Rascunho</span>
+      {% endif %}
+      {% if not comunicado.departments.exists %}
+      <span class="text-xs bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full">Todos os departamentos</span>
+      {% else %}
+      {% for dept in comunicado.departments.all %}
+      <span class="text-xs px-2.5 py-1 rounded-full text-white font-medium" style="background:{{ dept.color }}">{{ dept.name }}</span>
+      {% endfor %}
+      {% endif %}
     </div>
-    {% if user.role == 'PRESIDENTE' or user.role == 'ADMIN_TI' %}
-    <form method="post" action="{% url 'comunicados:delete' comunicado.pk %}" onsubmit="return confirm('Excluir este comunicado?')">
+
+    <!-- Título -->
+    <h1 class="text-2xl font-bold text-gray-900 leading-snug mb-3">{{ comunicado.title }}</h1>
+
+    <!-- Meta -->
+    <div class="flex items-center gap-3 mb-6 pb-5 border-b border-gray-100">
+      <div class="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-sm font-bold text-accent flex-shrink-0">
+        {{ comunicado.author.first_name|first|upper }}
+      </div>
+      <div>
+        <p class="text-sm font-medium text-gray-700">{{ comunicado.author.get_full_name|default:comunicado.author.email }}</p>
+        <p class="text-xs text-gray-400">
+          {{ comunicado.published_at|date:"d \d\e F \d\e Y" }}
+          {% if comunicado.expires_at %}· Expira em {{ comunicado.expires_at|date:"d/m/Y" }}{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Conteúdo -->
+    <div class="text-gray-700 leading-relaxed whitespace-pre-wrap text-[0.9375rem]">{{ comunicado.content }}</div>
+
+  </div>
+
+  <!-- Ações de gerente -->
+  {% if pode_gerenciar %}
+  <div class="flex items-center justify-between">
+    <form method="post" action="{% url 'comunicados:delete' comunicado.pk %}"
+          onsubmit="return confirm('Excluir este comunicado permanentemente?')">
       {% csrf_token %}
-      <button type="submit" class="text-xs text-red-500 hover:text-red-700">Excluir</button>
+      <button type="submit" class="text-xs text-red-500 hover:text-red-700 transition-colors">Excluir comunicado</button>
+    </form>
+    {% if not comunicado.is_published %}
+    <form method="post" action="{% url 'comunicados:edit' comunicado.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="publicar" value="1">
+      <input type="hidden" name="title" value="{{ comunicado.title }}">
+      <input type="hidden" name="content" value="{{ comunicado.content }}">
+      <button type="submit" class="btn-primary text-xs">Publicar agora</button>
     </form>
     {% endif %}
   </div>
-  <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ comunicado.title }}</h1>
-  <div class="flex items-center gap-2 text-sm text-gray-400 mb-6">
-    <span>{{ comunicado.author }}</span>
-    <span>·</span>
-    <span>{{ comunicado.published_at|date:"d \d\e F \d\e Y" }}</span>
-    {% if comunicado.expires_at %}<span>· Expira: {{ comunicado.expires_at|date:"d/m/Y" }}</span>{% endif %}
-  </div>
-  <div class="prose prose-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ comunicado.content }}</div>
-</div>
+  {% endif %}
+
+</article>
 {% endblock %}

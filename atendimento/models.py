@@ -33,6 +33,18 @@ class Atendimento(models.Model):
     telefone = EncryptedCharField('Telefone', max_length=200, blank=True)
     email_filiado = models.EmailField('E-mail do filiado', blank=True)
 
+    numero_senha = models.CharField('Nº Senha', max_length=10, blank=True)
+    nextqs_fila = models.CharField(
+        'Fila NextQS', max_length=1, blank=True,
+        choices=[('J', 'Jurídico'), ('P', 'Previdenciário'), ('T', 'Trabalhista'),
+                 ('A', 'Andamento de Processo'), ('M', 'Médico do Trabalho')],
+    )
+    is_retorno = models.BooleanField('É retorno?', default=False)
+    retorno_de = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='retornos', verbose_name='Retorno do atendimento',
+    )
+
     assunto = models.CharField('Assunto', max_length=200)
     descricao = models.TextField('Descrição inicial', blank=True)
     status = models.CharField(
@@ -55,6 +67,7 @@ class Atendimento(models.Model):
 
     created_at = models.DateTimeField('Criado em', auto_now_add=True)
     updated_at = models.DateTimeField('Atualizado em', auto_now=True)
+    iniciado_em = models.DateTimeField('Iniciado em', null=True, blank=True)
     concluido_em = models.DateTimeField('Concluído em', null=True, blank=True)
 
     class Meta:
@@ -72,6 +85,18 @@ class Atendimento(models.Model):
     @property
     def status_color(self):
         return self.STATUS_COLORS.get(self.status, '#64748b')
+
+    @property
+    def tempo_espera_min(self):
+        if self.iniciado_em and self.created_at:
+            return max(0, int((self.iniciado_em - self.created_at).total_seconds() / 60))
+        return None
+
+    @property
+    def tempo_atendimento_min(self):
+        if self.concluido_em and self.iniciado_em:
+            return max(0, int((self.concluido_em - self.iniciado_em).total_seconds() / 60))
+        return None
 
 
 class AtendimentoEtapa(models.Model):

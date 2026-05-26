@@ -7,7 +7,10 @@ from core.models import Department
 class Comunicado(models.Model):
     title = models.CharField('Título', max_length=200)
     content = models.TextField('Conteúdo')
-    is_pinned = models.BooleanField('Fixar', default=False)
+    cover_image = models.ImageField(
+        'Imagem de capa', upload_to='comunicados/', blank=True, null=True
+    )
+    is_pinned = models.BooleanField('Fixar no topo', default=False)
     is_published = models.BooleanField('Publicado', default=False)
     published_at = models.DateTimeField('Publicado em', blank=True, null=True)
     expires_at = models.DateTimeField('Expira em', blank=True, null=True)

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Histórico — {{ nome_filiado }}{% endblock %}
+{% block page_title %}Histórico do Filiado{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'atendimento:list' %}" class="btn-secondary text-xs">← Atendimentos</a>
+<a href="{% url 'atendimento:create' %}" class="btn-primary text-xs">+ Novo Atendimento</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-4">
+
+  <!-- Cabeçalho do filiado -->
+  <div class="card">
+    <div class="flex items-start justify-between flex-wrap gap-3">
+      <div>
+        <h2 class="text-xl font-bold text-gray-900">{{ nome_filiado }}</h2>
+        <p class="text-sm font-mono text-gray-400 mt-0.5">CPF: {{ cpf_display }}</p>
+      </div>
+      <div class="flex items-center gap-4 text-sm text-gray-500">
+        <div class="text-center">
+          <p class="text-2xl font-bold text-gray-800">{{ total }}</p>
+          <p class="text-xs text-gray-400">visita{{ total|pluralize:"s" }}</p>
+        </div>
+        {% if primeiro %}
+        <div class="text-center">
+          <p class="text-sm font-semibold text-gray-700">{{ primeiro.created_at|date:"d/m/Y" }}</p>
+          <p class="text-xs text-gray-400">primeiro</p>
+        </div>
+        {% endif %}
+        {% if ultimo and ultimo != primeiro %}
+        <div class="text-center">
+          <p class="text-sm font-semibold text-gray-700">{{ ultimo.created_at|date:"d/m/Y" }}</p>
+          <p class="text-xs text-gray-400">último</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista de atendimentos -->
+  <div class="card p-0 overflow-hidden">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-100 bg-gray-50">
+          <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Data</th>
+          <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 hidden sm:table-cell">Senha</th>
+          <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Assunto</th>
+          <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Status</th>
+          <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 hidden md:table-cell">Responsável</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for at in atendimentos %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3 text-gray-600 text-xs whitespace-nowrap">
+            {{ at.created_at|date:"d/m/Y H:i" }}
+            {% if at.is_retorno %}
+            <span class="ml-1 text-amber-500" title="Retorno">🔁</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 hidden sm:table-cell">
+            {% if at.nextqs_fila and at.numero_senha %}
+            <span class="text-xs font-bold font-mono bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
+            {% else %}
+            <span class="text-gray-300">—</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3">
+            <p class="font-medium text-gray-800 truncate max-w-48">{{ at.assunto }}</p>
+          </td>
+          <td class="px-4 py-3">
+            <span class="text-xs px-2.5 py-0.5 rounded-full text-white font-medium"
+                  style="background-color:{{ at.status_color }}">
+              {{ at.get_status_display }}
+            </span>
+          </td>
+          <td class="px-4 py-3 hidden md:table-cell text-xs text-gray-500">
+            {{ at.responsavel.get_full_name|default:"—" }}
+          </td>
+          <td class="px-4 py-3 text-right">
+            <a href="{% url 'atendimento:detail' at.pk %}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Ver →</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

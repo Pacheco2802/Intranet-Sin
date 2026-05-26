@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Métricas de Atendimento{% endblock %}
+{% block page_title %}Métricas de Atendimento{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'atendimento:painel' %}" class="btn-secondary text-xs">← Painel</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <!-- Filtro de período -->
+  <div class="flex items-center gap-2">
+    <span class="text-xs text-gray-500 font-medium">Período:</span>
+    <a href="?periodo=hoje"
+       class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors
+              {% if periodo == 'hoje' %}bg-accent text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+      Hoje
+    </a>
+    <a href="?periodo=semana"
+       class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors
+              {% if periodo == 'semana' %}bg-accent text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+      Últimos 7 dias
+    </a>
+    <a href="?periodo=mes"
+       class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors
+              {% if periodo == 'mes' %}bg-accent text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+      Este mês
+    </a>
+    {% if periodo != 'hoje' %}
+    <span class="text-xs text-gray-400 ml-2">desde {{ desde|date:"d/m/Y" }}</span>
+    {% endif %}
+  </div>
+
+  <!-- Cards de resumo -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="card text-center">
+      <p class="text-3xl font-bold text-gray-900">{{ total }}</p>
+      <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Abertos</p>
+    </div>
+    <div class="card text-center">
+      <p class="text-3xl font-bold text-emerald-600">{{ total_concluidos }}</p>
+      <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Concluídos</p>
+    </div>
+    <div class="card text-center">
+      <p class="text-3xl font-bold {% if avg_espera == '—' %}text-gray-300{% else %}text-blue-600{% endif %}">{{ avg_espera }}</p>
+      <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Espera média</p>
+    </div>
+    <div class="card text-center">
+      <p class="text-3xl font-bold {% if avg_servico == '—' %}text-gray-300{% else %}text-amber-600{% endif %}">{{ avg_servico }}</p>
+      <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Duração média</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+    <!-- Por operador -->
+    <div class="lg:col-span-2 card">
+      <h2 class="text-sm font-semibold text-gray-900 mb-4">Por operador</h2>
+      {% if operadores %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-100">
+              <th class="text-left text-xs font-semibold text-gray-400 uppercase tracking-wide pb-2">Operador</th>
+              <th class="text-center text-xs font-semibold text-gray-400 uppercase tracking-wide pb-2">Concluídos</th>
+              <th class="text-center text-xs font-semibold text-gray-400 uppercase tracking-wide pb-2">Espera média</th>
+              <th class="text-center text-xs font-semibold text-gray-400 uppercase tracking-wide pb-2">Duração média</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            {% for op in operadores %}
+            <tr>
+              <td class="py-2.5 pr-4">
+                <p class="font-medium text-gray-800">{{ op.nome }}</p>
+              </td>
+              <td class="py-2.5 text-center">
+                <span class="text-emerald-700 font-bold">{{ op.n }}</span>
+              </td>
+              <td class="py-2.5 text-center">
+                <span class="font-mono text-sm text-blue-600">{{ op.avg_espera }}</span>
+              </td>
+              <td class="py-2.5 text-center">
+                <span class="font-mono text-sm text-amber-600">{{ op.avg_servico }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-400 text-center py-8">Nenhum atendimento concluído no período.</p>
+      {% endif %}
+    </div>
+
+    <!-- Por fila -->
+    <div class="card">
+      <h2 class="text-sm font-semibold text-gray-900 mb-4">Por fila</h2>
+      {% if por_fila %}
+      <div class="space-y-3">
+        {% for fila, qtd in por_fila.items %}
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs text-gray-600 font-medium">{{ fila }}</span>
+            <span class="text-xs font-bold text-gray-800">{{ qtd }}</span>
+          </div>
+          <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-full bg-accent rounded-full"
+                 style="width: {% widthratio qtd total_concluidos 100 %}%"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-400 text-center py-8">Nenhum dado de fila.</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  {% if total_abertos %}
+  <div class="card border-l-4 border-amber-400 flex items-center gap-3">
+    <span class="text-amber-500 text-xl">⚠</span>
+    <p class="text-sm text-amber-700">
+      <strong>{{ total_abertos }}</strong> atendimento{{ total_abertos|pluralize }} ainda em aberto no período.
+      <a href="{% url 'atendimento:list' %}?status=EM_ANDAMENTO" class="underline font-medium ml-1">Ver lista →</a>
+    </p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
