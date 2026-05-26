@@ -1,15 +1,34 @@
 {% extends "base.html" %}
 {% block title %}{{ display_name }}{% endblock %}
-{% block page_title %}{{ display_name }}{% endblock %}
+{% block page_title %}
+<div class="flex items-center gap-2.5">
+  {% if conv.is_group %}
+  <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center flex-shrink-0">
+    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+  </div>
+  {% else %}
+  <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-accent to-green-700 flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">
+    {{ display_name|first|upper }}
+  </div>
+  {% endif %}
+  <div>
+    <span class="font-semibold text-gray-900">{{ display_name }}</span>
+    {% if conv.is_group %}
+    <p class="text-xs text-gray-400 font-normal leading-none mt-0.5">{{ conv.participants.count }} participantes</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
 {% block topbar_actions %}
-<a href="{% url 'mensagens:inbox' %}" class="btn-secondary text-xs">← Voltar</a>
+<a href="{% url 'mensagens:inbox' %}" class="btn-secondary text-xs">← Mensagens</a>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto flex flex-col" style="height: calc(100vh - 8rem)">
-  <!-- Messages area -->
+<div class="max-w-3xl mx-auto flex flex-col" style="height: calc(100vh - 9rem)">
+
+  <!-- Área de mensagens -->
   <div id="messages-container"
-       class="flex-1 overflow-y-auto bg-white rounded-xl border border-gray-100 p-4 mb-4"
+       class="flex-1 overflow-y-auto rounded-2xl border border-gray-100 bg-white/60 p-4 mb-3 space-y-1"
        hx-get="{% url 'mensagens:messages_poll' conv.pk %}"
        hx-trigger="every 5s"
        hx-target="#messages-container"
@@ -18,43 +37,65 @@
   </div>
 
   <!-- Input area -->
-  <form hx-post="{% url 'mensagens:send_message' conv.pk %}"
-        hx-target="#messages-container"
-        hx-swap="innerHTML"
-        hx-encoding="multipart/form-data"
-        hx-on::after-request="this.reset(); document.getElementById('messages-container').scrollTop = document.getElementById('messages-container').scrollHeight"
-        class="bg-white rounded-xl border border-gray-200 p-3 space-y-2">
-    {% csrf_token %}
-    <div class="flex gap-2 items-end">
-      <textarea name="content" rows="1" placeholder="Digite sua mensagem..."
-        class="flex-1 border-0 resize-none text-sm focus:outline-none focus:ring-0 leading-relaxed"
-        x-data
-        @keydown.enter.prevent="if (!$event.shiftKey) { $el.closest('form').dispatchEvent(new Event('submit', {bubbles: true})) }"></textarea>
-      <button type="submit" class="bg-accent hover:bg-[#15593a] text-white rounded-xl p-2.5 transition-colors flex-shrink-0">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-      </button>
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden"
+       x-data="{ hasFile: false, fileName: '', charCount: 0 }">
+
+    <!-- Arquivo selecionado -->
+    <div x-show="hasFile" x-cloak
+         class="flex items-center gap-2 px-4 pt-3 pb-0">
+      <div class="flex items-center gap-2 bg-blue-50 text-blue-700 text-xs px-3 py-1.5 rounded-full">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+        <span x-text="fileName" class="max-w-48 truncate"></span>
+        <button type="button" @click="hasFile = false; fileName = ''; $refs.fileInput.value = ''"
+                class="ml-1 hover:text-red-500 font-bold">×</button>
+      </div>
     </div>
-    <div class="flex items-center gap-2 pt-1 border-t border-gray-100">
-      <label class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-blue-500 cursor-pointer transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
-        Anexar arquivo
-        <input type="file" name="arquivo" class="hidden">
+
+    <form hx-post="{% url 'mensagens:send_message' conv.pk %}"
+          hx-target="#messages-container"
+          hx-swap="innerHTML"
+          hx-encoding="multipart/form-data"
+          hx-on::after-request="this.reset(); hasFile = false; fileName = ''; charCount = 0; document.getElementById('messages-container').scrollTop = 9999999"
+          class="flex items-end gap-2 p-3">
+      {% csrf_token %}
+
+      <!-- Botão de anexo -->
+      <label class="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-accent hover:bg-accent/10 cursor-pointer transition-colors mb-0.5">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+        <input type="file" name="arquivo" class="hidden" x-ref="fileInput"
+               @change="hasFile = $event.target.files.length > 0; fileName = $event.target.files[0]?.name || ''">
       </label>
-      <span id="file-name" class="text-xs text-gray-400 truncate max-w-[200px]"></span>
-    </div>
-  </form>
+
+      <!-- Textarea -->
+      <div class="flex-1 relative">
+        <textarea name="content" rows="1"
+                  placeholder="Digite uma mensagem... (Enter para enviar, Shift+Enter para nova linha)"
+                  x-data
+                  @input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 120) + 'px'"
+                  @keydown.enter.prevent="if (!$event.shiftKey) { $el.closest('form').dispatchEvent(new Event('submit', {bubbles:true})); $el.style.height = 'auto'; }"
+                  class="w-full resize-none text-sm text-gray-800 placeholder-gray-400 bg-transparent border-0 focus:outline-none focus:ring-0 leading-relaxed py-2"
+                  style="max-height: 120px; overflow-y: auto;"></textarea>
+      </div>
+
+      <!-- Botão enviar -->
+      <button type="submit"
+              class="flex-shrink-0 w-9 h-9 bg-accent hover:bg-accent-hover text-white rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-sm mb-0.5">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+      </button>
+    </form>
+  </div>
+
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
   const container = document.getElementById('messages-container');
-  container.scrollTop = container.scrollHeight;
+  if (container) container.scrollTop = 9999999;
   document.body.addEventListener('htmx:afterSwap', e => {
-    if (e.target.id === 'messages-container') container.scrollTop = container.scrollHeight;
-  });
-  document.querySelector('input[name="arquivo"]').addEventListener('change', function() {
-    document.getElementById('file-name').textContent = this.files[0] ? this.files[0].name : '';
+    if (e.target.id === 'messages-container') e.target.scrollTop = 9999999;
   });
 </script>
 {% endblock %}
