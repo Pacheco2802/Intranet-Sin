@@ -27,9 +27,9 @@ class Atendimento(models.Model):
         'CANCELADO': '#ef4444',
     }
 
-    cpf = EncryptedCharField('CPF', max_length=200)
+    cpf = EncryptedCharField('CPF', max_length=200, blank=True)
     cpf_hash = models.CharField('Hash do CPF', max_length=64, blank=True, db_index=True)
-    nome_filiado = models.CharField('Nome do filiado', max_length=200)
+    nome_filiado = models.CharField('Nome do filiado', max_length=200, blank=True)
     telefone = EncryptedCharField('Telefone', max_length=200, blank=True)
     email_filiado = models.EmailField('E-mail do filiado', blank=True)
 
@@ -45,7 +45,8 @@ class Atendimento(models.Model):
         related_name='retornos', verbose_name='Retorno do atendimento',
     )
 
-    assunto = models.CharField('Assunto', max_length=200)
+    assunto = models.CharField('Assunto', max_length=200, blank=True)
+    is_auto_nextqs = models.BooleanField('Gerado pelo NextQS', default=False)
     descricao = models.TextField('Descrição inicial', blank=True)
     status = models.CharField(
         'Status', max_length=20,

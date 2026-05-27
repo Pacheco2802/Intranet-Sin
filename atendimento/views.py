@@ -438,6 +438,83 @@ def nextqs_chamar(request, pk):
     return redirect('atendimento:detail', pk=pk)
 
 
+def _sync_nextqs_fila():
+    """
+    Cria atendimentos stub para senhas da fila NextQS que ainda não existem no sistema.
+    Chama-se no carregamento do painel (com cache de 20s para não sobrecarregar a API).
+    Retorna o número de registros criados.
+    """
+    from django.core.cache import cache
+    from django.utils.timezone import localdate
+
+    if cache.get('nextqs_sync_lock'):
+        return 0
+    cache.set('nextqs_sync_lock', True, 20)
+
+    fila = _fila_nextqs_ao_vivo()
+    if not fila:
+        return 0
+
+    today = localdate()
+    registradas = set(
+        Atendimento.objects.filter(
+            created_at__date=today
+        ).exclude(
+            nextqs_fila='', numero_senha=''
+        ).values_list('nextqs_fila', 'numero_senha')
+    )
+
+    criados = 0
+    for ticket in fila:
+        alpha = ticket.get('alpha', '').strip()
+        numero = ticket.get('numero', '').strip()
+        if not alpha or not numero:
+            continue
+        if (alpha, numero) in registradas:
+            continue
+
+        nome = ticket.get('nome', '').strip() or 'Aguardando identificação'
+        fila_label = dict(settings.NEXTQS_QUEUES).get(alpha, {})
+        if isinstance(fila_label, dict):
+            fila_label = fila_label.get('label', alpha)
+
+        at = Atendimento.objects.create(
+            cpf='',
+            cpf_hash='',
+            nome_filiado=nome[:200],
+            assunto=f'Fila {fila_label} — aguardando atendimento',
+            nextqs_fila=alpha,
+            numero_senha=numero,
+            is_auto_nextqs=True,
+            status=Atendimento.Status.TRIAGEM,
+            criado_por=None,
+        )
+        registradas.add((alpha, numero))
+
+        # Roteamento silencioso (sem notificações)
+        nome_dept = _FILA_PARA_DEPT.get(alpha)
+        if nome_dept:
+            try:
+                dept = Department.objects.get(name=nome_dept)
+                AtendimentoEtapa.objects.create(
+                    atendimento=at,
+                    tipo=AtendimentoEtapa.Tipo.ENCAMINHAMENTO,
+                    autor=None,
+                    departamento=None,
+                    para_departamento=dept,
+                    descricao='Encaminhado automaticamente (importado da fila NextQS).',
+                )
+                at.departamento_atual = dept
+                at.status = Atendimento.Status.ENCAMINHADO
+                at.save(update_fields=['departamento_atual', 'status', 'updated_at'])
+            except Department.DoesNotExist:
+                pass
+
+        criados += 1
+
+    return criados
+
+
 def _fila_nextqs_ao_vivo():
     if not getattr(settings, 'NEXTQS_API_KEY', ''):
         return []
@@ -471,6 +548,8 @@ def _fila_nextqs_ao_vivo():
 
 @login_required
 def atendimento_painel(request):
+    _sync_nextqs_fila()
+
     hoje = localdate()
     base = _qs_visivel(request.user)
     triagem = list(base.filter(status=Atendimento.Status.TRIAGEM, created_at__date=hoje))

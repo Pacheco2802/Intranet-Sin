@@ -9,7 +9,12 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="max-w-7xl mx-auto space-y-6"
+     id="painel-content"
+     hx-get="{% url 'atendimento:painel' %}"
+     hx-trigger="every 30s"
+     hx-swap="outerHTML"
+     hx-select="#painel-content">
 
   {% if fila_sem_atendimento %}
   <div class="card border-l-4 border-amber-400">
@@ -55,11 +60,16 @@
       <div class="space-y-2">
         {% for at in triagem %}
         <a href="{% url 'atendimento:detail' at.pk %}"
-           class="card block hover:border-slate-300 border border-transparent transition-all p-3 hover:shadow-sm">
-          {% if at.nextqs_fila and at.numero_senha %}
-          <span class="text-base font-bold font-mono text-blue-700">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
-          {% endif %}
-          <p class="font-medium text-gray-800 text-sm truncate mt-0.5">{{ at.nome_filiado }}</p>
+           class="card block hover:border-slate-300 border {% if at.is_auto_nextqs %}border-amber-200 bg-amber-50/30{% else %}border-transparent{% endif %} transition-all p-3 hover:shadow-sm">
+          <div class="flex items-center gap-1.5 mb-1">
+            {% if at.nextqs_fila and at.numero_senha %}
+            <span class="text-base font-bold font-mono text-blue-700">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
+            {% endif %}
+            {% if at.is_auto_nextqs %}
+            <span class="text-xs bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded font-medium ml-auto">Auto</span>
+            {% endif %}
+          </div>
+          <p class="font-medium text-gray-800 text-sm truncate">{{ at.nome_filiado|default:"Aguardando identificação" }}</p>
           <p class="text-xs text-gray-400 truncate">{{ at.assunto }}</p>
           <p class="text-xs text-gray-300 mt-1">{{ at.created_at|date:"H:i" }}</p>
         </a>
@@ -79,11 +89,16 @@
       <div class="space-y-2">
         {% for at in encaminhados %}
         <a href="{% url 'atendimento:detail' at.pk %}"
-           class="card block hover:border-blue-300 border border-transparent transition-all p-3 hover:shadow-sm">
-          {% if at.nextqs_fila and at.numero_senha %}
-          <span class="text-base font-bold font-mono text-blue-700">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
-          {% endif %}
-          <p class="font-medium text-gray-800 text-sm truncate mt-0.5">{{ at.nome_filiado }}</p>
+           class="card block hover:border-blue-300 border {% if at.is_auto_nextqs %}border-amber-200 bg-amber-50/30{% else %}border-transparent{% endif %} transition-all p-3 hover:shadow-sm">
+          <div class="flex items-center gap-1.5 mb-1">
+            {% if at.nextqs_fila and at.numero_senha %}
+            <span class="text-base font-bold font-mono text-blue-700">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
+            {% endif %}
+            {% if at.is_auto_nextqs %}
+            <span class="text-xs bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded font-medium ml-auto">Auto</span>
+            {% endif %}
+          </div>
+          <p class="font-medium text-gray-800 text-sm truncate">{{ at.nome_filiado|default:"Aguardando identificação" }}</p>
           <p class="text-xs text-gray-400 truncate">{{ at.assunto }}</p>
           {% if at.departamento_atual %}
           <p class="text-xs text-blue-500 mt-1">→ {{ at.departamento_atual.name }}</p>
