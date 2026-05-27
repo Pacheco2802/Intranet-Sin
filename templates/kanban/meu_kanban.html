@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Meu Kanban{% endblock %}
+{% block page_title %}
+<div class="flex items-center gap-2">
+  Meu Kanban
+  {% if total_ativos > 0 %}
+  <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-accent/10 text-accent">{{ total_ativos }} ativ{{ total_ativos|pluralize:"a,as" }}</span>
+  {% endif %}
+</div>
+{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'kanban:board_list' %}" class="btn-secondary text-xs">Ver todos os boards</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+
+  {% if not a_fazer and not em_andamento and not concluidos %}
+  <div class="flex flex-col items-center justify-center py-24 text-center">
+    <div class="w-20 h-20 rounded-3xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mb-5">
+      <svg class="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+      </svg>
+    </div>
+    <p class="text-gray-800 font-semibold text-lg">Nenhum card atribuído a você</p>
+    <p class="text-gray-400 text-sm mt-1">Quando alguém designar uma tarefa, ela aparecerá aqui.</p>
+  </div>
+
+  {% else %}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+    <!-- A Fazer -->
+    <div>
+      <div class="flex items-center gap-2 mb-3 px-1">
+        <div class="w-2.5 h-2.5 rounded-full bg-gray-400"></div>
+        <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider">A Fazer</h2>
+        <span class="ml-auto text-xs text-gray-400 font-medium">{{ a_fazer|length }}</span>
+      </div>
+      <div class="space-y-2.5">
+        {% for card in a_fazer %}
+        {% include "kanban/partials/meu_card.html" %}
+        {% empty %}
+        <p class="text-center text-xs text-gray-300 py-6">Nenhuma tarefa pendente</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Em Andamento -->
+    <div>
+      <div class="flex items-center gap-2 mb-3 px-1">
+        <div class="w-2.5 h-2.5 rounded-full bg-blue-400"></div>
+        <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Em Andamento</h2>
+        <span class="ml-auto text-xs text-gray-400 font-medium">{{ em_andamento|length }}</span>
+      </div>
+      <div class="space-y-2.5">
+        {% for card in em_andamento %}
+        {% include "kanban/partials/meu_card.html" %}
+        {% empty %}
+        <p class="text-center text-xs text-gray-300 py-6">Nenhuma tarefa em progresso</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Concluídos -->
+    <div>
+      <div class="flex items-center gap-2 mb-3 px-1">
+        <div class="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+        <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Concluídos</h2>
+        <span class="ml-auto text-xs text-gray-400 font-medium">{{ concluidos|length }}</span>
+      </div>
+      <div class="space-y-2.5">
+        {% for card in concluidos %}
+        {% include "kanban/partials/meu_card.html" %}
+        {% empty %}
+        <p class="text-center text-xs text-gray-300 py-6">Nenhum card concluído</p>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

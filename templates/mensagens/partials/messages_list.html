@@ -1,9 +1,28 @@
-{% for msg in messages_qs %}
-{% with is_mine=msg.sender.pk|stringformat:"s" %}
+{% if not feed %}
+<div class="flex flex-col items-center justify-center py-16 text-center">
+  <div class="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
+    <svg class="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+    </svg>
+  </div>
+  <p class="text-gray-400 text-sm">Seja o primeiro a escrever!</p>
+</div>
+{% endif %}
+
+{% for item in feed %}
+
+{% if item.type == 'separator' %}
+<div class="flex items-center gap-3 py-3 select-none">
+  <div class="flex-1 h-px bg-gray-100"></div>
+  <span class="text-xs text-gray-400 font-medium bg-gray-50 px-3 py-1 rounded-full border border-gray-100">{{ item.label }}</span>
+  <div class="flex-1 h-px bg-gray-100"></div>
+</div>
+
+{% else %}
+{% with msg=item.msg %}
 <div class="flex {% if msg.sender == request.user %}justify-end{% else %}justify-start{% endif %} items-end gap-2 mb-1">
 
   {% if msg.sender != request.user %}
-  <!-- Avatar remetente -->
   <div class="w-7 h-7 rounded-xl flex-shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm mb-0.5"
        style="background: linear-gradient(135deg, hsl({{ msg.sender.get_full_name|length|add:120 }},55%,45%), hsl({{ msg.sender.get_full_name|length|add:160 }},60%,35%))">
     {{ msg.sender.first_name|first|upper }}{{ msg.sender.last_name|first|upper }}
@@ -42,13 +61,6 @@
 
 </div>
 {% endwith %}
-{% empty %}
-<div class="flex flex-col items-center justify-center py-16 text-center">
-  <div class="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
-    <svg class="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-    </svg>
-  </div>
-  <p class="text-gray-400 text-sm">Seja o primeiro a escrever!</p>
-</div>
+{% endif %}
+
 {% endfor %}

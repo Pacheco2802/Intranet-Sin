@@ -96,11 +96,36 @@
         {% endfor %}
       </tbody>
     </table>
-    {% if total > 50 %}
-    <div class="px-4 py-3 border-t border-gray-100 bg-gray-50 text-xs text-gray-500 text-center">
-      Mostrando 50 de {{ total }} resultados. Use os filtros para refinar a busca.
+    <!-- Paginação -->
+    <div class="px-4 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between gap-4">
+      <span class="text-xs text-gray-500">
+        {% with start=page_obj.start_index end=page_obj.end_index %}
+        Exibindo {{ start }}–{{ end }} de {{ total }} resultado{{ total|pluralize:"s" }}
+        {% endwith %}
+      </span>
+      {% if page_obj.has_other_pages %}
+      <div class="flex items-center gap-1">
+        {% if page_obj.has_previous %}
+        <a href="?{{ base_query }}{% if base_query %}&{% endif %}page={{ page_obj.previous_page_number }}"
+           class="px-2.5 py-1 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors">← Anterior</a>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+          <span class="px-2.5 py-1 text-xs rounded-lg bg-accent text-white font-semibold">{{ num }}</span>
+          {% elif num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+          <a href="?{{ base_query }}{% if base_query %}&{% endif %}page={{ num }}"
+             class="px-2.5 py-1 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors">{{ num }}</a>
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <a href="?{{ base_query }}{% if base_query %}&{% endif %}page={{ page_obj.next_page_number }}"
+           class="px-2.5 py-1 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors">Próxima →</a>
+        {% endif %}
+      </div>
+      {% endif %}
     </div>
-    {% endif %}
   </div>
   {% else %}
   <div class="card text-center py-14">

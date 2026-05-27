@@ -1,0 +1,79 @@
+<a href="{% url 'kanban:card_detail' board_pk=card.column.board.pk pk=card.pk %}"
+   class="block bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group overflow-hidden">
+
+  <!-- Barra de prioridade -->
+  <div class="h-1 w-full" style="background-color: {{ card.priority_color }};"></div>
+
+  <div class="p-3.5">
+
+    <!-- Origem -->
+    <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+      {% if card.column.board.department %}
+      <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+            style="background: {{ card.column.board.department.color }}18; color: {{ card.column.board.department.color }};">
+        {{ card.column.board.department.icon }} {{ card.column.board.department.name }}
+      </span>
+      {% else %}
+      <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
+        {{ card.column.board.name }}
+      </span>
+      {% endif %}
+
+      {% if card.source_atendimento_id %}
+      <span class="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">
+        📋 Atendimento #{{ card.source_atendimento_id }}
+      </span>
+      {% elif card.source_subtask_id %}
+      <span class="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 font-medium">
+        🔗 Subtarefa
+      </span>
+      {% elif 'solicitacao' in card.tags %}
+      <span class="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 font-medium">
+        ⚡ Solicitação
+      </span>
+      {% endif %}
+    </div>
+
+    <!-- Título -->
+    <p class="text-sm font-semibold text-gray-800 leading-snug group-hover:text-accent transition-colors mb-2">
+      {{ card.title }}
+    </p>
+
+    <!-- Coluna de destino -->
+    <p class="text-xs text-gray-400 mb-3">{{ card.column.name }}</p>
+
+    <!-- Rodapé -->
+    <div class="flex items-center justify-between gap-2">
+
+      <!-- Prioridade -->
+      <span class="text-xs font-semibold px-2 py-0.5 rounded-full text-white"
+            style="background-color: {{ card.priority_color }};">
+        {{ card.get_priority_display }}
+      </span>
+
+      <div class="flex items-center gap-2">
+
+        <!-- Subtarefas -->
+        {% with total_sub=card.subtasks.count done_sub=card.subtasks.filter.is_done %}
+        {% if card.subtasks.count > 0 %}
+        <span class="text-xs text-gray-400 flex items-center gap-0.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 12l2 2 4-4"/>
+          </svg>
+          {{ card.subtasks.count }}
+        </span>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Prazo -->
+        {% if card.due_date %}
+        <span class="text-xs font-medium {% if card.is_overdue %}text-red-500{% else %}text-gray-400{% endif %}">
+          {% if card.is_overdue %}⚠ {% endif %}{{ card.due_date|date:"d/m" }}
+        </span>
+        {% endif %}
+
+      </div>
+    </div>
+
+  </div>
+</a>

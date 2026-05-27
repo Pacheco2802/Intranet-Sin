@@ -27,13 +27,32 @@
 <div class="max-w-3xl mx-auto flex flex-col" style="height: calc(100vh - 9rem)">
 
   <!-- Área de mensagens -->
-  <div id="messages-container"
-       class="flex-1 overflow-y-auto rounded-2xl border border-gray-100 bg-white/60 p-4 mb-3 space-y-1"
-       hx-get="{% url 'mensagens:messages_poll' conv.pk %}"
-       hx-trigger="every 5s"
-       hx-target="#messages-container"
-       hx-swap="innerHTML">
-    {% include "mensagens/partials/messages_list.html" %}
+  <div id="messages-scroll"
+       class="flex-1 overflow-y-auto rounded-2xl border border-gray-100 bg-white/60 p-4 mb-3">
+
+    <!-- Zona de mensagens anteriores (não substituída pelo poll) -->
+    <div id="older-zone">
+      {% if has_more %}
+      <div class="text-center pb-3">
+        <button hx-get="{% url 'mensagens:load_more' conv.pk %}?before_id={{ oldest_id }}"
+                hx-target="#older-zone"
+                hx-swap="outerHTML"
+                class="btn-secondary text-xs py-1.5 px-4">
+          ↑ Carregar mensagens anteriores
+        </button>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Zona recente — substituída pelo poll a cada 5s -->
+    <div id="messages-container"
+         hx-get="{% url 'mensagens:messages_poll' conv.pk %}"
+         hx-trigger="every 5s"
+         hx-target="#messages-container"
+         hx-swap="innerHTML">
+      {% include "mensagens/partials/messages_list.html" %}
+    </div>
+
   </div>
 
   <!-- Input area -->
@@ -55,7 +74,7 @@
           hx-target="#messages-container"
           hx-swap="innerHTML"
           hx-encoding="multipart/form-data"
-          hx-on::after-request="this.reset(); hasFile = false; fileName = ''; charCount = 0; document.getElementById('messages-container').scrollTop = 9999999"
+          hx-on::after-request="this.reset(); hasFile = false; fileName = ''; charCount = 0; document.getElementById('messages-scroll').scrollTop = 9999999"
           class="flex items-end gap-2 p-3">
       {% csrf_token %}
 
@@ -92,10 +111,13 @@
 
 {% block extra_scripts %}
 <script>
-  const container = document.getElementById('messages-container');
-  if (container) container.scrollTop = 9999999;
+  const scroll = document.getElementById('messages-scroll');
+  if (scroll) scroll.scrollTop = 9999999;
   document.body.addEventListener('htmx:afterSwap', e => {
-    if (e.target.id === 'messages-container') e.target.scrollTop = 9999999;
+    if (e.target.id === 'messages-container') {
+      const s = document.getElementById('messages-scroll');
+      if (s) s.scrollTop = 9999999;
+    }
   });
 </script>
 {% endblock %}

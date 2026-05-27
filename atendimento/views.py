@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -130,7 +131,7 @@ def _fmt_min(minutes):
 
 @login_required
 def atendimento_list(request):
-    qs = _qs_visivel(request.user)
+    qs = _qs_visivel(request.user).order_by('-updated_at')
     form = AtendimentoFilterForm(request.GET or None)
     cpf_filtro = ''
 
@@ -153,11 +154,20 @@ def atendimento_list(request):
             qs = qs.filter(departamento_atual=departamento)
 
     total = qs.count()
+    paginator = Paginator(qs, 25)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    params = request.GET.copy()
+    params.pop('page', None)
+    base_query = params.urlencode()
+
     return render(request, 'atendimento/list.html', {
-        'atendimentos': qs[:50],
+        'atendimentos': page_obj,
+        'page_obj': page_obj,
         'form': form,
         'cpf_filtro': cpf_filtro,
         'total': total,
+        'base_query': base_query,
     })
 
 

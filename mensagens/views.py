@@ -1,12 +1,51 @@
+from datetime import timedelta
+
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
+from django.utils.timezone import localtime, localdate
 from django.views.decorators.http import require_POST
 
 from core.models import CustomUser, AuditLog
 from core.middleware import AuditMiddleware
 from .models import Conversation, Message, MessageRead, MessageAnexo
 from .forms import NewConversationForm, MessageForm
+
+MESSAGES_PER_PAGE = 50
+
+
+def _build_feed(messages_list):
+    """Converts list of Message objects to feed items with day separators."""
+    today = localdate()
+    yesterday = today - timedelta(days=1)
+    items = []
+    current_day = None
+    for msg in messages_list:
+        msg_day = localtime(msg.sent_at).date()
+        if msg_day != current_day:
+            if msg_day == today:
+                label = 'Hoje'
+            elif msg_day == yesterday:
+                label = 'Ontem'
+            else:
+                label = msg_day.strftime('%d/%m/%Y')
+            items.append({'type': 'separator', 'label': label})
+            current_day = msg_day
+        items.append({'type': 'message', 'msg': msg})
+    return items
+
+
+def _get_paged_messages(conv, before_id=None):
+    """Returns (msgs_list, has_more, oldest_id) for a conversation."""
+    qs = conv.messages.filter(is_deleted=False)
+    if before_id:
+        qs = qs.filter(pk__lt=before_id)
+    qs = qs.select_related('sender').prefetch_related('anexos').order_by('sent_at')
+    total = qs.count()
+    has_more = total > MESSAGES_PER_PAGE
+    msgs = list(qs[total - MESSAGES_PER_PAGE:] if has_more else qs)
+    oldest_id = msgs[0].pk if msgs else None
+    return msgs, has_more, oldest_id
 
 
 @login_required
@@ -29,24 +68,25 @@ def conversation(request, pk):
     if not conv.participants.filter(pk=request.user.pk).exists():
         return HttpResponseForbidden()
 
-    # mark all as read
     unread_msgs = conv.messages.filter(is_deleted=False).exclude(reads__user=request.user).exclude(sender=request.user)
     for msg in unread_msgs:
         MessageRead.objects.get_or_create(message=msg, user=request.user)
 
-    form = MessageForm()
-    messages_qs = conv.messages.filter(is_deleted=False).select_related('sender').prefetch_related('anexos')
+    msgs, has_more, oldest_id = _get_paged_messages(conv)
+    feed = _build_feed(msgs)
     return render(request, 'mensagens/conversation.html', {
         'conv': conv,
         'display_name': conv.get_display_name(request.user),
-        'messages_qs': messages_qs,
-        'form': form,
+        'feed': feed,
+        'has_more': has_more,
+        'oldest_id': oldest_id,
+        'form': MessageForm(),
     })
 
 
 @login_required
 def messages_poll(request, pk):
-    """HTMX endpoint — returns only the messages partial."""
+    """HTMX polling endpoint — returns last N messages with day separators."""
     conv = get_object_or_404(Conversation, pk=pk)
     if not conv.participants.filter(pk=request.user.pk).exists():
         return HttpResponseForbidden()
@@ -55,9 +95,28 @@ def messages_poll(request, pk):
     for msg in unread_msgs:
         MessageRead.objects.get_or_create(message=msg, user=request.user)
 
-    messages_qs = conv.messages.filter(is_deleted=False).select_related('sender')
-    return render(request, 'mensagens/partials/messages_list.html', {
-        'messages_qs': messages_qs,
+    msgs, _, _ = _get_paged_messages(conv)
+    feed = _build_feed(msgs)
+    return render(request, 'mensagens/partials/messages_list.html', {'feed': feed, 'conv': conv})
+
+
+@login_required
+def messages_load_more(request, pk):
+    """HTMX endpoint — loads older messages before a given message ID."""
+    conv = get_object_or_404(Conversation, pk=pk)
+    if not conv.participants.filter(pk=request.user.pk).exists():
+        return HttpResponseForbidden()
+
+    before_id = request.GET.get('before_id')
+    if not before_id:
+        return HttpResponse('')
+
+    msgs, has_more, oldest_id = _get_paged_messages(conv, before_id=before_id)
+    feed = _build_feed(msgs)
+    return render(request, 'mensagens/partials/messages_older.html', {
+        'feed': feed,
+        'has_more': has_more,
+        'oldest_id': oldest_id,
         'conv': conv,
     })
 
@@ -99,11 +158,9 @@ def send_message(request, pk):
             ip=AuditMiddleware.get_client_ip(request),
         )
 
-    messages_qs = conv.messages.filter(is_deleted=False).select_related('sender').prefetch_related('anexos')
-    return render(request, 'mensagens/partials/messages_list.html', {
-        'messages_qs': messages_qs,
-        'conv': conv,
-    })
+    msgs, _, _ = _get_paged_messages(conv)
+    feed = _build_feed(msgs)
+    return render(request, 'mensagens/partials/messages_list.html', {'feed': feed, 'conv': conv})
 
 
 @login_required
@@ -146,8 +203,6 @@ def delete_message(request, pk):
         resource_type='Message', resource_id=msg.pk,
         ip=AuditMiddleware.get_client_ip(request),
     )
-    messages_qs = msg.conversation.messages.filter(is_deleted=False).select_related('sender')
-    return render(request, 'mensagens/partials/messages_list.html', {
-        'messages_qs': messages_qs,
-        'conv': msg.conversation,
-    })
+    msgs, _, _ = _get_paged_messages(msg.conversation)
+    feed = _build_feed(msgs)
+    return render(request, 'mensagens/partials/messages_list.html', {'feed': feed, 'conv': msg.conversation})

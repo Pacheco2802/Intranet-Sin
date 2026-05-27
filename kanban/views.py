@@ -8,7 +8,7 @@ from django.http import JsonResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 
-from core.models import AuditLog, Notification, CustomUser
+from core.models import AuditLog, Notification, CustomUser, Department
 from core.middleware import AuditMiddleware
 from core.validators import validate_file_extension, validate_file_size
 from .models import Board, Column, Card, CardComment, CardActivity, SubTask, SubTaskAnexo, CardAnexo
@@ -678,3 +678,65 @@ def _notify_card(card, actor, created: bool):
                     body=_card_body(card),
                     link=link,
                 )
+
+
+_PRIORITY_ORDER = {'URGENT': 0, 'HIGH': 1, 'MEDIUM': 2, 'LOW': 3}
+
+
+@login_required
+def meu_kanban(request):
+    cards = list(
+        Card.objects
+        .filter(assignee=request.user)
+        .select_related('column__board__department', 'creator', 'source_subtask')
+        .prefetch_related('subtasks')
+    )
+    cards.sort(key=lambda c: (_PRIORITY_ORDER.get(c.priority, 9), c.due_date or __import__('datetime').date(9999, 12, 31)))
+
+    a_fazer     = [c for c in cards if c.column.column_type == Column.ColumnType.A_FAZER]
+    em_andamento = [c for c in cards if c.column.column_type == Column.ColumnType.EM_ANDAMENTO]
+    concluidos  = [c for c in cards if c.column.column_type == Column.ColumnType.STATUS_FINAL]
+
+    return render(request, 'kanban/meu_kanban.html', {
+        'a_fazer': a_fazer,
+        'em_andamento': em_andamento,
+        'concluidos': concluidos,
+        'total_ativos': len(a_fazer) + len(em_andamento),
+    })
+
+
+@login_required
+def solicitar_rapida(request):
+    if request.method == 'POST':
+        titulo = request.POST.get('titulo', '').strip()
+        descricao = request.POST.get('descricao', '').strip()
+        dept_id = request.POST.get('departamento')
+        prioridade = request.POST.get('prioridade', 'MEDIUM')
+
+        if titulo and dept_id:
+            dept = get_object_or_404(Department, pk=dept_id)
+            desc_completa = f'[Solicitação direta]\n\n{descricao}' if descricao else '[Solicitação direta]'
+            card = criar_card_automatico(
+                department=dept,
+                title=titulo,
+                description=desc_completa,
+                creator=request.user,
+                tags='solicitacao',
+            )
+            if card:
+                if prioridade in ('LOW', 'MEDIUM', 'HIGH', 'URGENT'):
+                    card.priority = prioridade
+                    card.save(update_fields=['priority'])
+                _notify_card(card, request.user, created=True)
+                AuditLog.log(
+                    request.user, AuditLog.Action.CARD_CREATE,
+                    resource_type='Card', resource_id=card.pk,
+                    ip=AuditMiddleware.get_client_ip(request),
+                    title=card.title,
+                )
+                messages.success(request, f'Solicitação enviada para {dept.name}!')
+                return redirect('kanban:card_detail', board_pk=card.column.board.pk, pk=card.pk)
+        messages.error(request, 'Preencha o título e o departamento.')
+
+    departments = Department.objects.all().order_by('name')
+    return render(request, 'kanban/solicitar.html', {'departments': departments})
