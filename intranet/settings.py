@@ -109,7 +109,8 @@ if config('USE_S3', default=False, cast=bool):
     AWS_S3_CUSTOM_DOMAIN    = config('AWS_S3_CUSTOM_DOMAIN', default=None)
     AWS_DEFAULT_ACL         = None
     AWS_S3_FILE_OVERWRITE   = False
-    AWS_QUERYSTRING_AUTH    = False
+    AWS_QUERYSTRING_AUTH    = True
+    AWS_QUERYSTRING_EXPIRE  = 3600  # link válido por 1 hora
     MEDIA_URL = (
         f'https://{AWS_S3_CUSTOM_DOMAIN}/'
         if AWS_S3_CUSTOM_DOMAIN
