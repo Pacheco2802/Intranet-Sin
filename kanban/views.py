@@ -24,7 +24,7 @@ def board_list(request):
     else:
         from django.db.models import Q
         boards = Board.objects.filter(
-            Q(department=user.department) |
+            Q(department__in=user.departments.all()) |
             Q(members=user) |
             Q(is_global=True)
         ).distinct().select_related('department', 'created_by')
@@ -60,7 +60,7 @@ def board_detail(request, pk):
 
 @login_required
 def board_create(request):
-    if not (request.user.can_see_all or request.user.role == request.user.Role.GERENTE):
+    if not request.user.can_see_all:
         return HttpResponseForbidden()
     form = BoardForm(request.POST or None, user=request.user)
     if request.method == 'POST' and form.is_valid():
@@ -464,12 +464,12 @@ def board_access(request, pk):
         return redirect('kanban:board_access', pk=pk)
 
     from core.models import CustomUser as CU, Department
-    current_members = board.members.select_related('department').order_by('first_name')
+    current_members = board.members.prefetch_related('departments').order_by('first_name')
     dept_users = CU.objects.filter(
         is_active=True, is_approved=True
     ).exclude(
         pk__in=board.members.values('pk')
-    ).select_related('department').order_by('first_name')
+    ).prefetch_related('departments').order_by('first_name')
     return render(request, 'kanban/board_access.html', {
         'board': board,
         'current_members': current_members,
@@ -479,7 +479,7 @@ def board_access(request, pk):
 
 @login_required
 def analise(request):
-    if not (request.user.can_see_all or request.user.role in ('GERENTE', 'LIDER')):
+    if not request.user.can_see_all:
         return HttpResponseForbidden()
 
     from django.utils import timezone
@@ -634,25 +634,12 @@ def _notify_card(card, actor, created: bool):
         targets.add(card.assignee)
 
     # Notifica líderes do departamento-alvo quando o card é cross-dept
-    if board.department and board.department != actor.department:
+    if board.department and not actor.departments.filter(pk=board.department_id).exists():
         dept = board.department
-        leaders = set()
-
-        if dept.leader and dept.leader != actor:
-            leaders.add(dept.leader)
-
-        for mgr in CustomUser.objects.filter(
-            role=CustomUser.Role.GERENTE,
-            department=dept,
-            is_active=True,
-        ):
-            if mgr != actor:
-                leaders.add(mgr)
-
-        for leader in leaders:
-            if leader not in targets:
+        for ldr in dept.leaders.all():
+            if ldr != actor and ldr not in targets:
                 Notification.send(
-                    user=leader,
+                    user=ldr,
                     actor=actor,
                     ntype=Notification.Type.CARD_CROSS,
                     title=f'{prefix}Card cross-departamento em {dept.name}',
@@ -662,16 +649,12 @@ def _notify_card(card, actor, created: bool):
 
     # Se o board é do próprio departamento do ator mas sem responsável →
     # notifica os líderes do dept (para visibilidade)
-    elif board.department and board.department == actor.department and not card.assignee and created:
+    elif board.department and actor.departments.filter(pk=board.department_id).exists() and not card.assignee and created:
         dept = board.department
-        for mgr in CustomUser.objects.filter(
-            role=CustomUser.Role.GERENTE,
-            department=dept,
-            is_active=True,
-        ):
-            if mgr != actor and mgr not in targets:
+        for ldr in dept.leaders.all():
+            if ldr != actor and ldr not in targets:
                 Notification.send(
-                    user=mgr,
+                    user=ldr,
                     actor=actor,
                     ntype=Notification.Type.CARD_DEPT,
                     title=f'{prefix}Novo card em {dept.name}',

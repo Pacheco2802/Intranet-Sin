@@ -49,16 +49,11 @@ class Command(BaseCommand):
         if card.assignee:
             targets.add(card.assignee)
 
-        # Notifica também líderes/gerentes do departamento
+        # Notifica líderes do departamento
         if board.department:
             dept = board.department
-            if dept.leader:
-                targets.add(dept.leader)
-            from core.models import CustomUser
-            for mgr in CustomUser.objects.filter(
-                role=CustomUser.Role.GERENTE, department=dept, is_active=True
-            ):
-                targets.add(mgr)
+            for ldr in dept.leaders.all():
+                targets.add(ldr)
 
         for user in targets:
             Notification.objects.create(

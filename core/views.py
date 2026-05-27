@@ -240,7 +240,7 @@ def lgpd_export(request):
             'bio': user.bio or None,
             'foto': user.avatar.url if user.avatar else None,
             'cargo': user.get_role_display(),
-            'departamento': str(user.department) if user.department else None,
+            'departamentos': [str(d) for d in user.departments.all()],
             'data_cadastro': user.date_joined.isoformat(),
             'ultimo_acesso': user.last_login.isoformat() if user.last_login else None,
         },
@@ -292,7 +292,7 @@ def profile(request):
 def user_list(request):
     if not request.user.can_manage_users:
         return HttpResponseForbidden()
-    users = CustomUser.objects.filter(is_approved=True).select_related('department').order_by('first_name', 'last_name')
+    users = CustomUser.objects.filter(is_approved=True).prefetch_related('departments').order_by('first_name', 'last_name')
     pending = CustomUser.objects.filter(is_approved=False, is_active=False).order_by('date_joined')
     departments = Department.objects.all().order_by('name')
     return render(request, 'usuarios/list.html', {
@@ -313,6 +313,7 @@ def user_create(request):
         user.is_approved = True
         user.set_password(form.cleaned_data['password1'])
         user.save()
+        form.save_m2m()
         _add_to_teams(user)
         AuditLog.log(
             request.user, AuditLog.Action.USER_CREATE,
@@ -330,29 +331,28 @@ def user_edit(request, pk):
     if not request.user.can_manage_users:
         return HttpResponseForbidden()
     target = get_object_or_404(CustomUser, pk=pk)
-    old_department = target.department
+    old_dept_pks = set(target.departments.values_list('pk', flat=True))
     form = UserEditForm(request.POST or None, request.FILES or None, instance=target)
     if request.method == 'POST' and form.is_valid():
         user = form.save()
-        # Regra 5: atualiza equipe de departamento quando o departamento muda
-        new_department = user.department
-        if old_department != new_department:
-            if old_department:
-                try:
-                    old_team = old_department.team
-                    old_team.members.remove(user)
-                    if old_team.conversation:
-                        old_team.conversation.participants.remove(user)
-                except Department.team.RelatedObjectDoesNotExist:
-                    pass
-            if new_department:
-                dept_team, _ = Team.objects.get_or_create(
-                    department=new_department,
-                    defaults={'name': new_department.name, 'is_protected': True},
-                )
-                dept_team.members.add(user)
-                if dept_team.conversation:
-                    dept_team.conversation.participants.add(user)
+        new_dept_pks = set(user.departments.values_list('pk', flat=True))
+        for pk in old_dept_pks - new_dept_pks:
+            try:
+                old_team = Department.objects.get(pk=pk).team
+                old_team.members.remove(user)
+                if old_team.conversation:
+                    old_team.conversation.participants.remove(user)
+            except Exception:
+                pass
+        for pk in new_dept_pks - old_dept_pks:
+            dept = Department.objects.get(pk=pk)
+            dept_team, _ = Team.objects.get_or_create(
+                department=dept,
+                defaults={'name': dept.name, 'is_protected': True},
+            )
+            dept_team.members.add(user)
+            if dept_team.conversation:
+                dept_team.conversation.participants.add(user)
         AuditLog.log(
             request.user, AuditLog.Action.USER_EDIT,
             resource_type='CustomUser', resource_id=target.pk,
@@ -402,10 +402,11 @@ def user_approve(request, pk):
     form = ApproveUserForm(request.POST)
     if form.is_valid():
         target.role = form.cleaned_data['role']
-        target.department = form.cleaned_data['department']
     target.is_active = True
     target.is_approved = True
-    target.save(update_fields=['is_active', 'is_approved', 'role', 'department'])
+    target.save(update_fields=['is_active', 'is_approved', 'role'])
+    if form.is_valid() and form.cleaned_data.get('department'):
+        target.departments.add(form.cleaned_data['department'])
     _add_to_teams(target)
     AuditLog.log(
         request.user, AuditLog.Action.USER_APPROVE,
@@ -569,10 +570,10 @@ def _add_to_teams(user):
     if general.conversation:
         general.conversation.participants.add(user)
 
-    if user.department:
+    for dept in user.departments.all():
         dept_team, _ = Team.objects.get_or_create(
-            department=user.department,
-            defaults={'name': user.department.name, 'is_protected': True},
+            department=dept,
+            defaults={'name': dept.name, 'is_protected': True},
         )
         dept_team.members.add(user)
         if dept_team.conversation:
@@ -604,7 +605,7 @@ def _setup_department(dept, created_by):
 def department_list(request):
     if not request.user.can_manage_users:
         return HttpResponseForbidden()
-    depts = Department.objects.select_related('leader').prefetch_related('users', 'boards', 'team').order_by('name')
+    depts = Department.objects.prefetch_related('leaders', 'users', 'boards', 'team').order_by('name')
     dept_data = []
     for dept in depts:
         dept_data.append({

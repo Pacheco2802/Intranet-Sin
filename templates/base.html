@@ -321,7 +321,7 @@
       <div class="px-2 mb-5">
         <p class="text-white font-semibold text-sm leading-tight">{{ user.get_full_name|default:user.username }}</p>
         <p class="text-[11px] mt-0.5" style="color:rgba(255,255,255,.4);">
-          {{ user.get_role_display }}{% if user.department %} · {{ user.department }}{% endif %}
+          {{ user.get_role_display }}{% for d in user.departments.all %} · {{ d }}{% endfor %}
         </p>
       </div>
 

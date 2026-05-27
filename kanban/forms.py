@@ -64,7 +64,7 @@ class CardForm(forms.ModelForm):
             elif board.department:
                 # Board de departamento: membros do departamento
                 qs = CustomUser.objects.filter(
-                    is_active=True, is_approved=True, department=board.department
+                    is_active=True, is_approved=True, departments=board.department
                 ).order_by('first_name', 'last_name')
                 if not qs.exists():
                     qs = CustomUser.objects.filter(is_active=True, is_approved=True)

@@ -42,11 +42,13 @@
 
     <div class="flex items-center justify-between text-xs text-gray-400 pt-3 border-t border-gray-50">
       <span>
-        {% if dept.leader %}
-        👤 Líder: <span class="text-gray-600 font-medium">{{ dept.leader.get_full_name }}</span>
+        {% with ldrs=dept.leaders.all %}
+        {% if ldrs %}
+        👤 {% for l in ldrs %}<span class="text-gray-600 font-medium">{{ l.get_full_name }}</span>{% if not forloop.last %}, {% endif %}{% endfor %}
         {% else %}
         <span class="text-gray-400 italic">Sem líder definido</span>
         {% endif %}
+        {% endwith %}
       </span>
       <div class="flex gap-2 items-center">
         {% if dept.team %}

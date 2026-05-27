@@ -14,7 +14,7 @@
     {% endif %}
     <div>
       <h2 class="text-xl font-bold text-gray-900">{{ user.get_full_name|default:user.username }}</h2>
-      <p class="text-gray-500 text-sm">{{ user.get_role_display }}{% if user.department %} · {{ user.department }}{% endif %}</p>
+      <p class="text-gray-500 text-sm">{{ user.get_role_display }}{% for d in user.departments.all %} · {{ d }}{% endfor %}</p>
       <p class="text-gray-400 text-xs mt-1">{{ user.email }}</p>
     </div>
   </div>

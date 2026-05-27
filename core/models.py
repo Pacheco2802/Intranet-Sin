@@ -26,11 +26,15 @@ class Department(models.Model):
     description = models.TextField('Descrição', blank=True)
     color = models.CharField('Cor', max_length=7, default='#1e3a5f')
     icon = models.CharField('Ícone (emoji)', max_length=10, default='🏢')
-    leader = models.ForeignKey(
-        'CustomUser', on_delete=models.SET_NULL, null=True, blank=True,
-        verbose_name='Líder', related_name='led_departments',
+    leaders = models.ManyToManyField(
+        'CustomUser', blank=True,
+        verbose_name='Líderes', related_name='led_departments',
     )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def leader(self):
+        return self.leaders.first()
 
     class Meta:
         verbose_name = 'Departamento'
@@ -47,13 +51,12 @@ class CustomUser(AbstractUser):
         DIRETOR = 'DIRETOR', 'Diretor'
         ADMIN_TI = 'ADMIN_TI', 'Administrador TI'
         LIDER = 'LIDER', 'Líder'
-        GERENTE = 'GERENTE', 'Gerente'
         COLABORADOR = 'COLABORADOR', 'Colaborador'
 
     email = models.EmailField('E-mail', unique=True)
-    department = models.ForeignKey(
-        Department, on_delete=models.SET_NULL, null=True, blank=True,
-        verbose_name='Departamento', related_name='users'
+    departments = models.ManyToManyField(
+        Department, blank=True,
+        verbose_name='Departamentos', related_name='users'
     )
     role = models.CharField('Cargo', max_length=20, choices=Role.choices, default=Role.COLABORADOR)
     avatar = models.ImageField('Avatar', upload_to='avatars/', null=True, blank=True)
@@ -93,8 +96,12 @@ class CustomUser(AbstractUser):
         return self.role == self.Role.ADMIN_TI
 
     @property
+    def department(self):
+        return self.departments.first()
+
+    @property
     def can_see_all(self):
-        return self.role in (self.Role.ADMIN_TI, self.Role.PRESIDENTE, self.Role.DIRETOR)
+        return self.role in (self.Role.ADMIN_TI, self.Role.PRESIDENTE, self.Role.DIRETOR, self.Role.LIDER)
 
     def anonymize(self):
         uid = hashlib.sha256(str(self.pk).encode()).hexdigest()[:8]

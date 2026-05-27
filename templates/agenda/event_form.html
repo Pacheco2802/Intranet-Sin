@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="max-w-2xl mx-auto card">
-  <form method="post" class="space-y-4">
+  <form method="post" class="space-y-4" x-data="eventParticipantPicker()">
     {% csrf_token %}
 
     <div>
@@ -36,10 +36,69 @@
       {{ form.description }}
     </div>
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Participantes</label>
-      <p class="text-xs text-gray-400 mb-1">Segure Ctrl (ou Cmd) para selecionar vários.</p>
-      {{ form.participants }}
+    <!-- Participantes -->
+    <div class="space-y-3">
+      <div>
+        <p class="text-sm font-medium text-gray-700 mb-0.5">Participantes</p>
+        <p class="text-xs text-gray-400">Quem participará deste evento?</p>
+      </div>
+
+      <!-- Chips dos selecionados -->
+      <div x-show="selected.length > 0" class="flex flex-wrap gap-1.5">
+        <template x-for="p in selected" :key="p.id">
+          <span class="inline-flex items-center gap-1.5 text-xs bg-accent/10 text-accent px-2.5 py-1.5 rounded-full font-medium">
+            <span class="w-4 h-4 rounded-full bg-accent text-white flex items-center justify-center text-xs font-bold" x-text="p.initials"></span>
+            <span x-text="p.name"></span>
+            <button type="button" @click="remove(p)"
+                    class="hover:text-red-500 transition-colors ml-0.5 font-bold leading-none">×</button>
+          </span>
+        </template>
+      </div>
+
+      <!-- Busca -->
+      <div class="relative">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input type="text" x-model="search" @input="filter()"
+               placeholder="Buscar por nome ou departamento..."
+               class="form-input pl-9">
+      </div>
+
+      <!-- Lista -->
+      <div class="border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-50 max-h-60 overflow-y-auto">
+        <template x-for="u in filtered" :key="u.id">
+          <div @click="toggle(u)"
+               class="flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors"
+               :class="isSelected(u) ? 'bg-accent/5' : 'hover:bg-gray-50'">
+
+            <div class="w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all"
+                 :class="isSelected(u) ? 'bg-accent border-accent' : 'border-gray-300'">
+              <svg x-show="isSelected(u)" class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+
+            <div class="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                 :style="`background: linear-gradient(135deg, hsl(${u.hue},55%,45%), hsl(${u.hue+40},65%,35%))`"
+                 x-text="u.initials"></div>
+
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-800 truncate" x-text="u.name"></p>
+              <p class="text-xs text-gray-400 truncate" x-text="u.dept"></p>
+            </div>
+          </div>
+        </template>
+        <div x-show="filtered.length === 0" class="px-3 py-6 text-center text-sm text-gray-400">
+          Nenhum usuário encontrado
+        </div>
+      </div>
+
+      <!-- Inputs ocultos para submit -->
+      <template x-for="p in selected" :key="p.id">
+        <input type="hidden" name="participants" :value="p.id">
+      </template>
+
       {% for err in form.participants.errors %}<p class="text-xs text-red-500 mt-1">{{ err }}</p>{% endfor %}
     </div>
 
@@ -53,4 +112,35 @@
     </div>
   </form>
 </div>
+
+<script>
+function eventParticipantPicker() {
+  const preselected = new Set([{% if event %}{% for p in event.participants.all %}{{ p.user_id }},{% endfor %}{% endif %}]);
+  const users = [
+    {% for u in form.participants.field.queryset %}
+    {
+      id: {{ u.pk }},
+      name: "{{ u.get_full_name|default:u.email|escapejs }}",
+      dept: "{{ u.department.name|default:'Sem departamento'|escapejs }}",
+      initials: "{{ u.first_name|first|upper }}{{ u.last_name|first|upper }}",
+      hue: {{ u.pk|add:120 }},
+    },
+    {% endfor %}
+  ];
+  return {
+    users, filtered: users,
+    selected: users.filter(u => preselected.has(u.id)),
+    search: '',
+    filter() {
+      const q = this.search.toLowerCase();
+      this.filtered = q ? this.users.filter(u =>
+        u.name.toLowerCase().includes(q) || u.dept.toLowerCase().includes(q)
+      ) : this.users;
+    },
+    isSelected(u) { return this.selected.some(s => s.id === u.id); },
+    toggle(u) { this.isSelected(u) ? this.remove(u) : this.selected.push(u); },
+    remove(u) { this.selected = this.selected.filter(s => s.id !== u.id); },
+  };
+}
+</script>
 {% endblock %}

@@ -37,7 +37,7 @@ class Board(models.Model):
             return True
         if self.is_cross_department:
             return self.members.filter(pk=user.pk).exists()
-        return self.department == user.department or self.members.filter(pk=user.pk).exists()
+        return self.members.filter(pk=user.pk).exists() or user.departments.filter(pk=self.department_id).exists()
 
 
 class Column(models.Model):

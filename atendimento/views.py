@@ -30,8 +30,8 @@ def _qs_visivel(user):
         return qs
     return qs.filter(
         Q(criado_por=user) |
-        Q(departamento_atual=user.department) |
-        Q(departamento_atual__leader=user)
+        Q(departamento_atual__in=user.departments.all()) |
+        Q(departamento_atual__leaders=user)
     ).distinct()
 
 
@@ -40,9 +40,9 @@ def _pode_agir(atendimento, user):
         return True
     if atendimento.criado_por == user:
         return True
-    if user.department and atendimento.departamento_atual == user.department:
+    if atendimento.departamento_atual_id and user.departments.filter(pk=atendimento.departamento_atual_id).exists():
         return True
-    if atendimento.departamento_atual and atendimento.departamento_atual.leader == user:
+    if atendimento.departamento_atual and atendimento.departamento_atual.leaders.filter(pk=user.pk).exists():
         return True
     return False
 
@@ -64,10 +64,11 @@ def _salvar_anexo(arquivo, atendimento, etapa, user):
 def _notificar_encaminhamento(atendimento, para_dept, actor):
     link = f'/atendimento/{atendimento.pk}/'
     targets = set()
-    if para_dept.leader and para_dept.leader != actor:
-        targets.add(para_dept.leader)
+    for ldr in para_dept.leaders.all():
+        if ldr != actor:
+            targets.add(ldr)
     for member in CustomUser.objects.filter(
-        department=para_dept, is_active=True, is_approved=True
+        departments=para_dept, is_active=True, is_approved=True
     ):
         if member != actor:
             targets.add(member)

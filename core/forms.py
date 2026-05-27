@@ -61,7 +61,7 @@ class RegisterForm(forms.Form):
 class UserCreateForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = CustomUser
-        fields = ('username', 'first_name', 'last_name', 'email', 'role', 'department', 'phone')
+        fields = ('username', 'first_name', 'last_name', 'email', 'role', 'departments', 'phone')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -72,7 +72,7 @@ class UserCreateForm(UserCreationForm):
 class UserEditForm(forms.ModelForm):
     class Meta:
         model = CustomUser
-        fields = ('first_name', 'last_name', 'email', 'role', 'department', 'phone', 'bio', 'avatar', 'is_active', 'is_approved')
+        fields = ('first_name', 'last_name', 'email', 'role', 'departments', 'phone', 'bio', 'avatar', 'is_active', 'is_approved')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -88,28 +88,25 @@ class UserEditForm(forms.ModelForm):
 class DepartmentForm(forms.ModelForm):
     class Meta:
         model = Department
-        fields = ('name', 'description', 'color', 'icon', 'leader')
+        fields = ('name', 'description', 'color', 'icon', 'leaders')
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-input'}),
             'description': forms.Textarea(attrs={'rows': 2, 'class': 'form-input'}),
             'color': forms.TextInput(attrs={'type': 'color', 'class': 'form-input h-10 p-1 cursor-pointer'}),
             'icon': forms.TextInput(attrs={'class': 'form-input', 'placeholder': '🏢'}),
-            'leader': forms.Select(attrs={'class': 'form-input'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['leader'].queryset = CustomUser.objects.filter(
+        self.fields['leaders'].queryset = CustomUser.objects.filter(
             is_active=True, is_approved=True
         ).order_by('first_name', 'last_name')
-        self.fields['leader'].empty_label = 'Sem líder definido'
-        self.fields['leader'].required = False
+        self.fields['leaders'].required = False
 
     def save(self, commit=True):
         dept = super().save(commit=False)
         if not dept.slug:
             dept.slug = slugify(dept.name)
-        # ensure slug uniqueness
         base = dept.slug
         n = 1
         qs = Department.objects.exclude(pk=dept.pk) if dept.pk else Department.objects.all()
@@ -118,6 +115,7 @@ class DepartmentForm(forms.ModelForm):
             n += 1
         if commit:
             dept.save()
+            self.save_m2m()
         return dept
 
 
@@ -140,7 +138,7 @@ class ApproveUserForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-input'}),
     )
     department = forms.ModelChoiceField(
-        label='Departamento',
+        label='Departamento inicial',
         queryset=Department.objects.all().order_by('name'),
         required=False,
         empty_label='Sem departamento',

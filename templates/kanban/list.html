@@ -2,10 +2,8 @@
 {% block title %}Quadros Kanban{% endblock %}
 {% block page_title %}Quadros Kanban{% endblock %}
 {% block topbar_actions %}
-{% if user.can_see_all or user.role == 'GERENTE' or user.role == 'LIDER' %}
+{% if user.can_see_all %}
 <a href="{% url 'kanban:analise' %}" class="btn-secondary text-xs">Análise</a>
-{% endif %}
-{% if user.can_see_all or user.role == 'GERENTE' %}
 <a href="{% url 'kanban:board_create' %}" class="btn-primary text-xs">+ Novo Quadro</a>
 {% endif %}
 {% endblock %}
@@ -16,7 +14,7 @@
 <div class="card text-center py-16">
   <div class="text-5xl mb-4">📋</div>
   <p class="text-gray-500 mb-4">Nenhum quadro disponível para você.</p>
-  {% if user.can_see_all or user.role == 'GERENTE' %}
+  {% if user.can_see_all %}
   <a href="{% url 'kanban:board_create' %}" class="btn-primary inline-block">Criar quadro</a>
   {% endif %}
 </div>

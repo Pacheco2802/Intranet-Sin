@@ -12,12 +12,12 @@ class DepartmentAdmin(admin.ModelAdmin):
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
-    list_display = ('username', 'get_full_name', 'email', 'role', 'department', 'is_active', 'lgpd_consent')
-    list_filter = ('role', 'department', 'is_active', 'lgpd_consent')
+    list_display = ('username', 'get_full_name', 'email', 'role', 'is_active', 'lgpd_consent')
+    list_filter = ('role', 'departments', 'is_active', 'lgpd_consent')
     search_fields = ('username', 'first_name', 'last_name', 'email')
     fieldsets = UserAdmin.fieldsets + (
         ('Informações da Intranet', {
-            'fields': ('role', 'department', 'phone', 'bio', 'avatar', 'created_by')
+            'fields': ('role', 'departments', 'phone', 'bio', 'avatar', 'created_by')
         }),
         ('LGPD', {
             'fields': ('lgpd_consent', 'lgpd_consent_date')
@@ -25,7 +25,7 @@ class CustomUserAdmin(UserAdmin):
     )
     add_fieldsets = UserAdmin.add_fieldsets + (
         ('Informações da Intranet', {
-            'fields': ('role', 'department', 'first_name', 'last_name', 'email')
+            'fields': ('role', 'departments', 'first_name', 'last_name', 'email')
         }),
     )
 

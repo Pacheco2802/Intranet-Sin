@@ -11,7 +11,7 @@
       <div>
         <p class="text-white/50 text-xs font-medium uppercase tracking-wider">Bem-vindo de volta</p>
         <h2 class="text-xl font-bold text-white mt-0.5">{{ user.first_name|default:user.username }} {{ user.last_name }}</h2>
-        <p class="text-white/60 text-sm mt-1">{{ user.get_role_display }}{% if user.department %} · {{ user.department }}{% endif %}</p>
+        <p class="text-white/60 text-sm mt-1">{{ user.get_role_display }}{% for d in user.departments.all %} · {{ d }}{% endfor %}</p>
       </div>
       <div class="hidden sm:flex items-center gap-3">
         {% if user.avatar %}
