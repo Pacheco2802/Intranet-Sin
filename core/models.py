@@ -201,6 +201,7 @@ class AuditLog(models.Model):
         USER_EDIT = 'USER_EDIT', 'Usuário editado'
         USER_DEACTIVATE = 'USER_DEACTIVATE', 'Usuário desativado'
         USER_ANONYMIZE = 'USER_ANONYMIZE', 'Usuário anonimizado'
+        USER_PASSWORD_RESET = 'USER_PASSWORD_RESET', 'Senha redefinida'
         DATA_EXPORT = 'DATA_EXPORT', 'Exportação de dados'
         LGPD_CONSENT = 'LGPD_CONSENT', 'Consentimento LGPD'
         ATENDIMENTO_CREATE = 'ATEND_CREATE', 'Atendimento criado'

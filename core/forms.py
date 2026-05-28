@@ -146,6 +146,74 @@ class ApproveUserForm(forms.Form):
     )
 
 
+class AdminPasswordResetForm(forms.Form):
+    password1 = forms.CharField(
+        label='Nova senha',
+        widget=forms.PasswordInput(attrs={'class': 'form-input', 'autocomplete': 'new-password'}),
+        min_length=8,
+    )
+    password2 = forms.CharField(
+        label='Confirmar nova senha',
+        widget=forms.PasswordInput(attrs={'class': 'form-input', 'autocomplete': 'new-password'}),
+    )
+
+    def clean_password1(self):
+        password = self.cleaned_data.get('password1')
+        if password:
+            try:
+                validate_password(password)
+            except ValidationError as e:
+                raise ValidationError(e.messages)
+        return password
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('password1') and cleaned.get('password2') and cleaned['password1'] != cleaned['password2']:
+            self.add_error('password2', 'As senhas não coincidem.')
+        return cleaned
+
+
+class ChangeOwnPasswordForm(forms.Form):
+    current_password = forms.CharField(
+        label='Senha atual',
+        widget=forms.PasswordInput(attrs={'class': 'form-input', 'autocomplete': 'current-password'}),
+    )
+    password1 = forms.CharField(
+        label='Nova senha',
+        widget=forms.PasswordInput(attrs={'class': 'form-input', 'autocomplete': 'new-password'}),
+        min_length=8,
+    )
+    password2 = forms.CharField(
+        label='Confirmar nova senha',
+        widget=forms.PasswordInput(attrs={'class': 'form-input', 'autocomplete': 'new-password'}),
+    )
+
+    def __init__(self, user, *args, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean_current_password(self):
+        current = self.cleaned_data.get('current_password')
+        if not self.user.check_password(current):
+            raise ValidationError('Senha atual incorreta.')
+        return current
+
+    def clean_password1(self):
+        password = self.cleaned_data.get('password1')
+        if password:
+            try:
+                validate_password(password, user=self.user)
+            except ValidationError as e:
+                raise ValidationError(e.messages)
+        return password
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('password1') and cleaned.get('password2') and cleaned['password1'] != cleaned['password2']:
+            self.add_error('password2', 'As senhas não coincidem.')
+        return cleaned
+
+
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = CustomUser

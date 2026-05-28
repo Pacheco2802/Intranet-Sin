@@ -122,9 +122,31 @@
           {% endif %}
         </td>
         <td class="py-3">
-          <div class="flex items-center gap-2" x-data="{ confirm: false }">
+          <div class="flex items-center gap-2" x-data="{ confirm: false, resetPwd: false }">
             {% if u != user %}
             <a href="{% url 'core:user_edit' u.pk %}" class="text-blue-600 hover:text-blue-800 text-xs font-medium">Editar</a>
+            <button @click="resetPwd = true" class="text-yellow-600 hover:text-yellow-800 text-xs font-medium">Senha</button>
+            <div x-show="resetPwd" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div class="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl">
+                <h3 class="font-bold text-gray-900 mb-1">Redefinir senha</h3>
+                <p class="text-xs text-gray-500 mb-4">{{ u.get_full_name|default:u.email }}</p>
+                <form method="post" action="{% url 'core:user_reset_password' u.pk %}" class="space-y-3">
+                  {% csrf_token %}
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Nova senha</label>
+                    <input type="password" name="password1" required minlength="8" class="form-input" autocomplete="new-password">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Confirmar senha</label>
+                    <input type="password" name="password2" required class="form-input" autocomplete="new-password">
+                  </div>
+                  <div class="flex gap-2 pt-1">
+                    <button type="submit" class="btn-primary flex-1">Redefinir</button>
+                    <button type="button" @click="resetPwd = false" class="btn-secondary flex-1">Cancelar</button>
+                  </div>
+                </form>
+              </div>
+            </div>
             {% if u.is_active %}
             <button @click="confirm = true" class="text-red-500 hover:text-red-700 text-xs font-medium">Desativar</button>
             <div x-show="confirm" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

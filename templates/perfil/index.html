@@ -35,6 +35,26 @@
   </div>
 
   <div class="card">
+    <h3 class="font-semibold text-gray-900 mb-4">Alterar senha</h3>
+    <form method="post" action="{% url 'core:change_own_password' %}" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Senha atual</label>
+        <input type="password" name="current_password" required class="form-input" autocomplete="current-password">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Nova senha</label>
+        <input type="password" name="password1" required minlength="8" class="form-input" autocomplete="new-password">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Confirmar nova senha</label>
+        <input type="password" name="password2" required class="form-input" autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn-primary">Alterar senha</button>
+    </form>
+  </div>
+
+  <div class="card">
     <h3 class="font-semibold text-gray-900 mb-3">Privacidade — LGPD</h3>
     <div class="space-y-2 text-sm text-gray-600">
       <p>Consentimento: {% if user.lgpd_consent %}✅ Aceito em {{ user.lgpd_consent_date|date:"d/m/Y" }}{% else %}❌ Pendente{% endif %}</p>

@@ -21,6 +21,8 @@ urlpatterns = [
     path('usuarios/<int:pk>/desativar/', views.user_deactivate, name='user_deactivate'),
     path('usuarios/<int:pk>/aprovar/', views.user_approve, name='user_approve'),
     path('usuarios/<int:pk>/rejeitar/', views.user_reject, name='user_reject'),
+    path('usuarios/<int:pk>/redefinir-senha/', views.user_reset_password, name='user_reset_password'),
+    path('perfil/alterar-senha/', views.change_own_password, name='change_own_password'),
 
     path('departamentos/', views.department_list, name='department_list'),
     path('departamentos/novo/', views.department_create, name='department_create'),

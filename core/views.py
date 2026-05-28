@@ -1,6 +1,6 @@
 import json
 from django.contrib import messages
-from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404, resolve_url
@@ -9,7 +9,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from .models import CustomUser, Department, Team, LGPDConsent, AuditLog, Notification, _anonymize_ip
-from .forms import LoginForm, RegisterForm, UserCreateForm, UserEditForm, ProfileForm, TeamForm, DepartmentForm, ApproveUserForm
+from .forms import LoginForm, RegisterForm, UserCreateForm, UserEditForm, ProfileForm, TeamForm, DepartmentForm, ApproveUserForm, AdminPasswordResetForm, ChangeOwnPasswordForm
 from .middleware import AuditMiddleware
 
 # ──────────────────────────────────────────────
@@ -434,6 +434,52 @@ def user_reject(request, pk):
     target.delete()
     messages.success(request, f'Cadastro de {name} rejeitado e removido.')
     return redirect('core:user_list')
+
+
+@login_required
+@require_POST
+def user_reset_password(request, pk):
+    if not request.user.can_manage_users:
+        return HttpResponseForbidden()
+    target = get_object_or_404(CustomUser, pk=pk)
+    form = AdminPasswordResetForm(request.POST)
+    if form.is_valid():
+        target.set_password(form.cleaned_data['password1'])
+        target.save(update_fields=['password'])
+        AuditLog.log(
+            request.user, AuditLog.Action.USER_PASSWORD_RESET,
+            resource_type='CustomUser', resource_id=target.pk,
+            ip=AuditMiddleware.get_client_ip(request),
+            target_email=target.email,
+        )
+        messages.success(request, f'Senha de {target.get_full_name() or target.email} redefinida com sucesso.')
+    else:
+        for field_errors in form.errors.values():
+            for error in field_errors:
+                messages.error(request, error)
+    return redirect('core:user_list')
+
+
+@login_required
+@require_POST
+def change_own_password(request):
+    form = ChangeOwnPasswordForm(request.user, request.POST)
+    if form.is_valid():
+        request.user.set_password(form.cleaned_data['password1'])
+        request.user.save(update_fields=['password'])
+        update_session_auth_hash(request, request.user)
+        AuditLog.log(
+            request.user, AuditLog.Action.USER_PASSWORD_RESET,
+            resource_type='CustomUser', resource_id=request.user.pk,
+            ip=AuditMiddleware.get_client_ip(request),
+            changed_by='self',
+        )
+        messages.success(request, 'Senha alterada com sucesso.')
+    else:
+        for field_errors in form.errors.values():
+            for error in field_errors:
+                messages.error(request, error)
+    return redirect('core:profile')
 
 
 # ── Equipes ───────────────────────────────────
