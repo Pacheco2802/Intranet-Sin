@@ -3,10 +3,17 @@
 {% block page_title %}Métricas de Atendimento{% endblock %}
 {% block topbar_actions %}
 <a href="{% url 'atendimento:painel' %}" class="btn-secondary text-xs">← Painel</a>
+<button hx-get="{% url 'atendimento:metricas' %}?periodo={{ periodo }}"
+        hx-target="#metricas-content"
+        hx-swap="outerHTML"
+        hx-select="#metricas-content"
+        class="btn-secondary text-xs">
+  ↻ Atualizar
+</button>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto space-y-6">
+<div class="max-w-5xl mx-auto space-y-6" id="metricas-content">
 
   <!-- Filtro de período -->
   <div class="flex items-center gap-2">

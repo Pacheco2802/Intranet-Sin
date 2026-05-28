@@ -118,6 +118,13 @@
               <div class="flex items-center gap-2 mt-0.5 flex-wrap">
                 {% if st.assignee %}<span class="text-xs text-gray-400">👤 {{ st.assignee.first_name }}</span>{% endif %}
                 {% if st.target_department %}<span class="text-xs text-gray-400">🏢 {{ st.target_department.name }}</span>{% endif %}
+                {% if st.due_date %}
+                  {% if not st.is_done and st.due_date < today %}
+                  <span class="text-xs text-red-500 font-medium">⚠ {{ st.due_date|date:"d/m" }}</span>
+                  {% else %}
+                  <span class="text-xs text-gray-400">📅 {{ st.due_date|date:"d/m" }}</span>
+                  {% endif %}
+                {% endif %}
                 {% if st.anexos.exists %}<span class="text-xs text-blue-500">📎 {{ st.anexos.count }} anexo{{ st.anexos.count|pluralize:"s" }}</span>{% endif %}
               </div>
             </div>
@@ -182,6 +189,10 @@
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-1">Área responsável</label>
                   {{ subtask_form.target_department }}
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Prazo</label>
+                  {{ subtask_form.due_date }}
                 </div>
               </div>
               <div class="flex gap-2">

@@ -86,11 +86,12 @@ class CardCommentForm(forms.ModelForm):
 class SubTaskForm(forms.ModelForm):
     class Meta:
         model = SubTask
-        fields = ('title', 'assignee', 'target_department')
+        fields = ('title', 'assignee', 'target_department', 'due_date')
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Descreva a sub-tarefa...'}),
             'assignee': forms.Select(attrs={'class': 'form-input'}),
             'target_department': forms.Select(attrs={'class': 'form-input'}),
+            'due_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-input'}),
         }
 
     def __init__(self, *args, **kwargs):

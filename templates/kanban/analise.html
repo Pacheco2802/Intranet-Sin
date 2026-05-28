@@ -8,7 +8,7 @@
 {% block content %}
 
 <!-- Resumo geral -->
-<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 mb-8">
 
   <div class="card text-center">
     <p class="text-3xl font-bold text-gray-900">{{ total }}</p>
@@ -38,6 +38,11 @@
   <div class="card text-center border-t-4 border-t-red-400">
     <p class="text-3xl font-bold text-red-600">{{ vencidos }}</p>
     <p class="text-xs text-gray-500 mt-1">Vencidos</p>
+  </div>
+
+  <div class="card text-center border-t-4 border-t-orange-400">
+    <p class="text-3xl font-bold text-orange-600">{{ concluidos_com_atraso }}</p>
+    <p class="text-xs text-gray-500 mt-1">Finalizados com atraso</p>
   </div>
 
 </div>
@@ -104,8 +109,11 @@
         </div>
         <span class="text-sm font-semibold text-gray-900">{{ cancelados }}</span>
       </div>
-      <div class="pt-2 mt-2 border-t border-gray-100">
+      <div class="pt-2 mt-2 border-t border-gray-100 flex items-center justify-between">
         <span class="text-xs text-gray-400">{{ sf_total }} cards com status registrado</span>
+        {% if concluidos_com_atraso %}
+        <span class="text-xs text-orange-600 font-medium">{{ concluidos_com_atraso }} finalizados com atraso</span>
+        {% endif %}
       </div>
     </div>
     {% else %}
@@ -171,6 +179,7 @@
           <th class="text-center py-2 px-3 text-xs text-blue-400 font-medium uppercase tracking-wide">Em Andamento</th>
           <th class="text-center py-2 px-3 text-xs text-green-400 font-medium uppercase tracking-wide">Status Final</th>
           <th class="text-center py-2 px-3 text-xs text-red-400 font-medium uppercase tracking-wide">Vencidos</th>
+          <th class="text-center py-2 px-3 text-xs text-orange-400 font-medium uppercase tracking-wide">Fin. com atraso</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-100">
@@ -193,6 +202,13 @@
             <span class="text-gray-300">—</span>
             {% endif %}
           </td>
+          <td class="py-3 px-3 text-center">
+            {% if s.concluidos_com_atraso %}
+            <span class="text-orange-600 font-semibold">{{ s.concluidos_com_atraso }}</span>
+            {% else %}
+            <span class="text-gray-300">—</span>
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -204,6 +220,7 @@
           <td class="py-3 px-3 text-center font-bold text-blue-600">{{ em_andamento }}</td>
           <td class="py-3 px-3 text-center font-bold text-green-600">{{ status_final }}</td>
           <td class="py-3 px-3 text-center font-bold text-red-600">{% if vencidos %}{{ vencidos }}{% else %}<span class="text-gray-300">—</span>{% endif %}</td>
+          <td class="py-3 px-3 text-center font-bold text-orange-600">{% if concluidos_com_atraso %}{{ concluidos_com_atraso }}{% else %}<span class="text-gray-300">—</span>{% endif %}</td>
         </tr>
       </tfoot>
     </table>

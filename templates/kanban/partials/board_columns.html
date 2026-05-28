@@ -32,10 +32,9 @@
   </div>
 
   <!-- Cards -->
-  <div class="sortable-cards flex-1 overflow-y-auto px-3 pb-3 space-y-2"
-       data-column-id="{{ col.pk }}" id="column-{{ col.pk }}">
+  <div class="flex-1 overflow-y-auto px-3 pb-3 space-y-2" id="column-{{ col.pk }}">
     {% for card in col.cards.all %}
-    <div class="bg-white rounded-lg shadow-sm p-3 cursor-grab active:cursor-grabbing border border-gray-100 hover:border-blue-200 hover:shadow transition-all group"
+    <div class="bg-white rounded-lg shadow-sm p-3 border border-gray-100 hover:border-blue-200 hover:shadow transition-all group"
          data-card-id="{{ card.pk }}">
       <!-- Priority badge + origem -->
       <div class="flex items-start justify-between mb-2">
@@ -106,6 +105,31 @@
         {% endfor %}
       </div>
       {% endif %}
+      <!-- Botões de movimentação -->
+      <div class="flex items-center justify-end gap-1 mt-2 pt-1.5 border-t border-gray-50">
+        {% if not forloop.parentloop.first %}
+        <form method="post" action="{% url 'kanban:card_move_direction' card.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="direction" value="prev">
+          <button type="submit"
+                  title="Mover para coluna anterior"
+                  class="text-gray-300 hover:text-blue-500 hover:bg-blue-50 text-sm font-bold px-2 py-0.5 rounded transition-colors">
+            ←
+          </button>
+        </form>
+        {% endif %}
+        {% if not forloop.parentloop.last %}
+        <form method="post" action="{% url 'kanban:card_move_direction' card.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="direction" value="next">
+          <button type="submit"
+                  title="Mover para próxima coluna"
+                  class="text-gray-300 hover:text-blue-500 hover:bg-blue-50 text-sm font-bold px-2 py-0.5 rounded transition-colors">
+            →
+          </button>
+        </form>
+        {% endif %}
+      </div>
     </div>
     {% endfor %}
   </div>

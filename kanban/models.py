@@ -109,6 +109,7 @@ class Card(models.Model):
         ]
     )
     final_notes = models.TextField('Observações de conclusão', blank=True)
+    completed_at = models.DateTimeField('Concluído em', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -147,6 +148,7 @@ class SubTask(models.Model):
         'core.Department', on_delete=models.SET_NULL, null=True, blank=True,
         verbose_name='Área responsável'
     )
+    due_date = models.DateField('Vencimento', null=True, blank=True)
     is_done = models.BooleanField('Concluída', default=False)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,

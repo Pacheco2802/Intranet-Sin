@@ -18,10 +18,6 @@
 <a href="{% url 'kanban:card_create' board.pk %}" class="btn-primary text-xs">+ Card</a>
 {% endblock %}
 
-{% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-{% endblock %}
-
 {% block content %}
 <!-- Board info -->
 <div class="flex items-center gap-3 mb-5">
@@ -36,38 +32,14 @@
   </div>
 </div>
 
-<!-- Kanban board -->
-<div class="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6" style="min-height: calc(100vh - 14rem)">
+<!-- Kanban board (atualiza a cada 5s) -->
+<div id="board-columns"
+     class="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6"
+     style="min-height: calc(100vh - 14rem)"
+     hx-get="{% url 'kanban:board_columns_partial' board.pk %}"
+     hx-trigger="every 5s"
+     hx-target="#board-columns"
+     hx-swap="innerHTML">
   {% include "kanban/partials/board_columns.html" %}
 </div>
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-const MOVE_URL = (id) => `/kanban/card/${id}/mover/`;
-const CSRF = '{{ csrf_token }}';
-
-document.querySelectorAll('.sortable-cards').forEach(el => {
-  Sortable.create(el, {
-    group: 'cards',
-    animation: 150,
-    ghostClass: 'opacity-30',
-    dragClass: 'shadow-2xl',
-    onEnd(evt) {
-      const cardId = evt.item.dataset.cardId;
-      const colId = evt.to.dataset.columnId;
-      const order = evt.newIndex;
-
-      fetch(MOVE_URL(cardId), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': CSRF,
-        },
-        body: JSON.stringify({ column_id: colId, order }),
-      });
-    }
-  });
-});
-</script>
 {% endblock %}

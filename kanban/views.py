@@ -104,12 +104,15 @@ def card_detail(request, board_pk, pk):
                 _notify_comment(c, request.user)
                 return redirect('kanban:card_detail', board_pk=board.pk, pk=card.pk)
         elif action == 'final_status':
+            from django.utils import timezone as tz
             new_status = request.POST.get('final_status', '')
             valid = [c[0] for c in Card._meta.get_field('final_status').choices]
             if new_status in valid or new_status == '':
                 card.final_status = new_status
                 card.final_notes = request.POST.get('final_notes', '')
-                card.save(update_fields=['final_status', 'final_notes'])
+                if new_status and card.completed_at is None:
+                    card.completed_at = tz.now()
+                card.save(update_fields=['final_status', 'final_notes', 'completed_at'])
                 CardActivity.objects.create(
                     card=card, user=request.user,
                     action=f'Registrou status final: {card.get_final_status_display() or "—"}'
@@ -153,6 +156,7 @@ def card_detail(request, board_pk, pk):
     card_anexos = card.anexos.select_related('enviado_por').all()
     is_status_final = card.column.column_type == Column.ColumnType.STATUS_FINAL
     final_status_choices = Card._meta.get_field('final_status').choices
+    from django.utils import timezone as tz
     return render(request, 'kanban/card_detail.html', {
         'board': board,
         'card': card,
@@ -163,6 +167,7 @@ def card_detail(request, board_pk, pk):
         'is_status_final': is_status_final,
         'final_status_choices': final_status_choices,
         'card_anexos': card_anexos,
+        'today': tz.now().date(),
     })
 
 
@@ -348,6 +353,73 @@ def card_move(request, pk):
 
 @login_required
 @require_POST
+def card_move_direction(request, pk):
+    card = get_object_or_404(Card, pk=pk)
+    board = card.column.board
+    if not board.can_access(request.user):
+        return HttpResponseForbidden()
+
+    direction = request.POST.get('direction')
+    columns = list(board.columns.order_by('order'))
+    current_idx = next((i for i, c in enumerate(columns) if c.pk == card.column_id), None)
+
+    if current_idx is None:
+        return redirect('kanban:board_detail', pk=board.pk)
+
+    if direction == 'prev' and current_idx > 0:
+        target_col = columns[current_idx - 1]
+    elif direction == 'next' and current_idx < len(columns) - 1:
+        target_col = columns[current_idx + 1]
+    else:
+        return redirect('kanban:board_detail', pk=board.pk)
+
+    old_col = card.column
+    card.column = target_col
+    card.order = 0
+    card.save(update_fields=['column', 'order'])
+    CardActivity.objects.create(
+        card=card, user=request.user,
+        action=f'Moveu de "{old_col.name}" para "{target_col.name}"',
+    )
+    AuditLog.log(
+        request.user, AuditLog.Action.CARD_UPDATE,
+        resource_type='Card', resource_id=card.pk,
+        ip=AuditMiddleware.get_client_ip(request),
+    )
+    if card.assignee_id and card.assignee_id != request.user.pk:
+        card.refresh_from_db(fields=['assignee'])
+        Notification.send(
+            user=card.assignee,
+            actor=request.user,
+            ntype=Notification.Type.CARD_MOVED,
+            title=f'Card movido para "{target_col.name}"',
+            body=card.title,
+            link=f'/kanban/{board.pk}/card/{card.pk}/',
+        )
+    return redirect('kanban:board_detail', pk=board.pk)
+
+
+@login_required
+def board_columns_partial(request, pk):
+    board = get_object_or_404(Board, pk=pk)
+    if not board.can_access(request.user):
+        return HttpResponseForbidden()
+    annotated_cards = Card.objects.annotate(
+        comment_count=Count('comments', distinct=True),
+        subtask_total=Count('subtasks', distinct=True),
+        subtask_done=Count('subtasks', filter=Q(subtasks__is_done=True), distinct=True),
+    ).select_related('assignee', 'creator')
+    columns = board.columns.prefetch_related(
+        Prefetch('cards', queryset=annotated_cards)
+    )
+    return render(request, 'kanban/partials/board_columns.html', {
+        'board': board,
+        'columns': columns,
+    })
+
+
+@login_required
+@require_POST
 def card_delete(request, board_pk, pk):
     board = get_object_or_404(Board, pk=board_pk)
     if not board.can_access(request.user):
@@ -502,6 +574,13 @@ def analise(request):
     nao_concluidos = all_cards.filter(final_status='nao_concluido').count()
     cancelados = all_cards.filter(final_status='cancelado').count()
 
+    from django.db.models import F
+    concluidos_com_atraso = all_cards.filter(
+        final_status__in=['concluido', 'nao_concluido', 'cancelado'],
+        due_date__isnull=False,
+        completed_at__isnull=False,
+    ).filter(completed_at__date__gt=F('due_date')).count()
+
     dept_stats = []
     for dept in Department.objects.filter(boards__isnull=False).distinct().order_by('name'):
         dc = Card.objects.filter(column__board__department=dept)
@@ -514,6 +593,11 @@ def analise(request):
             'vencidos': dc.exclude(column__column_type=CT.STATUS_FINAL).filter(
                 due_date__lt=today, due_date__isnull=False
             ).count(),
+            'concluidos_com_atraso': dc.filter(
+                final_status__in=['concluido', 'nao_concluido', 'cancelado'],
+                due_date__isnull=False,
+                completed_at__isnull=False,
+            ).filter(completed_at__date__gt=F('due_date')).count(),
         })
 
     return render(request, 'kanban/analise.html', {
@@ -526,6 +610,7 @@ def analise(request):
         'concluidos': concluidos,
         'nao_concluidos': nao_concluidos,
         'cancelados': cancelados,
+        'concluidos_com_atraso': concluidos_com_atraso,
         'dept_stats': dept_stats,
     })
 
