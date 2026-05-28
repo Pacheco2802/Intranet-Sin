@@ -88,17 +88,21 @@ def board_create(request):
 @login_required
 def card_detail(request, board_pk, pk):
     board = get_object_or_404(Board, pk=board_pk)
-    if not board.can_access(request.user):
-        return HttpResponseForbidden()
+    is_member = board.can_access(request.user)
     card = get_object_or_404(
         Card.objects.select_related('source_subtask__card__column__board'),
         pk=pk, column__board=board,
     )
+    is_creator = card.creator_id == request.user.pk
+    if not is_member and not is_creator:
+        return HttpResponseForbidden()
 
     comment_form = CardCommentForm()
     subtask_form = SubTaskForm()
 
     if request.method == 'POST':
+        if not is_member:
+            return HttpResponseForbidden()
         action = request.POST.get('action')
         if action == 'comment':
             comment_form = CardCommentForm(request.POST)
@@ -124,6 +128,17 @@ def card_detail(request, board_pk, pk):
                     card=card, user=request.user,
                     action=f'Registrou status final: {card.get_final_status_display() or "—"}'
                 )
+                if new_status and card.creator_id and card.creator_id != request.user.pk:
+                    status_label = card.get_final_status_display()
+                    link = f'/kanban/{board.pk}/card/{card.pk}/'
+                    Notification.send(
+                        user=card.creator,
+                        actor=request.user,
+                        ntype=Notification.Type.CARD_MOVED,
+                        title=f'Sua solicitação foi encerrada: {status_label}',
+                        body=card.title,
+                        link=link,
+                    )
             return redirect('kanban:card_detail', board_pk=board.pk, pk=card.pk)
         elif action == 'subtask':
             subtask_form = SubTaskForm(request.POST)
@@ -175,6 +190,7 @@ def card_detail(request, board_pk, pk):
         'final_status_choices': final_status_choices,
         'card_anexos': card_anexos,
         'today': tz.now().date(),
+        'is_member': is_member,
     })
 
 
@@ -345,13 +361,24 @@ def card_move(request, pk):
             resource_type='Card', resource_id=card.pk,
             ip=AuditMiddleware.get_client_ip(request),
         )
+        card.refresh_from_db(fields=['assignee', 'creator'])
+        notified = set()
         if card.assignee_id and card.assignee_id != request.user.pk:
-            card.refresh_from_db(fields=['assignee'])
             Notification.send(
                 user=card.assignee,
                 actor=request.user,
                 ntype=Notification.Type.CARD_MOVED,
                 title=f'Card movido para "{col.name}"',
+                body=card.title,
+                link=f'/kanban/{board.pk}/card/{card.pk}/',
+            )
+            notified.add(card.assignee_id)
+        if card.creator_id and card.creator_id != request.user.pk and card.creator_id not in notified:
+            Notification.send(
+                user=card.creator,
+                actor=request.user,
+                ntype=Notification.Type.CARD_MOVED,
+                title=f'Sua solicitação foi movida para "{col.name}"',
                 body=card.title,
                 link=f'/kanban/{board.pk}/card/{card.pk}/',
             )
@@ -400,13 +427,24 @@ def card_move_direction(request, pk):
         resource_type='Card', resource_id=card.pk,
         ip=AuditMiddleware.get_client_ip(request),
     )
+    card.refresh_from_db(fields=['assignee', 'creator'])
+    notified = set()
     if card.assignee_id and card.assignee_id != request.user.pk:
-        card.refresh_from_db(fields=['assignee'])
         Notification.send(
             user=card.assignee,
             actor=request.user,
             ntype=Notification.Type.CARD_MOVED,
             title=f'Card movido para "{target_col.name}"',
+            body=card.title,
+            link=f'/kanban/{board.pk}/card/{card.pk}/',
+        )
+        notified.add(card.assignee_id)
+    if card.creator_id and card.creator_id != request.user.pk and card.creator_id not in notified:
+        Notification.send(
+            user=card.creator,
+            actor=request.user,
+            ntype=Notification.Type.CARD_MOVED,
+            title=f'Sua solicitação foi movida para "{target_col.name}"',
             body=card.title,
             link=f'/kanban/{board.pk}/card/{card.pk}/',
         )

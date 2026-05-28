@@ -2,11 +2,20 @@
 {% block title %}{{ card.title }}{% endblock %}
 {% block page_title %}{{ card.title }}{% endblock %}
 {% block topbar_actions %}
+{% if is_member %}
 <a href="{% url 'kanban:board_detail' board.pk %}" class="btn-secondary text-xs">← {{ board.name }}</a>
 <a href="{% url 'kanban:card_edit' board.pk card.pk %}" class="btn-primary text-xs">Editar</a>
+{% else %}
+<a href="{% url 'kanban:solicitar_rapida' %}" class="btn-secondary text-xs">← Minhas solicitações</a>
+{% endif %}
 {% endblock %}
 
 {% block content %}
+{% if not is_member %}
+<div class="mb-4 px-4 py-3 rounded-xl bg-blue-50 border border-blue-200 text-sm text-blue-700">
+  Você está visualizando esta solicitação em modo leitura.
+</div>
+{% endif %}
 <div class="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
 
   <!-- Main column -->
@@ -104,6 +113,7 @@
         {% for st in subtasks %}
         <div class="rounded-lg border {% if st.is_done %}border-green-200 bg-green-50{% else %}border-gray-200 bg-gray-50{% endif %}">
           <div class="flex items-center gap-3 p-2.5 group">
+            {% if is_member %}
             <form method="post" action="{% url 'kanban:subtask_toggle' st.pk %}">
               {% csrf_token %}
               <button type="submit" class="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors
@@ -113,6 +123,14 @@
                 {% endif %}
               </button>
             </form>
+            {% else %}
+            <div class="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0
+              {% if st.is_done %}bg-green-500 border-green-500 text-white{% else %}border-gray-200{% endif %}">
+              {% if st.is_done %}
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+              {% endif %}
+            </div>
+            {% endif %}
             <div class="flex-1 min-w-0">
               <p class="text-sm {% if st.is_done %}line-through text-gray-400{% else %}text-gray-800{% endif %}">{{ st.title }}</p>
               <div class="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -128,6 +146,7 @@
                 {% if st.anexos.exists %}<span class="text-xs text-blue-500">📎 {{ st.anexos.count }} anexo{{ st.anexos.count|pluralize:"s" }}</span>{% endif %}
               </div>
             </div>
+            {% if is_member %}
             <form method="post" action="{% url 'kanban:subtask_delete' st.pk %}"
                   class="opacity-0 group-hover:opacity-100 transition-opacity">
               {% csrf_token %}
@@ -137,6 +156,7 @@
                 </svg>
               </button>
             </form>
+            {% endif %}
           </div>
 
           {% if st.anexos.exists %}
@@ -151,6 +171,7 @@
           </div>
           {% endif %}
 
+          {% if is_member %}
           <div class="px-3 pb-2 {% if not st.anexos.exists %}border-t border-gray-200 pt-2{% endif %}">
             <form method="post" action="{% url 'kanban:subtask_attach' st.pk %}" enctype="multipart/form-data"
                   class="flex items-center gap-2">
@@ -159,12 +180,14 @@
               <button type="submit" class="text-xs text-blue-500 hover:text-blue-700 whitespace-nowrap">Anexar</button>
             </form>
           </div>
+          {% endif %}
         </div>
         {% endfor %}
       </div>
       {% endif %}
 
       <!-- Add subtask form -->
+      {% if is_member %}
       <div>
         <button type="button" onclick="document.getElementById('subtask-form-{{ card.pk }}').classList.toggle('hidden')"
                 class="flex items-center gap-2 text-sm text-gray-400 hover:text-blue-600 transition-colors py-1">
@@ -202,6 +225,7 @@
           </form>
         </div>
       </div>
+      {% endif %}
     </div>
 
     <!-- Card Attachments -->
@@ -220,12 +244,14 @@
       {% else %}
       <p class="text-sm text-gray-400 italic mb-3">Nenhum anexo ainda.</p>
       {% endif %}
+      {% if is_member %}
       <form method="post" action="{% url 'kanban:card_attach' board.pk card.pk %}" enctype="multipart/form-data"
             class="flex items-center gap-2 pt-2 border-t border-gray-100">
         {% csrf_token %}
         <input type="file" name="arquivo" class="text-xs text-gray-400 file:mr-2 file:text-xs file:btn-secondary file:border-0 file:py-1 file:px-2 file:rounded flex-1">
         <button type="submit" class="text-xs text-blue-500 hover:text-blue-700 whitespace-nowrap font-medium">Anexar</button>
       </form>
+      {% endif %}
     </div>
 
     <!-- Comments -->
@@ -251,12 +277,14 @@
       <p class="text-sm text-gray-400 italic mb-4">Nenhum comentário ainda.</p>
       {% endfor %}
 
+      {% if is_member %}
       <form method="post" class="flex gap-2 items-end mt-2 pt-3 border-t border-gray-100">
         {% csrf_token %}
         <input type="hidden" name="action" value="comment">
         <div class="flex-1">{{ comment_form.content }}</div>
         <button type="submit" class="btn-primary py-2 text-sm">Enviar</button>
       </form>
+      {% endif %}
     </div>
 
   </div>
@@ -326,7 +354,7 @@
     </div>
 
     <!-- Status Final -->
-    {% if is_status_final %}
+    {% if is_status_final and is_member %}
     <div class="card" x-data="{ editing: {% if not card.final_status %}true{% else %}false{% endif %} }">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold">Desfecho</h3>
