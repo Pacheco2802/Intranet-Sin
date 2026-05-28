@@ -55,7 +55,14 @@ def board_detail(request, pk):
     columns = board.columns.prefetch_related(
         Prefetch('cards', queryset=annotated_cards)
     )
-    return render(request, 'kanban/board.html', {'board': board, 'columns': columns})
+    board_members = CustomUser.objects.filter(
+        assigned_cards__column__board=board, is_active=True
+    ).distinct().order_by('first_name')
+    return render(request, 'kanban/board.html', {
+        'board': board,
+        'columns': columns,
+        'board_members': board_members,
+    })
 
 
 @login_required
@@ -363,15 +370,22 @@ def card_move_direction(request, pk):
     columns = list(board.columns.order_by('order'))
     current_idx = next((i for i, c in enumerate(columns) if c.pk == card.column_id), None)
 
-    if current_idx is None:
+    redirect_to = request.POST.get('redirect_to')
+
+    def _redirect():
+        if redirect_to == 'meu_kanban':
+            return redirect('kanban:meu_kanban')
         return redirect('kanban:board_detail', pk=board.pk)
+
+    if current_idx is None:
+        return _redirect()
 
     if direction == 'prev' and current_idx > 0:
         target_col = columns[current_idx - 1]
     elif direction == 'next' and current_idx < len(columns) - 1:
         target_col = columns[current_idx + 1]
     else:
-        return redirect('kanban:board_detail', pk=board.pk)
+        return _redirect()
 
     old_col = card.column
     card.column = target_col
@@ -396,7 +410,7 @@ def card_move_direction(request, pk):
             body=card.title,
             link=f'/kanban/{board.pk}/card/{card.pk}/',
         )
-    return redirect('kanban:board_detail', pk=board.pk)
+    return _redirect()
 
 
 @login_required
@@ -404,17 +418,77 @@ def board_columns_partial(request, pk):
     board = get_object_or_404(Board, pk=pk)
     if not board.can_access(request.user):
         return HttpResponseForbidden()
+
+    from django.utils import timezone as tz
+    from datetime import timedelta
+    today = tz.now().date()
+
     annotated_cards = Card.objects.annotate(
         comment_count=Count('comments', distinct=True),
         subtask_total=Count('subtasks', distinct=True),
         subtask_done=Count('subtasks', filter=Q(subtasks__is_done=True), distinct=True),
     ).select_related('assignee', 'creator')
+
+    priority = request.GET.get('priority')
+    assignee_id = request.GET.get('assignee')
+    prazo = request.GET.get('prazo')
+
+    if priority:
+        annotated_cards = annotated_cards.filter(priority=priority)
+    if assignee_id:
+        annotated_cards = annotated_cards.filter(assignee_id=assignee_id)
+    if prazo == 'vencidos':
+        annotated_cards = annotated_cards.filter(due_date__lt=today)
+    elif prazo == 'hoje':
+        annotated_cards = annotated_cards.filter(due_date=today)
+    elif prazo == 'semana':
+        annotated_cards = annotated_cards.filter(due_date__gte=today, due_date__lte=today + timedelta(days=7))
+
     columns = board.columns.prefetch_related(
         Prefetch('cards', queryset=annotated_cards)
     )
     return render(request, 'kanban/partials/board_columns.html', {
         'board': board,
         'columns': columns,
+    })
+
+
+@login_required
+def board_finalizados(request, board_pk, column_pk):
+    from django.core.paginator import Paginator
+    from django.utils import timezone as tz
+    from datetime import timedelta
+
+    board = get_object_or_404(Board, pk=board_pk)
+    if not board.can_access(request.user):
+        return HttpResponseForbidden()
+    col = get_object_or_404(Column, pk=column_pk, board=board,
+                            column_type=Column.ColumnType.STATUS_FINAL)
+
+    cards = col.cards.select_related('assignee', 'creator').order_by('-updated_at')
+
+    final_status = request.GET.get('final_status', '')
+    if final_status:
+        cards = cards.filter(final_status=final_status)
+
+    periodo = request.GET.get('periodo', '')
+    today = tz.now().date()
+    if periodo == 'hoje':
+        cards = cards.filter(completed_at__date=today)
+    elif periodo == 'semana':
+        cards = cards.filter(completed_at__date__gte=today - timedelta(days=7))
+    elif periodo == 'mes':
+        cards = cards.filter(completed_at__date__gte=today - timedelta(days=30))
+
+    paginator = Paginator(cards, 20)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    return render(request, 'kanban/finalizados.html', {
+        'board': board,
+        'col': col,
+        'page_obj': page_obj,
+        'final_status': final_status,
+        'periodo': periodo,
     })
 
 

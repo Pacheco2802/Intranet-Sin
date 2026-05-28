@@ -33,105 +33,21 @@
 
   <!-- Cards -->
   <div class="flex-1 overflow-y-auto px-3 pb-3 space-y-2" id="column-{{ col.pk }}">
-    {% for card in col.cards.all %}
-    <div class="bg-white rounded-lg shadow-sm p-3 border border-gray-100 hover:border-blue-200 hover:shadow transition-all group"
-         data-card-id="{{ card.pk }}">
-      <!-- Priority badge + origem -->
-      <div class="flex items-start justify-between mb-2">
-        <div class="flex items-center gap-1 flex-wrap">
-          <span class="text-xs px-2 py-0.5 rounded-full font-medium text-white"
-                style="background-color:{{ card.priority_color }}">
-            {{ card.get_priority_display }}
-          </span>
-          {% if card.source_atendimento_id %}
-          <span class="text-xs px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">Atendimento</span>
-          {% elif card.source_subtask_id %}
-          <span class="text-xs px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">Sub-tarefa</span>
-          {% endif %}
-        </div>
-        {% if card.is_overdue %}
-        <span class="text-xs text-red-500 font-medium">⚠ Vencido</span>
-        {% endif %}
-      </div>
-      <a href="{% url 'kanban:card_detail' board.pk card.pk %}" class="block">
-        <p class="text-sm font-medium text-gray-800 group-hover:text-blue-600 leading-snug">{{ card.title }}</p>
-        {% if card.description %}
-        <p class="text-xs text-gray-400 mt-1 line-clamp-2">{{ card.description }}</p>
-        {% endif %}
+    {% if col.column_type == 'status_final' %}
+      {% for card in col.cards.all|slice:":15" %}
+        {% include "kanban/partials/board_card.html" %}
+      {% endfor %}
+      {% if col.cards.count > 15 %}
+      <a href="{% url 'kanban:board_finalizados' board.pk col.pk %}"
+         class="block text-center text-xs text-gray-400 hover:text-blue-600 py-2 transition-colors">
+        Ver todos {{ col.cards.count }} finalizados →
       </a>
-      <!-- Subtask progress bar -->
-      {% if card.subtask_total %}
-      <div class="mt-2">
-        <div class="flex items-center justify-between mb-0.5">
-          <span class="text-xs text-gray-400">Sub-tarefas</span>
-          <span class="text-xs text-gray-400">{{ card.subtask_done }}/{{ card.subtask_total }}</span>
-        </div>
-        <div class="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
-          <div class="h-full bg-green-500 rounded-full"
-               style="width:{% widthratio card.subtask_done card.subtask_total 100 %}%"></div>
-        </div>
-      </div>
       {% endif %}
-
-      <div class="flex items-center justify-between mt-3 pt-2 border-t border-gray-50">
-        {% if card.assignee %}
-        <div class="flex items-center gap-1.5">
-          <div class="w-5 h-5 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold">
-            {{ card.assignee.first_name|first|upper }}
-          </div>
-          <span class="text-xs text-gray-500 truncate max-w-20">{{ card.assignee.first_name }}</span>
-        </div>
-        {% else %}
-        <span class="text-xs text-gray-300">Sem responsável</span>
-        {% endif %}
-        <div class="flex items-center gap-2">
-          {% if card.comment_count %}
-          <span class="flex items-center gap-0.5 text-xs text-gray-400">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-            {{ card.comment_count }}
-          </span>
-          {% endif %}
-          {% if card.due_date %}
-          <span class="text-xs {% if card.is_overdue %}text-red-500{% else %}text-gray-400{% endif %}">
-            📅 {{ card.due_date|date:"d/m" }}
-          </span>
-          {% endif %}
-        </div>
-      </div>
-      {% if card.tags_list %}
-      <div class="flex flex-wrap gap-1 mt-2">
-        {% for tag in card.tags_list %}
-        <span class="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{{ tag }}</span>
-        {% endfor %}
-      </div>
-      {% endif %}
-      <!-- Botões de movimentação -->
-      <div class="flex items-center justify-end gap-1 mt-2 pt-1.5 border-t border-gray-50">
-        {% if not forloop.parentloop.first %}
-        <form method="post" action="{% url 'kanban:card_move_direction' card.pk %}">
-          {% csrf_token %}
-          <input type="hidden" name="direction" value="prev">
-          <button type="submit"
-                  title="Mover para coluna anterior"
-                  class="text-gray-300 hover:text-blue-500 hover:bg-blue-50 text-sm font-bold px-2 py-0.5 rounded transition-colors">
-            ←
-          </button>
-        </form>
-        {% endif %}
-        {% if not forloop.parentloop.last %}
-        <form method="post" action="{% url 'kanban:card_move_direction' card.pk %}">
-          {% csrf_token %}
-          <input type="hidden" name="direction" value="next">
-          <button type="submit"
-                  title="Mover para próxima coluna"
-                  class="text-gray-300 hover:text-blue-500 hover:bg-blue-50 text-sm font-bold px-2 py-0.5 rounded transition-colors">
-            →
-          </button>
-        </form>
-        {% endif %}
-      </div>
-    </div>
-    {% endfor %}
+    {% else %}
+      {% for card in col.cards.all %}
+        {% include "kanban/partials/board_card.html" %}
+      {% endfor %}
+    {% endif %}
   </div>
 
   <!-- Add card button -->

@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Finalizados — {{ col.name }}{% endblock %}
+{% block page_title %}{{ col.name }} — Arquivo{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'kanban:board_detail' board.pk %}" class="btn-secondary text-xs">← Voltar ao board</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-5">
+
+  <!-- Cabeçalho -->
+  <div class="flex items-center gap-3">
+    <div class="w-3 h-3 rounded-full flex-shrink-0" style="background-color:{{ col.color }}"></div>
+    <div>
+      <p class="text-sm text-gray-500">{{ board.name }}</p>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="flex flex-wrap items-center gap-2">
+    <span class="text-xs text-gray-500 font-medium">Desfecho:</span>
+    <a href="?periodo={{ periodo }}"
+       class="text-xs px-3 py-1 rounded-full font-medium transition-colors {% if not final_status %}bg-gray-800 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+      Todos
+    </a>
+    <a href="?final_status=concluido&periodo={{ periodo }}"
+       class="text-xs px-3 py-1 rounded-full font-medium transition-colors {% if final_status == 'concluido' %}bg-green-600 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+      Concluído
+    </a>
+    <a href="?final_status=nao_concluido&periodo={{ periodo }}"
+       class="text-xs px-3 py-1 rounded-full font-medium transition-colors {% if final_status == 'nao_concluido' %}bg-orange-500 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+      Não concluído
+    </a>
+    <a href="?final_status=cancelado&periodo={{ periodo }}"
+       class="text-xs px-3 py-1 rounded-full font-medium transition-colors {% if final_status == 'cancelado' %}bg-gray-500 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+      Cancelado
+    </a>
+
+    <span class="text-gray-200 mx-1">|</span>
+    <span class="text-xs text-gray-500 font-medium">Período:</span>
+    <a href="?final_status={{ final_status }}"
+       class="text-xs px-3 py-1 rounded-full font-medium transition-colors {% if not periodo %}bg-gray-800 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+      Todos
+    </a>
+    <a href="?final_status={{ final_status }}&periodo=hoje"
+       class="text-xs px-3 py-1 rounded-full font-medium transition-colors {% if periodo == 'hoje' %}bg-gray-800 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+      Hoje
+    </a>
+    <a href="?final_status={{ final_status }}&periodo=semana"
+       class="text-xs px-3 py-1 rounded-full font-medium transition-colors {% if periodo == 'semana' %}bg-gray-800 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+      Últimos 7 dias
+    </a>
+    <a href="?final_status={{ final_status }}&periodo=mes"
+       class="text-xs px-3 py-1 rounded-full font-medium transition-colors {% if periodo == 'mes' %}bg-gray-800 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+      Último mês
+    </a>
+  </div>
+
+  <!-- Lista -->
+  <div class="card overflow-x-auto">
+    {% if page_obj.object_list %}
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100">
+          <th class="pb-3 font-semibold">Card</th>
+          <th class="pb-3 font-semibold">Responsável</th>
+          <th class="pb-3 font-semibold">Prazo</th>
+          <th class="pb-3 font-semibold">Finalizado em</th>
+          <th class="pb-3 font-semibold">Desfecho</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for card in page_obj %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="py-3 pr-4">
+            <a href="{% url 'kanban:card_detail' board.pk card.pk %}"
+               class="font-medium text-gray-900 hover:text-blue-600 transition-colors">
+              {{ card.title }}
+            </a>
+            {% if card.tags_list %}
+            <div class="flex flex-wrap gap-1 mt-1">
+              {% for tag in card.tags_list %}
+              <span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{{ tag }}</span>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </td>
+          <td class="py-3 pr-4 text-gray-500">
+            {{ card.assignee.get_full_name|default:"—" }}
+          </td>
+          <td class="py-3 pr-4 text-gray-500">
+            {% if card.due_date %}{{ card.due_date|date:"d/m/Y" }}{% else %}—{% endif %}
+          </td>
+          <td class="py-3 pr-4 text-gray-500">
+            {% if card.completed_at %}{{ card.completed_at|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+          </td>
+          <td class="py-3">
+            {% if card.final_status == 'concluido' %}
+            <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Concluído</span>
+            {% elif card.final_status == 'nao_concluido' %}
+            <span class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Não concluído</span>
+            {% elif card.final_status == 'cancelado' %}
+            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">Cancelado</span>
+            {% else %}
+            <span class="text-xs text-gray-300">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Paginação -->
+    {% if page_obj.has_other_pages %}
+    <div class="flex items-center justify-between pt-4 mt-4 border-t border-gray-100">
+      <span class="text-xs text-gray-400">
+        {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }} cards
+      </span>
+      <div class="flex items-center gap-1">
+        {% if page_obj.has_previous %}
+        <a href="?final_status={{ final_status }}&periodo={{ periodo }}&page={{ page_obj.previous_page_number }}"
+           class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+          ← Anterior
+        </a>
+        {% endif %}
+        {% if page_obj.has_next %}
+        <a href="?final_status={{ final_status }}&periodo={{ periodo }}&page={{ page_obj.next_page_number }}"
+           class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+          Próxima →
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <p class="text-sm text-gray-400 italic text-center py-8">Nenhum card encontrado com esses filtros.</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

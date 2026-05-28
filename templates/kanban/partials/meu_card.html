@@ -1,10 +1,9 @@
-<a href="{% url 'kanban:card_detail' board_pk=card.column.board.pk pk=card.pk %}"
-   class="block bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group overflow-hidden">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group overflow-hidden">
 
   <!-- Barra de prioridade -->
   <div class="h-1 w-full" style="background-color: {{ card.priority_color }};"></div>
 
-  <div class="p-3.5">
+  <a href="{% url 'kanban:card_detail' board_pk=card.column.board.pk pk=card.pk %}" class="block p-3.5">
 
     <!-- Origem -->
     <div class="flex items-center gap-1.5 mb-2 flex-wrap">
@@ -54,7 +53,6 @@
       <div class="flex items-center gap-2">
 
         <!-- Subtarefas -->
-        {% with total_sub=card.subtasks.count done_sub=card.subtasks.filter.is_done %}
         {% if card.subtasks.count > 0 %}
         <span class="text-xs text-gray-400 flex items-center gap-0.5">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,7 +61,6 @@
           {{ card.subtasks.count }}
         </span>
         {% endif %}
-        {% endwith %}
 
         <!-- Prazo -->
         {% if card.due_date %}
@@ -75,5 +72,34 @@
       </div>
     </div>
 
+  </a>
+
+  <!-- Botões de movimentação -->
+  <div class="flex items-center justify-end gap-1 px-3 pb-2 pt-1 border-t border-gray-50">
+    {% if show_prev %}
+    <form method="post" action="{% url 'kanban:card_move_direction' card.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="direction" value="prev">
+      <input type="hidden" name="redirect_to" value="meu_kanban">
+      <button type="submit"
+              title="Mover para coluna anterior"
+              class="text-gray-300 hover:text-blue-500 hover:bg-blue-50 text-sm font-bold px-2 py-0.5 rounded transition-colors">
+        ←
+      </button>
+    </form>
+    {% endif %}
+    {% if show_next %}
+    <form method="post" action="{% url 'kanban:card_move_direction' card.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="direction" value="next">
+      <input type="hidden" name="redirect_to" value="meu_kanban">
+      <button type="submit"
+              title="Mover para próxima coluna"
+              class="text-gray-300 hover:text-blue-500 hover:bg-blue-50 text-sm font-bold px-2 py-0.5 rounded transition-colors">
+        →
+      </button>
+    </form>
+    {% endif %}
   </div>
-</a>
+
+</div>

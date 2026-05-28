@@ -32,12 +32,43 @@
   </div>
 </div>
 
+<!-- Filtros -->
+<form id="board-filters" class="flex flex-wrap items-center gap-2 mb-4">
+  <select name="priority" class="text-xs form-input py-1 w-auto">
+    <option value="">Todas as prioridades</option>
+    <option value="LOW">Baixa</option>
+    <option value="MEDIUM">Média</option>
+    <option value="HIGH">Alta</option>
+    <option value="URGENT">Urgente</option>
+  </select>
+  {% if board_members %}
+  <select name="assignee" class="text-xs form-input py-1 w-auto">
+    <option value="">Todos os responsáveis</option>
+    {% for u in board_members %}
+    <option value="{{ u.pk }}">{{ u.first_name }} {{ u.last_name }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
+  <select name="prazo" class="text-xs form-input py-1 w-auto">
+    <option value="">Qualquer prazo</option>
+    <option value="vencidos">Vencidos</option>
+    <option value="hoje">Vencem hoje</option>
+    <option value="semana">Próximos 7 dias</option>
+  </select>
+  <button type="button"
+          onclick="this.form.reset(); htmx.trigger('#board-columns', 'change')"
+          class="text-xs text-gray-400 hover:text-gray-600 underline">
+    Limpar
+  </button>
+</form>
+
 <!-- Kanban board (atualiza a cada 5s) -->
 <div id="board-columns"
      class="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6"
      style="min-height: calc(100vh - 14rem)"
      hx-get="{% url 'kanban:board_columns_partial' board.pk %}"
-     hx-trigger="every 5s"
+     hx-trigger="every 5s, change from:#board-filters"
+     hx-include="#board-filters"
      hx-target="#board-columns"
      hx-swap="innerHTML">
   {% include "kanban/partials/board_columns.html" %}

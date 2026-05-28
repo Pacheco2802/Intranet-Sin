@@ -38,7 +38,9 @@
       </div>
       <div class="space-y-2.5">
         {% for card in a_fazer %}
+        {% with show_prev=False show_next=True %}
         {% include "kanban/partials/meu_card.html" %}
+        {% endwith %}
         {% empty %}
         <p class="text-center text-xs text-gray-300 py-6">Nenhuma tarefa pendente</p>
         {% endfor %}
@@ -54,7 +56,9 @@
       </div>
       <div class="space-y-2.5">
         {% for card in em_andamento %}
+        {% with show_prev=True show_next=True %}
         {% include "kanban/partials/meu_card.html" %}
+        {% endwith %}
         {% empty %}
         <p class="text-center text-xs text-gray-300 py-6">Nenhuma tarefa em progresso</p>
         {% endfor %}
@@ -70,7 +74,9 @@
       </div>
       <div class="space-y-2.5">
         {% for card in concluidos %}
+        {% with show_prev=True show_next=False %}
         {% include "kanban/partials/meu_card.html" %}
+        {% endwith %}
         {% empty %}
         <p class="text-center text-xs text-gray-300 py-6">Nenhum card concluído</p>
         {% endfor %}

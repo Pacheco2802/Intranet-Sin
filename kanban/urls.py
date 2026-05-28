@@ -24,6 +24,7 @@ urlpatterns = [
     path('card/<int:pk>/mover/', views.card_move, name='card_move'),
     path('card/<int:pk>/mover-direcao/', views.card_move_direction, name='card_move_direction'),
     path('<int:pk>/colunas/', views.board_columns_partial, name='board_columns_partial'),
+    path('<int:board_pk>/finalizados/<int:column_pk>/', views.board_finalizados, name='board_finalizados'),
     path('subtarefa/<int:pk>/toggle/', views.subtask_toggle, name='subtask_toggle'),
     path('subtarefa/<int:pk>/excluir/', views.subtask_delete, name='subtask_delete'),
     path('subtarefa/<int:pk>/anexar/', views.subtask_attach, name='subtask_attach'),
