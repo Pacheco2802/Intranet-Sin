@@ -119,7 +119,7 @@
                 {% if st.assignee %}<span class="text-xs text-gray-400">👤 {{ st.assignee.first_name }}</span>{% endif %}
                 {% if st.target_department %}<span class="text-xs text-gray-400">🏢 {{ st.target_department.name }}</span>{% endif %}
                 {% if st.due_date %}
-                  {% if not st.is_done and st.due_date < today %}
+                  {% if st.is_overdue %}
                   <span class="text-xs text-red-500 font-medium">⚠ {{ st.due_date|date:"d/m" }}</span>
                   {% else %}
                   <span class="text-xs text-gray-400">📅 {{ st.due_date|date:"d/m" }}</span>

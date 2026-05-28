@@ -131,7 +131,7 @@ class Card(models.Model):
 
     @property
     def is_overdue(self):
-        if self.due_date:
+        if self.due_date and not self.final_status:
             from django.utils.timezone import now
             return self.due_date < now().date()
         return False
@@ -155,6 +155,13 @@ class SubTask(models.Model):
         related_name='created_subtasks', verbose_name='Criado por'
     )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def is_overdue(self):
+        if self.due_date and not self.is_done:
+            from django.utils.timezone import now
+            return self.due_date < now().date()
+        return False
 
     class Meta:
         verbose_name = 'Sub-tarefa'

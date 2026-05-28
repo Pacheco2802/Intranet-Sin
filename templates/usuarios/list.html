@@ -83,6 +83,7 @@
         <th class="pb-3 font-semibold">Cargo</th>
         <th class="pb-3 font-semibold">Departamento</th>
         <th class="pb-3 font-semibold">Status</th>
+        <th class="pb-3 font-semibold">Comunicados</th>
         <th class="pb-3 font-semibold">LGPD</th>
         <th class="pb-3 font-semibold">Ações</th>
       </tr>
@@ -112,6 +113,15 @@
           <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Ativo</span>
           {% else %}
           <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Inativo</span>
+          {% endif %}
+        </td>
+        <td class="py-3">
+          {% if u.can_post_comunicado %}
+          <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Sim</span>
+          {% elif u.role in "PRESIDENTE DIRETOR ADMIN_TI" %}
+          <span class="text-xs text-gray-400">Pelo cargo</span>
+          {% else %}
+          <span class="text-xs text-gray-300">—</span>
           {% endif %}
         </td>
         <td class="py-3">

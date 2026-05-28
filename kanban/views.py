@@ -854,21 +854,38 @@ def solicitar_rapida(request):
         descricao = request.POST.get('descricao', '').strip()
         dept_id = request.POST.get('departamento')
         prioridade = request.POST.get('prioridade', 'MEDIUM')
+        assignee_id = request.POST.get('assignee')
+        tags_extra = request.POST.get('tags', '').strip()
 
         if titulo and dept_id:
             dept = get_object_or_404(Department, pk=dept_id)
             desc_completa = f'[Solicitação direta]\n\n{descricao}' if descricao else '[Solicitação direta]'
+            tags_value = 'solicitacao'
+            if tags_extra:
+                tags_value = f'solicitacao,{tags_extra}'
             card = criar_card_automatico(
                 department=dept,
                 title=titulo,
                 description=desc_completa,
                 creator=request.user,
-                tags='solicitacao',
+                tags=tags_value,
             )
             if card:
+                update_fields = []
                 if prioridade in ('LOW', 'MEDIUM', 'HIGH', 'URGENT'):
                     card.priority = prioridade
-                    card.save(update_fields=['priority'])
+                    update_fields.append('priority')
+                if assignee_id:
+                    try:
+                        card.assignee = CustomUser.objects.get(pk=assignee_id, is_active=True)
+                        update_fields.append('assignee')
+                    except CustomUser.DoesNotExist:
+                        pass
+                if tags_extra:
+                    card.tags = tags_value
+                    update_fields.append('tags')
+                if update_fields:
+                    card.save(update_fields=update_fields)
                 _notify_card(card, request.user, created=True)
                 AuditLog.log(
                     request.user, AuditLog.Action.CARD_CREATE,
@@ -881,4 +898,5 @@ def solicitar_rapida(request):
         messages.error(request, 'Preencha o título e o departamento.')
 
     departments = Department.objects.all().order_by('name')
-    return render(request, 'kanban/solicitar.html', {'departments': departments})
+    users = CustomUser.objects.filter(is_active=True, is_approved=True).prefetch_related('departments').order_by('first_name', 'last_name')
+    return render(request, 'kanban/solicitar.html', {'departments': departments, 'users': users})
