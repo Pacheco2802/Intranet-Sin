@@ -6,7 +6,7 @@
 <a href="{% url 'kanban:board_detail' board.pk %}" class="btn-secondary text-xs">← {{ board.name }}</a>
 <a href="{% url 'kanban:card_edit' board.pk card.pk %}" class="btn-primary text-xs">Editar</a>
 {% else %}
-<a href="{% url 'kanban:solicitar_rapida' %}" class="btn-secondary text-xs">← Minhas solicitações</a>
+<a href="{% url 'kanban:minhas_solicitacoes' %}" class="btn-secondary text-xs">← Minhas solicitações</a>
 {% endif %}
 {% endblock %}
 

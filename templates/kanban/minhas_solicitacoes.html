@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Minhas Solicitações{% endblock %}
+{% block page_title %}Minhas Solicitações{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'kanban:solicitar_rapida' %}" class="btn-primary text-xs">+ Nova solicitação</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-4">
+
+  <!-- Filtro ativas / finalizadas -->
+  <div class="flex items-center gap-2">
+    <a href="?filtro=ativas"
+       class="text-xs px-3 py-1.5 rounded-full font-medium transition-colors
+              {% if filtro != 'finalizadas' %}bg-gray-800 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+      Ativas
+    </a>
+    <a href="?filtro=finalizadas"
+       class="text-xs px-3 py-1.5 rounded-full font-medium transition-colors
+              {% if filtro == 'finalizadas' %}bg-gray-800 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+      Finalizadas
+    </a>
+  </div>
+
+  <!-- Lista -->
+  {% if cards %}
+  <div class="space-y-3">
+    {% for card in cards %}
+    <a href="{% url 'kanban:card_detail' card.column.board.pk card.pk %}"
+       class="card card-hover flex items-start gap-4 group">
+
+      <!-- Prioridade + status -->
+      <div class="flex-shrink-0 pt-0.5">
+        <span class="inline-block w-2 h-2 rounded-full mt-1" style="background-color:{{ card.priority_color }}"></span>
+      </div>
+
+      <div class="flex-1 min-w-0">
+        <div class="flex items-start justify-between gap-2">
+          <p class="font-medium text-gray-900 group-hover:text-blue-600 transition-colors leading-snug">{{ card.title }}</p>
+          <!-- Status badge -->
+          {% if card.final_status %}
+          <span class="flex-shrink-0 text-xs px-2 py-0.5 rounded-full font-medium
+            {% if card.final_status == 'concluido' %}bg-emerald-100 text-emerald-700
+            {% elif card.final_status == 'cancelado' %}bg-gray-100 text-gray-600
+            {% else %}bg-orange-100 text-orange-700{% endif %}">
+            {{ card.get_final_status_display }}
+          </span>
+          {% else %}
+          <span class="flex-shrink-0 text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+            {{ card.column.name }}
+          </span>
+          {% endif %}
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 mt-1.5">
+          <!-- Departamento -->
+          {% if card.column.board.department %}
+          <span class="text-xs text-gray-400">
+            {{ card.column.board.department.icon }} {{ card.column.board.department.name }}
+          </span>
+          {% endif %}
+          <!-- Responsável -->
+          {% if card.assignee %}
+          <span class="text-xs text-gray-400">👤 {{ card.assignee.first_name }}</span>
+          {% endif %}
+          <!-- Prazo -->
+          {% if card.due_date %}
+          <span class="text-xs {% if card.is_overdue %}text-red-500 font-medium{% else %}text-gray-400{% endif %}">
+            📅 {{ card.due_date|date:"d/m/Y" }}{% if card.is_overdue %} · Vencido{% endif %}
+          </span>
+          {% endif %}
+          <!-- Data de criação -->
+          <span class="text-xs text-gray-300">Criado em {{ card.created_at|date:"d/m/Y" }}</span>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="card text-center py-12">
+    <p class="text-gray-400 text-sm">
+      {% if filtro == 'finalizadas' %}
+        Nenhuma solicitação finalizada ainda.
+      {% else %}
+        Você não tem solicitações ativas no momento.
+      {% endif %}
+    </p>
+    {% if filtro != 'finalizadas' %}
+    <a href="{% url 'kanban:solicitar_rapida' %}" class="btn-primary text-xs mt-4 inline-block">
+      Fazer uma solicitação
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

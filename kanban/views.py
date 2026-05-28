@@ -938,3 +938,25 @@ def solicitar_rapida(request):
     departments = Department.objects.all().order_by('name')
     users = CustomUser.objects.filter(is_active=True, is_approved=True).prefetch_related('departments').order_by('first_name', 'last_name')
     return render(request, 'kanban/solicitar.html', {'departments': departments, 'users': users})
+
+
+@login_required
+def minhas_solicitacoes(request):
+    filtro = request.GET.get('filtro', 'ativas')
+
+    cards = (
+        Card.objects
+        .filter(creator=request.user, tags__contains='solicitacao')
+        .select_related('column__board__department', 'assignee')
+        .order_by('-created_at')
+    )
+
+    if filtro == 'finalizadas':
+        cards = cards.filter(column__column_type=Column.ColumnType.STATUS_FINAL)
+    else:
+        cards = cards.exclude(column__column_type=Column.ColumnType.STATUS_FINAL)
+
+    return render(request, 'kanban/minhas_solicitacoes.html', {
+        'cards': cards,
+        'filtro': filtro,
+    })

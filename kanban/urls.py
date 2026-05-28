@@ -8,6 +8,7 @@ urlpatterns = [
     path('analise/', views.analise, name='analise'),
     path('meu-kanban/', views.meu_kanban, name='meu_kanban'),
     path('solicitar/', views.solicitar_rapida, name='solicitar_rapida'),
+    path('minhas-solicitacoes/', views.minhas_solicitacoes, name='minhas_solicitacoes'),
     path('novo/', views.board_create, name='board_create'),
     path('<int:pk>/', views.board_detail, name='board_detail'),
     path('<int:pk>/editar/', views.board_edit, name='board_edit'),
