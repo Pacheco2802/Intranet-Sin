@@ -7,6 +7,11 @@
 <a href="{% url 'kanban:card_edit' board.pk card.pk %}" class="btn-primary text-xs">Editar</a>
 {% else %}
 <a href="{% url 'kanban:minhas_solicitacoes' %}" class="btn-secondary text-xs">← Minhas solicitações</a>
+<form method="post" action="{% url 'kanban:card_delete' board.pk card.pk %}"
+      onsubmit="return confirm('Excluir esta solicitação? Esta ação não pode ser desfeita.')">
+  {% csrf_token %}
+  <button type="submit" class="btn-danger text-xs">Excluir</button>
+</form>
 {% endif %}
 {% endblock %}
 

@@ -534,9 +534,11 @@ def board_finalizados(request, board_pk, column_pk):
 @require_POST
 def card_delete(request, board_pk, pk):
     board = get_object_or_404(Board, pk=board_pk)
-    if not board.can_access(request.user):
-        return HttpResponseForbidden()
     card = get_object_or_404(Card, pk=pk, column__board=board)
+    is_member = board.can_access(request.user)
+    is_creator = card.creator_id == request.user.pk
+    if not is_member and not is_creator:
+        return HttpResponseForbidden()
     AuditLog.log(
         request.user, AuditLog.Action.CARD_DELETE,
         resource_type='Card', resource_id=card.pk,
@@ -544,7 +546,9 @@ def card_delete(request, board_pk, pk):
         title=card.title,
     )
     card.delete()
-    messages.success(request, 'Card excluído.')
+    messages.success(request, 'Solicitação excluída.' if is_creator and not is_member else 'Card excluído.')
+    if is_creator and not is_member:
+        return redirect('kanban:minhas_solicitacoes')
     return redirect('kanban:board_detail', pk=board.pk)
 
 
@@ -924,6 +928,18 @@ def solicitar_rapida(request):
                     update_fields.append('tags')
                 if update_fields:
                     card.save(update_fields=update_fields)
+                for arquivo in request.FILES.getlist('arquivos'):
+                    try:
+                        validate_file_extension(arquivo)
+                        validate_file_size(arquivo)
+                        CardAnexo.objects.create(
+                            card=card,
+                            arquivo=arquivo,
+                            nome_original=arquivo.name,
+                            enviado_por=request.user,
+                        )
+                    except ValidationError:
+                        pass
                 _notify_card(card, request.user, created=True)
                 AuditLog.log(
                     request.user, AuditLog.Action.CARD_CREATE,
