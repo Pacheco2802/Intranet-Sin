@@ -361,16 +361,10 @@ def atendimento_detail(request, pk):
             )
             at.status = Atendimento.Status.CANCELADO
             at.save(update_fields=['status', 'updated_at'])
-            if at.numero_senha and at.nextqs_fila:
-                from .nextqs import cancelar_senha
-                agent_id = request.user.nextqs_agent_id or getattr(settings, 'NEXTQS_SYSTEM_AGENT_ID', '')
-                if agent_id:
-                    ok, msg = cancelar_senha(at, agent_id)
-                    if not ok:
-                        messages.warning(request, f'Atendimento cancelado, mas erro ao remover senha NextQS: {msg}')
-                else:
-                    messages.warning(request, 'Atendimento cancelado. Remova a senha manualmente no NextQS.')
-            messages.success(request, 'Atendimento cancelado.')
+            if at.numero_senha:
+                messages.warning(request, f'Atendimento cancelado. Remova a senha {at.nextqs_fila}{at.numero_senha} manualmente no NextQS se necessário.')
+            else:
+                messages.success(request, 'Atendimento cancelado.')
             return redirect('atendimento:detail', pk=at.pk)
 
     etapas = at.etapas.select_related(
@@ -403,11 +397,6 @@ def nextqs_chamar(request, pk):
     if not (at.numero_senha and at.nextqs_fila):
         messages.error(request, 'Este atendimento não tem número de senha NextQS.')
         return redirect('atendimento:detail', pk=pk)
-    agent_id = request.user.nextqs_agent_id
-    if not agent_id:
-        messages.error(request, 'Configure seu Agent ID NextQS no seu perfil antes de chamar senhas.')
-        return redirect('atendimento:detail', pk=pk)
-
     agent_id = request.user.nextqs_agent_id or getattr(settings, 'NEXTQS_SYSTEM_AGENT_ID', '')
     if not agent_id:
         messages.error(request, 'Agent ID não configurado. Contate o administrador do sistema.')
