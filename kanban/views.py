@@ -128,6 +128,8 @@ def card_detail(request, board_pk, pk):
                     card=card, user=request.user,
                     action=f'Registrou status final: {card.get_final_status_display() or "—"}'
                 )
+                if new_status:
+                    _propagar_conclusao_para_subtarefa(card, request.user)
                 if new_status and card.creator_id and card.creator_id != request.user.pk:
                     status_label = card.get_final_status_display()
                     link = f'/kanban/{board.pk}/card/{card.pk}/'
@@ -173,7 +175,11 @@ def card_detail(request, board_pk, pk):
                 messages.success(request, f'Sub-tarefa "{st.title}" adicionada.')
                 return redirect('kanban:card_detail', board_pk=board.pk, pk=card.pk)
 
-    subtasks = card.subtasks.select_related('assignee', 'target_department').prefetch_related('anexos__enviado_por')
+    subtasks = card.subtasks.select_related('assignee', 'target_department').prefetch_related(
+        'anexos__enviado_por',
+        'kanban_cards__anexos__enviado_por',
+        'kanban_cards__column__board',
+    )
     done_count = subtasks.filter(is_done=True).count()
     card_anexos = card.anexos.select_related('enviado_por').all()
     is_status_final = card.column.column_type == Column.ColumnType.STATUS_FINAL
@@ -351,6 +357,9 @@ def card_move(request, pk):
     card.order = order
     card.save(update_fields=['column', 'order'])
 
+    if old_col != col and col.column_type == Column.ColumnType.STATUS_FINAL:
+        _propagar_conclusao_para_subtarefa(card, request.user)
+
     if old_col != col:
         CardActivity.objects.create(
             card=card, user=request.user,
@@ -418,6 +427,8 @@ def card_move_direction(request, pk):
     card.column = target_col
     card.order = 0
     card.save(update_fields=['column', 'order'])
+    if target_col.column_type == Column.ColumnType.STATUS_FINAL:
+        _propagar_conclusao_para_subtarefa(card, request.user)
     CardActivity.objects.create(
         card=card, user=request.user,
         action=f'Moveu de "{old_col.name}" para "{target_col.name}"',
@@ -775,6 +786,32 @@ def _card_body(card) -> str:
         else:
             parts.append(f'Prazo: {card.due_date.strftime("%d/%m/%Y")}')
     return ' · '.join(parts)
+
+
+def _propagar_conclusao_para_subtarefa(card, actor):
+    subtask = card.source_subtask
+    if not subtask or subtask.is_done:
+        return
+    subtask.is_done = True
+    subtask.save(update_fields=['is_done'])
+    parent_card = subtask.card
+    CardActivity.objects.create(
+        card=parent_card, user=actor,
+        action=f'Sub-tarefa concluída automaticamente: {subtask.title}',
+    )
+    link = f'/kanban/{parent_card.column.board_id}/card/{parent_card.pk}/'
+    notified = set()
+    for recipient in (subtask.created_by, parent_card.creator):
+        if recipient and recipient.pk not in notified:
+            Notification.send(
+                user=recipient, actor=actor,
+                ntype=Notification.Type.CARD_MOVED,
+                title=f'Sub-tarefa concluída: {subtask.title}',
+                body=parent_card.title,
+                link=link,
+            )
+            notified.add(recipient.pk)
+    _propagar_conclusao_para_subtarefa(parent_card, actor)
 
 
 def _notify_subtask(subtask, actor):

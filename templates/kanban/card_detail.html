@@ -148,7 +148,7 @@
                   <span class="text-xs text-gray-400">📅 {{ st.due_date|date:"d/m" }}</span>
                   {% endif %}
                 {% endif %}
-                {% if st.anexos.exists %}<span class="text-xs text-blue-500">📎 {{ st.anexos.count }} anexo{{ st.anexos.count|pluralize:"s" }}</span>{% endif %}
+                {% if st.anexos.all %}<span class="text-xs text-blue-500">📎 {{ st.anexos.all|length }} anexo{{ st.anexos.all|length|pluralize:"s" }}</span>{% endif %}
               </div>
             </div>
             {% if is_member %}
@@ -164,7 +164,7 @@
             {% endif %}
           </div>
 
-          {% if st.anexos.exists %}
+          {% if st.anexos.all or st.kanban_cards.all %}
           <div class="px-3 pb-2 space-y-1 border-t border-gray-200 pt-2">
             {% for anexo in st.anexos.all %}
             <div class="flex items-center gap-2 text-xs text-gray-500">
@@ -173,11 +173,21 @@
               <span class="text-gray-300">· {{ anexo.enviado_por.first_name }} {{ anexo.created_at|date:"d/m H:i" }}</span>
             </div>
             {% endfor %}
+            {% for child_card in st.kanban_cards.all %}
+            {% for anexo in child_card.anexos.all %}
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+              <svg class="w-3 h-3 flex-shrink-0 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+              <a href="{{ anexo.arquivo.url }}" target="_blank" class="hover:text-purple-600 truncate max-w-xs">{{ anexo.nome_original }}</a>
+              <span class="text-gray-300">· {{ anexo.enviado_por.first_name }} {{ anexo.created_at|date:"d/m H:i" }}</span>
+              <span class="text-purple-300 italic">{{ child_card.column.board.department.name }}</span>
+            </div>
+            {% endfor %}
+            {% endfor %}
           </div>
           {% endif %}
 
           {% if is_member %}
-          <div class="px-3 pb-2 {% if not st.anexos.exists %}border-t border-gray-200 pt-2{% endif %}">
+          <div class="px-3 pb-2 {% if not st.anexos.all %}border-t border-gray-200 pt-2{% endif %}">
             <form method="post" action="{% url 'kanban:subtask_attach' st.pk %}" enctype="multipart/form-data"
                   class="flex items-center gap-2">
               {% csrf_token %}
