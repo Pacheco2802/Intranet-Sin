@@ -31,6 +31,14 @@
         ⚡ Solicitação
       </span>
       {% endif %}
+      {% if card.final_status %}
+      <span class="text-xs px-2 py-0.5 rounded-full font-medium
+        {% if card.final_status == 'concluido' %}bg-emerald-100 text-emerald-700
+        {% elif card.final_status == 'cancelado' %}bg-gray-200 text-gray-600
+        {% else %}bg-orange-100 text-orange-700{% endif %}">
+        {{ card.get_final_status_display }}
+      </span>
+      {% endif %}
     </div>
 
     <!-- Título -->
