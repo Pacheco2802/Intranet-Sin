@@ -40,6 +40,7 @@
                 <option value="LIDER">Líder</option>
                 <option value="DIRETOR">Diretor</option>
                 <option value="PRESIDENTE">Presidente</option>
+                <option value="COORD_GERAL">Coord. Geral</option>
                 <option value="ADMIN_TI">Administrador TI</option>
               </select>
             </div>
@@ -118,7 +119,7 @@
         <td class="py-3">
           {% if u.can_post_comunicado %}
           <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Sim</span>
-          {% elif u.role in "PRESIDENTE DIRETOR ADMIN_TI" %}
+          {% elif u.role in "PRESIDENTE COORD_GERAL DIRETOR ADMIN_TI" %}
           <span class="text-xs text-gray-400">Pelo cargo</span>
           {% else %}
           <span class="text-xs text-gray-300">—</span>

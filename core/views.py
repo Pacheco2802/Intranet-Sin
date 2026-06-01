@@ -833,15 +833,22 @@ def visao_executiva(request):
     mes_inicio = today.replace(day=1)
     h24_atras = now - timedelta(hours=24)
 
+    lider_depts = request.user.departments.all() if request.user.is_lider else None
+
     # ── Atendimentos ──────────────────────────────
     ats_mes = Atendimento.objects.filter(created_at__date__gte=mes_inicio)
+    ats_base = Atendimento.objects
+    if lider_depts is not None:
+        ats_mes = ats_mes.filter(departamento_atual__in=lider_depts)
+        ats_base = ats_base.filter(departamento_atual__in=lider_depts)
+
     at_total_mes      = ats_mes.count()
     at_concluidos_mes = ats_mes.filter(status='CONCLUIDO').count()
     at_cancelados_mes = ats_mes.filter(status='CANCELADO').count()
-    at_ativos         = Atendimento.objects.exclude(status__in=['CONCLUIDO', 'CANCELADO']).count()
-    at_recepcao       = Atendimento.objects.filter(status='TRIAGEM').count()
-    at_encaminhados   = Atendimento.objects.filter(status='ENCAMINHADO').count()
-    at_em_andamento   = Atendimento.objects.filter(status='EM_ANDAMENTO').count()
+    at_ativos         = ats_base.exclude(status__in=['CONCLUIDO', 'CANCELADO']).count()
+    at_recepcao       = ats_base.filter(status='TRIAGEM').count()
+    at_encaminhados   = ats_base.filter(status='ENCAMINHADO').count()
+    at_em_andamento   = ats_base.filter(status='EM_ANDAMENTO').count()
 
     # Tempo médio de conclusão (horas) — mês atual
     concluidos_mes = ats_mes.filter(status='CONCLUIDO', concluido_em__isnull=False)
@@ -854,10 +861,15 @@ def visao_executiva(request):
         tempo_medio_horas = round(total_seg / concluidos_mes.count() / 3600, 1)
 
     # Atendimentos ativos por departamento
-    at_por_dept = (
+    at_por_dept_qs = (
         Atendimento.objects
         .exclude(status__in=['CONCLUIDO', 'CANCELADO'])
         .exclude(departamento_atual__isnull=True)
+    )
+    if lider_depts is not None:
+        at_por_dept_qs = at_por_dept_qs.filter(departamento_atual__in=lider_depts)
+    at_por_dept = (
+        at_por_dept_qs
         .values('departamento_atual__name', 'departamento_atual__icon', 'departamento_atual__pk')
         .annotate(total=Count('id'))
         .order_by('-total')
@@ -865,7 +877,10 @@ def visao_executiva(request):
 
     # ── Kanban ────────────────────────────────────
     CT = Column.ColumnType
-    cards_ativos = Card.objects.exclude(column__column_type=CT.STATUS_FINAL)
+    cards_base = Card.objects
+    if lider_depts is not None:
+        cards_base = cards_base.filter(column__board__department__in=lider_depts)
+    cards_ativos = cards_base.exclude(column__column_type=CT.STATUS_FINAL)
 
     urgentes = (
         cards_ativos
@@ -883,7 +898,8 @@ def visao_executiva(request):
 
     # Saúde por departamento
     dept_saude = []
-    for dept in Department.objects.order_by('name'):
+    depts_iter = lider_depts.order_by('name') if lider_depts is not None else Department.objects.order_by('name')
+    for dept in depts_iter:
         dc = Card.objects.filter(column__board__department=dept)
         total_dept   = dc.count()
         ativos_dept  = dc.exclude(column__column_type=CT.STATUS_FINAL).count()
@@ -913,16 +929,22 @@ def visao_executiva(request):
         })
 
     # ── Atividade 24h ─────────────────────────────
+    kanban_ativ_qs = CardActivity.objects.filter(timestamp__gte=h24_atras)
+    etapas_qs = AtendimentoEtapa.objects.filter(
+        created_at__gte=h24_atras, tipo__in=['ABERTURA', 'CONCLUSAO', 'CANCELAMENTO']
+    )
+    if lider_depts is not None:
+        kanban_ativ_qs = kanban_ativ_qs.filter(card__column__board__department__in=lider_depts)
+        etapas_qs = etapas_qs.filter(atendimento__departamento_atual__in=lider_depts)
+
     atividade_kanban = (
-        CardActivity.objects
-        .filter(timestamp__gte=h24_atras)
+        kanban_ativ_qs
         .select_related('card__column__board', 'user')
         .order_by('-timestamp')[:20]
     )
 
     etapas_recentes = (
-        AtendimentoEtapa.objects
-        .filter(created_at__gte=h24_atras, tipo__in=['ABERTURA', 'CONCLUSAO', 'CANCELAMENTO'])
+        etapas_qs
         .select_related('atendimento', 'autor')
         .order_by('-created_at')[:20]
     )

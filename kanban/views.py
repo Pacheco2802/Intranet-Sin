@@ -676,7 +676,12 @@ def analise(request):
     today = timezone.now().date()
     CT = Column.ColumnType
 
+    lider_depts = request.user.departments.all() if request.user.is_lider else None
+
     all_cards = Card.objects.select_related('column')
+    if lider_depts is not None:
+        all_cards = all_cards.filter(column__board__department__in=lider_depts)
+
     total = all_cards.count()
     a_fazer = all_cards.filter(column__column_type=CT.A_FAZER).count()
     em_andamento = all_cards.filter(column__column_type=CT.EM_ANDAMENTO).count()
@@ -698,7 +703,12 @@ def analise(request):
     ).filter(completed_at__date__gt=F('due_date')).count()
 
     dept_stats = []
-    for dept in Department.objects.filter(boards__isnull=False).distinct().order_by('name'):
+    depts_iter = (
+        lider_depts.filter(boards__isnull=False).distinct().order_by('name')
+        if lider_depts is not None
+        else Department.objects.filter(boards__isnull=False).distinct().order_by('name')
+    )
+    for dept in depts_iter:
         dc = Card.objects.filter(column__board__department=dept)
         dept_stats.append({
             'dept': dept,
