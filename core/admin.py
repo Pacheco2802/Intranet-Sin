@@ -17,7 +17,8 @@ class CustomUserAdmin(UserAdmin):
     search_fields = ('username', 'first_name', 'last_name', 'email')
     fieldsets = UserAdmin.fieldsets + (
         ('Informações da Intranet', {
-            'fields': ('role', 'departments', 'phone', 'bio', 'avatar', 'created_by')
+            'fields': ('role', 'departments', 'phone', 'bio', 'avatar', 'created_by',
+                       'can_post_comunicado', 'can_access_consultas')
         }),
         ('LGPD', {
             'fields': ('lgpd_consent', 'lgpd_consent_date')

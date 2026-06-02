@@ -2,30 +2,29 @@ import datetime
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from .models import Doctor, Consulta
-from .forms import ConsultaForm, RescheduleForm, DoctorForm
+from .forms import (
+    ASOForm, AtendimentoForm, ConsultaDocumentoForm,
+    ConsultaForm, DoctorForm, RescheduleForm,
+)
+from .models import ASO, Atendimento, Consulta, ConsultaDocumento, Doctor
 
 # Horários disponíveis: 07:30 até 17:30 em intervalos de 30 min
-SLOTS = [
-    datetime.time(h, m)
-    for h in range(7, 18)
-    for m in (0, 30)
-    if not (h == 7 and m == 0)   # começa em 07:30
-    if not (h == 17 and m == 30) # termina em 17:30 (inclusive)
-][: ]
-
-# Recalcula para incluir 17:30 corretamente
 SLOTS = []
-t = datetime.time(7, 30)
-while t <= datetime.time(17, 30):
-    SLOTS.append(t)
-    dt = datetime.datetime.combine(datetime.date.today(), t) + datetime.timedelta(minutes=30)
-    t = dt.time()
+_t = datetime.time(7, 30)
+while _t <= datetime.time(17, 30):
+    SLOTS.append(_t)
+    _dt = datetime.datetime.combine(datetime.date.today(), _t) + datetime.timedelta(minutes=30)
+    _t = _dt.time()
+
+
+def _can_access(user):
+    return user.can_see_all or user.can_access_consultas
 
 
 def _is_admin(user):
@@ -42,6 +41,9 @@ def _can_edit(user, consulta):
 
 @login_required
 def agenda(request):
+    if not _can_access(request.user):
+        return HttpResponseForbidden()
+
     date_str = request.GET.get('date')
     try:
         date = datetime.date.fromisoformat(date_str)
@@ -69,11 +71,39 @@ def agenda(request):
 
 
 # ---------------------------------------------------------------------------
+# Detalhe / prontuário da consulta
+# ---------------------------------------------------------------------------
+
+@login_required
+def consulta_detail(request, pk):
+    if not _can_access(request.user):
+        return HttpResponseForbidden()
+
+    consulta = get_object_or_404(Consulta, pk=pk)
+    atendimento = getattr(consulta, 'atendimento', None)
+    aso = getattr(consulta, 'aso', None)
+    documentos = consulta.documentos.select_related('enviado_por').all()
+    doc_form = ConsultaDocumentoForm()
+
+    return render(request, 'consultas/detail.html', {
+        'consulta':    consulta,
+        'atendimento': atendimento,
+        'aso':         aso,
+        'documentos':  documentos,
+        'doc_form':    doc_form,
+        'atend_form':  AtendimentoForm(instance=atendimento),
+    })
+
+
+# ---------------------------------------------------------------------------
 # Criar / Editar consulta
 # ---------------------------------------------------------------------------
 
 @login_required
 def consulta_create(request):
+    if not _can_access(request.user):
+        return HttpResponseForbidden()
+
     initial = {}
     if request.GET.get('date'):
         initial['date'] = request.GET['date']
@@ -95,6 +125,9 @@ def consulta_create(request):
 
 @login_required
 def consulta_edit(request, pk):
+    if not _can_access(request.user):
+        return HttpResponseForbidden()
+
     consulta = get_object_or_404(Consulta, pk=pk)
     if not _can_edit(request.user, consulta):
         return HttpResponseForbidden()
@@ -117,6 +150,9 @@ def consulta_edit(request, pk):
 @login_required
 @require_POST
 def consulta_status(request, pk):
+    if not _can_access(request.user):
+        return HttpResponseForbidden()
+
     consulta = get_object_or_404(Consulta, pk=pk)
     new_status = request.POST.get('status')
     valid = [s[0] for s in Consulta.Status.choices]
@@ -139,6 +175,9 @@ def consulta_status(request, pk):
 
 @login_required
 def consulta_reschedule(request, pk):
+    if not _can_access(request.user):
+        return HttpResponseForbidden()
+
     original = get_object_or_404(Consulta, pk=pk)
     if not _can_edit(request.user, original):
         return HttpResponseForbidden()
@@ -179,6 +218,9 @@ def consulta_reschedule(request, pk):
 @login_required
 @require_POST
 def consulta_delete(request, pk):
+    if not _can_access(request.user):
+        return HttpResponseForbidden()
+
     consulta = get_object_or_404(Consulta, pk=pk)
     if not _can_edit(request.user, consulta):
         return HttpResponseForbidden()
@@ -186,6 +228,104 @@ def consulta_delete(request, pk):
     consulta.delete()
     messages.success(request, 'Consulta excluída.')
     return redirect(f'/consultas/?date={date}')
+
+
+# ---------------------------------------------------------------------------
+# Prontuário (Atendimento clínico)
+# ---------------------------------------------------------------------------
+
+@login_required
+@require_POST
+def prontuario_save(request, pk):
+    if not _can_access(request.user):
+        return HttpResponseForbidden()
+
+    consulta = get_object_or_404(Consulta, pk=pk)
+    atendimento = getattr(consulta, 'atendimento', None)
+
+    form = AtendimentoForm(request.POST, instance=atendimento)
+    if form.is_valid():
+        obj = form.save(commit=False)
+        obj.consulta = consulta
+        finalizar = request.POST.get('finalizar') == '1'
+        if finalizar and not obj.finalizado:
+            obj.finalizado = True
+            obj.finalizado_em = timezone.now()
+            obj.finalizado_por = request.user
+            consulta.status = Consulta.Status.FINALIZADO
+            consulta.save(update_fields=['status', 'updated_at'])
+        obj.save()
+        messages.success(request, 'Prontuário salvo.' if not finalizar else 'Prontuário finalizado.')
+    else:
+        messages.error(request, 'Erro ao salvar prontuário.')
+
+    return redirect('consultas:consulta_detail', pk=pk)
+
+
+# ---------------------------------------------------------------------------
+# Documentos
+# ---------------------------------------------------------------------------
+
+@login_required
+@require_POST
+def documento_upload(request, pk):
+    if not _can_access(request.user):
+        return HttpResponseForbidden()
+
+    consulta = get_object_or_404(Consulta, pk=pk)
+    form = ConsultaDocumentoForm(request.POST, request.FILES)
+    if form.is_valid():
+        doc = form.save(commit=False)
+        doc.consulta = consulta
+        doc.nome_original = request.FILES['arquivo'].name
+        doc.enviado_por = request.user
+        doc.save()
+        messages.success(request, 'Documento enviado.')
+    else:
+        messages.error(request, 'Erro ao enviar documento.')
+
+    return redirect('consultas:consulta_detail', pk=pk)
+
+
+@login_required
+@require_POST
+def documento_delete(request, doc_pk):
+    if not _can_access(request.user):
+        return HttpResponseForbidden()
+
+    doc = get_object_or_404(ConsultaDocumento, pk=doc_pk)
+    consulta_pk = doc.consulta_id
+    doc.arquivo.delete(save=False)
+    doc.delete()
+    messages.success(request, 'Documento removido.')
+    return redirect('consultas:consulta_detail', pk=consulta_pk)
+
+
+# ---------------------------------------------------------------------------
+# ASO
+# ---------------------------------------------------------------------------
+
+@login_required
+def aso_edit(request, pk):
+    if not _can_access(request.user):
+        return HttpResponseForbidden()
+
+    consulta = get_object_or_404(Consulta, pk=pk)
+    aso = getattr(consulta, 'aso', None)
+
+    form = ASOForm(request.POST or None, instance=aso)
+    if form.is_valid():
+        obj = form.save(commit=False)
+        obj.consulta = consulta
+        if not aso:
+            obj.created_by = request.user
+        obj.save()
+        messages.success(request, 'ASO salvo.')
+        return redirect('consultas:consulta_detail', pk=pk)
+
+    return render(request, 'consultas/aso_form.html', {
+        'form': form, 'consulta': consulta, 'aso': aso,
+    })
 
 
 # ---------------------------------------------------------------------------

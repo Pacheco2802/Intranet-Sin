@@ -6,9 +6,10 @@
             {% elif c.status == 'faltou' %}bg-red-50 border-red-200
             {% elif c.status == 'cancelado' %}bg-gray-50 border-gray-200 opacity-60
             {% elif c.status == 'remarcado' %}bg-amber-50 border-amber-200 opacity-60
+            {% elif c.status == 'finalizado' %}bg-teal-50 border-teal-200
             {% endif %}">
 
-  <div class="font-semibold text-gray-800 truncate mb-0.5">{{ c.patient_name }}</div>
+  <a href="{% url 'consultas:consulta_detail' c.pk %}" class="block font-semibold text-gray-800 truncate mb-0.5 hover:underline">{{ c.patient_name }}</a>
 
   <div class="mb-1.5">
     <span class="px-1.5 py-0.5 rounded-full font-medium
@@ -18,6 +19,7 @@
                  {% elif c.status == 'faltou' %}bg-red-100 text-red-700
                  {% elif c.status == 'cancelado' %}bg-gray-100 text-gray-600
                  {% elif c.status == 'remarcado' %}bg-amber-100 text-amber-700
+                 {% elif c.status == 'finalizado' %}bg-teal-100 text-teal-700
                  {% endif %}">
       {{ c.get_status_display }}
     </span>
@@ -39,7 +41,7 @@
             class="action-btn bg-green-100 text-green-700 hover:bg-green-200">✓ Presente</button>
     {% endif %}
 
-    {% if c.status != 'faltou' and c.status != 'cancelado' and c.status != 'remarcado' %}
+    {% if c.status != 'faltou' and c.status != 'cancelado' and c.status != 'remarcado' and c.status != 'finalizado' %}
     <button hx-post="{% url 'consultas:consulta_status' c.pk %}"
             hx-vals='{"status": "faltou"}'
             hx-target="#card-{{ c.pk }}"
@@ -49,24 +51,30 @@
             title="Faltou">✗ Faltou</button>
     {% endif %}
 
-    {% if c.status != 'cancelado' and c.status != 'remarcado' %}
+    {% if c.status != 'cancelado' and c.status != 'remarcado' and c.status != 'finalizado' %}
     <a href="{% url 'consultas:consulta_reschedule' c.pk %}"
        class="action-btn bg-amber-100 text-amber-700 hover:bg-amber-200"
        title="Remarcar">⟳ Remarcar</a>
     {% endif %}
 
-    {% if c.status != 'remarcado' %}
+    {% if c.status != 'remarcado' and c.status != 'finalizado' %}
     <a href="{% url 'consultas:consulta_edit' c.pk %}"
        class="action-btn bg-gray-100 text-gray-600 hover:bg-gray-200"
        title="Editar">✎</a>
     {% endif %}
 
+    <a href="{% url 'consultas:consulta_detail' c.pk %}"
+       class="action-btn bg-blue-50 text-blue-600 hover:bg-blue-100"
+       title="Prontuário">📋</a>
+
     {% if user == c.created_by or user.can_see_all %}
+    {% if c.status != 'finalizado' %}
     <form method="post" action="{% url 'consultas:consulta_delete' c.pk %}"
           onsubmit="return confirm('Excluir esta consulta?')">
       {% csrf_token %}
       <button type="submit" class="action-btn bg-red-50 text-red-400 hover:bg-red-100" title="Excluir">🗑</button>
     </form>
+    {% endif %}
     {% endif %}
   </div>
 </div>

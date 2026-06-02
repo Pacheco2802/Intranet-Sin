@@ -246,12 +246,14 @@
       <span class="rail-label">Agenda</span>
     </a>
 
+    {% if user.can_access_consultas or user.can_see_all %}
     <a href="{% url 'consultas:agenda' %}"
        class="rail-btn {% if 'consultas' in request.path %}active{% endif %}"
        title="Agenda Médica">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
       <span class="rail-label">Medicina</span>
     </a>
+    {% endif %}
 
     <a href="{% url 'atendimento:list' %}"
        class="rail-btn {% if 'atendimento' in request.path %}active{% endif %}"
@@ -362,6 +364,16 @@
         <a href="{% url 'agenda:event_create' %}" class="nav-item pl-8 text-xs" style="color:rgba(255,255,255,.38);">
           + Novo evento
         </a>
+
+        {% if user.can_access_consultas or user.can_see_all %}
+        <a href="{% url 'consultas:agenda' %}" class="nav-item {% if 'consultas' in request.path %}active{% endif %}">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+          Agenda Médica
+        </a>
+        <a href="{% url 'consultas:consulta_create' %}" class="nav-item pl-8 text-xs" style="color:rgba(255,255,255,.38);">
+          + Nova consulta
+        </a>
+        {% endif %}
 
         <a href="{% url 'atendimento:list' %}" class="nav-item {% if 'atendimento' in request.path %}active{% endif %}">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>

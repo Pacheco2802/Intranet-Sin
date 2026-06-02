@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{% if aso %}Editar ASO{% else %}Emitir ASO{% endif %} — {{ consulta.patient_name }}{% endblock %}
+{% block page_title %}{% if aso %}Editar ASO{% else %}Emitir ASO{% endif %}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'consultas:consulta_detail' consulta.pk %}" class="btn-secondary text-xs">← Prontuário</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-4">
+
+  <!-- Cabeçalho da consulta -->
+  <div class="card bg-purple-50 border border-purple-200">
+    <p class="text-xs text-purple-600 font-semibold uppercase tracking-wide mb-1">Consulta vinculada</p>
+    <p class="font-semibold text-gray-800">{{ consulta.patient_name }}</p>
+    <p class="text-sm text-gray-500 mt-0.5">{{ consulta.doctor }} — {{ consulta.date|date:"d/m/Y" }} às {{ consulta.time|time:"H:i" }}</p>
+  </div>
+
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+
+    <div class="card space-y-4">
+      <h3 class="font-semibold text-gray-700 text-sm border-b pb-2">Dados do ASO</h3>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Tipo de Exame *</label>
+          {{ form.tipo_exame }}
+          {% for err in form.tipo_exame.errors %}<p class="text-red-500 text-xs mt-1">{{ err }}</p>{% endfor %}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Resultado *</label>
+          {{ form.resultado }}
+          {% for err in form.resultado.errors %}<p class="text-red-500 text-xs mt-1">{{ err }}</p>{% endfor %}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">CID-10 <span class="text-gray-300 font-normal normal-case">(opcional)</span></label>
+          {{ form.cid }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Validade (dias)</label>
+          {{ form.validade_dias }}
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Riscos Ocupacionais</label>
+        {{ form.riscos_ocupacionais }}
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Exames Realizados</label>
+        {{ form.exames_realizados }}
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Restrições</label>
+        {{ form.restricoes }}
+      </div>
+    </div>
+
+    <div class="flex gap-3">
+      <button type="submit" class="btn-primary flex-1">
+        {% if aso %}Atualizar ASO{% else %}Emitir ASO{% endif %}
+      </button>
+      <a href="{% url 'consultas:consulta_detail' consulta.pk %}" class="btn-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

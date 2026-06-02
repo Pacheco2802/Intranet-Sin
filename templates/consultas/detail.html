@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+{% block title %}{{ consulta.patient_name }} — Consulta{% endblock %}
+{% block page_title %}Consulta{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'consultas:agenda' %}?date={{ consulta.date|date:'Y-m-d' }}" class="btn-secondary text-xs">← Agenda</a>
+{% if not atendimento.finalizado %}
+<a href="{% url 'consultas:consulta_edit' consulta.pk %}" class="btn-secondary text-xs">✎ Editar</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-4">
+
+  <!-- ── Cabeçalho do paciente ─────────────────────────────────── -->
+  <div class="card">
+    <div class="flex items-start justify-between gap-4 flex-wrap">
+      <div class="flex-1 min-w-0">
+        <h2 class="font-bold text-xl text-gray-800 truncate">{{ consulta.patient_name }}</h2>
+        <p class="text-sm text-gray-500 mt-0.5">
+          <span class="font-medium text-gray-700">{{ consulta.doctor }}</span>
+          {% if consulta.doctor.room %}<span class="text-gray-400"> · {{ consulta.doctor.room }}</span>{% endif %}
+          &nbsp;·&nbsp;
+          {{ consulta.date|date:"d/m/Y" }} às {{ consulta.time|time:"H:i" }}
+          ({{ consulta.duration_minutes }} min)
+        </p>
+        <div class="flex flex-wrap gap-4 mt-2 text-xs text-gray-500">
+          {% if consulta.patient_cpf %}<span>CPF: {{ consulta.patient_cpf }}</span>{% endif %}
+          {% if consulta.patient_phone %}<span>Telefone: {{ consulta.patient_phone }}</span>{% endif %}
+        </div>
+        {% if consulta.notes %}
+        <p class="mt-2 text-sm text-gray-600 italic bg-gray-50 rounded px-2 py-1">{{ consulta.notes }}</p>
+        {% endif %}
+      </div>
+
+      <div class="flex flex-col items-end gap-2 flex-shrink-0">
+        <span class="badge text-sm px-3 py-1
+          {% if consulta.status == 'agendado' %}bg-blue-100 text-blue-700
+          {% elif consulta.status == 'confirmado' %}bg-indigo-100 text-indigo-700
+          {% elif consulta.status == 'presente' %}bg-green-100 text-green-700
+          {% elif consulta.status == 'faltou' %}bg-red-100 text-red-700
+          {% elif consulta.status == 'cancelado' %}bg-gray-100 text-gray-600
+          {% elif consulta.status == 'remarcado' %}bg-amber-100 text-amber-700
+          {% elif consulta.status == 'finalizado' %}bg-teal-100 text-teal-700
+          {% endif %}">
+          {{ consulta.get_status_display }}
+        </span>
+
+        {% if consulta.status != 'finalizado' and consulta.status != 'cancelado' and consulta.status != 'remarcado' %}
+        <div class="flex gap-1 flex-wrap justify-end">
+          {% if consulta.status == 'agendado' %}
+          <button hx-post="{% url 'consultas:consulta_status' consulta.pk %}"
+                  hx-vals='{"status":"confirmado"}'
+                  hx-target="body" hx-push-url="false"
+                  hx-on::after-request="window.location.reload()"
+                  class="btn-secondary text-xs">✓ Confirmar</button>
+          {% elif consulta.status == 'confirmado' %}
+          <button hx-post="{% url 'consultas:consulta_status' consulta.pk %}"
+                  hx-vals='{"status":"presente"}'
+                  hx-target="body" hx-push-url="false"
+                  hx-on::after-request="window.location.reload()"
+                  class="btn-secondary text-xs bg-green-50 border-green-200 text-green-700">✓ Presente</button>
+          {% endif %}
+          {% if consulta.status != 'faltou' %}
+          <button hx-post="{% url 'consultas:consulta_status' consulta.pk %}"
+                  hx-vals='{"status":"faltou"}'
+                  hx-target="body" hx-push-url="false"
+                  hx-on::after-request="window.location.reload()"
+                  hx-confirm="Marcar como faltou?"
+                  class="btn-secondary text-xs bg-red-50 border-red-200 text-red-600">✗ Faltou</button>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        {% if consulta.rescheduled_to %}
+        <a href="{% url 'consultas:consulta_detail' consulta.rescheduled_to.pk %}"
+           class="text-xs text-amber-600 hover:underline">
+          → Remarcada: {{ consulta.rescheduled_to.date|date:"d/m/Y" }} {{ consulta.rescheduled_to.time|time:"H:i" }}
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Prontuário Clínico ─────────────────────────────────────── -->
+  <div class="card" x-data="{ open: true }">
+    <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
+      <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+        Prontuário Clínico
+        {% if atendimento and atendimento.finalizado %}
+        <span class="badge bg-teal-100 text-teal-700 text-xs">Finalizado</span>
+        {% elif atendimento %}
+        <span class="badge bg-yellow-100 text-yellow-700 text-xs">Em andamento</span>
+        {% endif %}
+      </h3>
+      <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open ? 'rotate-180' : ''"
+           fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+      </svg>
+    </div>
+
+    {% if atendimento and atendimento.finalizado %}
+    <!-- Leitura somente quando finalizado -->
+    <div x-show="open" x-transition class="mt-4 space-y-3">
+      <div class="grid grid-cols-3 gap-3 text-sm">
+        {% if atendimento.pressao_arterial %}
+        <div class="bg-gray-50 rounded p-2"><p class="text-xs text-gray-400 mb-0.5">Pressão</p><p class="font-medium">{{ atendimento.pressao_arterial }}</p></div>
+        {% endif %}
+        {% if atendimento.peso %}
+        <div class="bg-gray-50 rounded p-2"><p class="text-xs text-gray-400 mb-0.5">Peso</p><p class="font-medium">{{ atendimento.peso }} kg</p></div>
+        {% endif %}
+        {% if atendimento.altura %}
+        <div class="bg-gray-50 rounded p-2"><p class="text-xs text-gray-400 mb-0.5">Altura</p><p class="font-medium">{{ atendimento.altura }} m</p></div>
+        {% endif %}
+      </div>
+      {% if atendimento.queixa_principal %}
+      <div><p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Queixa Principal</p><p class="text-sm text-gray-700 whitespace-pre-wrap">{{ atendimento.queixa_principal }}</p></div>
+      {% endif %}
+      {% if atendimento.anamnese %}
+      <div><p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Anamnese / Histórico</p><p class="text-sm text-gray-700 whitespace-pre-wrap">{{ atendimento.anamnese }}</p></div>
+      {% endif %}
+      {% if atendimento.exame_clinico %}
+      <div><p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Exame Clínico</p><p class="text-sm text-gray-700 whitespace-pre-wrap">{{ atendimento.exame_clinico }}</p></div>
+      {% endif %}
+      {% if atendimento.diagnostico %}
+      <div><p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Diagnóstico{% if atendimento.cid %} — CID: {{ atendimento.cid }}{% endif %}</p><p class="text-sm text-gray-700 whitespace-pre-wrap">{{ atendimento.diagnostico }}</p></div>
+      {% endif %}
+      {% if atendimento.conduta %}
+      <div><p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Conduta</p><p class="text-sm text-gray-700 whitespace-pre-wrap">{{ atendimento.conduta }}</p></div>
+      {% endif %}
+      <p class="text-xs text-gray-400 pt-2 border-t">
+        Finalizado por {{ atendimento.finalizado_por }} em {{ atendimento.finalizado_em|date:"d/m/Y H:i" }}
+      </p>
+    </div>
+    {% else %}
+    <!-- Formulário editável -->
+    <div x-show="open" x-transition class="mt-4">
+      <form method="post" action="{% url 'consultas:prontuario_save' consulta.pk %}">
+        {% csrf_token %}
+
+        <div class="space-y-4">
+          <!-- Sinais vitais -->
+          <div>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Sinais Vitais</p>
+            <div class="grid grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">Pressão arterial</label>
+                {{ atend_form.pressao_arterial }}
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">Peso (kg)</label>
+                {{ atend_form.peso }}
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">Altura (m)</label>
+                {{ atend_form.altura }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Dados clínicos -->
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Queixa Principal</label>
+            {{ atend_form.queixa_principal }}
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Anamnese / Histórico</label>
+            {{ atend_form.anamnese }}
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Exame Clínico</label>
+            {{ atend_form.exame_clinico }}
+          </div>
+          <div class="grid grid-cols-3 gap-3">
+            <div class="col-span-2">
+              <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Diagnóstico / Impressão</label>
+              {{ atend_form.diagnostico }}
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">CID-10</label>
+              {{ atend_form.cid }}
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Conduta</label>
+            {{ atend_form.conduta }}
+          </div>
+        </div>
+
+        <div class="flex gap-3 mt-4 pt-4 border-t">
+          <button type="submit" name="finalizar" value="0" class="btn-secondary flex-1 text-sm">
+            💾 Salvar rascunho
+          </button>
+          <button type="submit" name="finalizar" value="1"
+                  onclick="return confirm('Finalizar prontuário? Esta ação não pode ser desfeita.')"
+                  class="btn-primary text-sm">
+            ✓ Finalizar consulta
+          </button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Documentos ─────────────────────────────────────────────── -->
+  <div class="card" x-data="{ uploading: false }">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+        <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+        </svg>
+        Documentos
+        {% if documentos %}<span class="badge bg-gray-100 text-gray-600 text-xs">{{ documentos|length }}</span>{% endif %}
+      </h3>
+      <button @click="uploading = !uploading" class="btn-secondary text-xs">
+        + Enviar arquivo
+      </button>
+    </div>
+
+    <!-- Upload form -->
+    <div x-show="uploading" x-transition class="mb-4 p-3 bg-gray-50 rounded-lg border">
+      <form method="post" action="{% url 'consultas:documento_upload' consulta.pk %}" enctype="multipart/form-data" class="space-y-3">
+        {% csrf_token %}
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">Tipo</label>
+            {{ doc_form.tipo }}
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">Título *</label>
+            {{ doc_form.titulo }}
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Arquivo *</label>
+          {{ doc_form.arquivo }}
+        </div>
+        <div class="flex gap-2">
+          <button type="submit" class="btn-primary text-xs">Enviar</button>
+          <button type="button" @click="uploading = false" class="btn-secondary text-xs">Cancelar</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Lista de documentos -->
+    {% if documentos %}
+    <div class="space-y-2">
+      {% for doc in documentos %}
+      <div class="flex items-center justify-between gap-2 p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="text-lg flex-shrink-0">
+            {% if doc.tipo == 'exame' %}🔬
+            {% elif doc.tipo == 'receita' %}💊
+            {% elif doc.tipo == 'atestado' %}📋
+            {% elif doc.tipo == 'encaminhamento' %}➡️
+            {% else %}📄{% endif %}
+          </span>
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-gray-700 truncate">{{ doc.titulo }}</p>
+            <p class="text-xs text-gray-400">{{ doc.get_tipo_display }} · {{ doc.nome_original }} · {{ doc.created_at|date:"d/m/Y" }}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-1 flex-shrink-0">
+          <a href="{{ doc.arquivo.url }}" target="_blank"
+             class="btn-secondary text-xs py-1">↓ Baixar</a>
+          <form method="post" action="{% url 'consultas:documento_delete' doc.pk %}"
+                onsubmit="return confirm('Remover este documento?')">
+            {% csrf_token %}
+            <button type="submit" class="btn-secondary text-xs py-1 text-red-500 border-red-200 hover:bg-red-50">🗑</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-gray-400 text-center py-4">Nenhum documento anexado.</p>
+    {% endif %}
+  </div>
+
+  <!-- ── ASO ───────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+        <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+        ASO — Atestado de Saúde Ocupacional
+        {% if aso %}
+        <span class="badge text-xs
+          {% if aso.resultado == 'apto' %}bg-green-100 text-green-700
+          {% elif aso.resultado == 'apto_restricao' %}bg-yellow-100 text-yellow-700
+          {% else %}bg-red-100 text-red-700{% endif %}">
+          {{ aso.get_resultado_display }}
+        </span>
+        {% endif %}
+      </h3>
+      <a href="{% url 'consultas:aso_edit' consulta.pk %}" class="btn-secondary text-xs">
+        {% if aso %}✎ Editar ASO{% else %}+ Emitir ASO{% endif %}
+      </a>
+    </div>
+
+    {% if aso %}
+    <div class="grid grid-cols-2 gap-4 text-sm">
+      <div>
+        <p class="text-xs text-gray-400 mb-0.5">Tipo de exame</p>
+        <p class="font-medium">{{ aso.get_tipo_exame_display }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-gray-400 mb-0.5">Validade</p>
+        <p class="font-medium">{{ aso.proximo_exame|date:"d/m/Y" }} ({{ aso.validade_dias }} dias)</p>
+      </div>
+      {% if aso.cid %}
+      <div>
+        <p class="text-xs text-gray-400 mb-0.5">CID-10</p>
+        <p class="font-medium">{{ aso.cid }}</p>
+      </div>
+      {% endif %}
+      {% if aso.restricoes %}
+      <div class="col-span-2">
+        <p class="text-xs text-gray-400 mb-0.5">Restrições</p>
+        <p class="text-gray-700">{{ aso.restricoes }}</p>
+      </div>
+      {% endif %}
+      {% if aso.riscos_ocupacionais %}
+      <div class="col-span-2">
+        <p class="text-xs text-gray-400 mb-0.5">Riscos Ocupacionais</p>
+        <p class="text-gray-700">{{ aso.riscos_ocupacionais }}</p>
+      </div>
+      {% endif %}
+      {% if aso.exames_realizados %}
+      <div class="col-span-2">
+        <p class="text-xs text-gray-400 mb-0.5">Exames Realizados</p>
+        <p class="text-gray-700">{{ aso.exames_realizados }}</p>
+      </div>
+      {% endif %}
+    </div>
+    <p class="text-xs text-gray-400 mt-3 pt-3 border-t">
+      Emitido em {{ aso.data_emissao|date:"d/m/Y" }}{% if aso.created_by %} por {{ aso.created_by }}{% endif %}
+    </p>
+    {% else %}
+    <p class="text-sm text-gray-400 text-center py-3">Nenhum ASO emitido para esta consulta.</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
