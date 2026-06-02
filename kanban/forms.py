@@ -140,8 +140,19 @@ class RecurringTaskForm(forms.ModelForm):
         self.fields['assignee'].queryset = CustomUser.objects.filter(
             is_active=True, is_approved=True
         ).order_by('first_name', 'last_name')
-        # Populate choices for day_of_week
         self.fields['day_of_week'].choices = [('', '— selecione —')] + RecurringTask.WEEKDAY_CHOICES
+        # Restringe boards ao que o usuário pode acessar
+        if user is not None:
+            from django.db.models import Q
+            from .models import Board
+            if user.can_see_all:
+                self.fields['board'].queryset = Board.objects.all()
+            else:
+                self.fields['board'].queryset = Board.objects.filter(
+                    Q(department__in=user.departments.all()) |
+                    Q(members=user) |
+                    Q(is_global=True)
+                ).distinct()
 
     def clean(self):
         data = super().clean()

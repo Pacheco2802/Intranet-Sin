@@ -1027,24 +1027,34 @@ def minhas_solicitacoes(request):
 
 # ── Tarefas Recorrentes ───────────────────────────────────────────────────────
 
-def _can_manage_recurring(user):
-    return user.can_see_all or user.role in (user.Role.GERENTE, user.Role.LIDER)
+def _accessible_boards(user):
+    """Boards que o usuário pode ver — mesma lógica do board_list."""
+    if user.can_see_all:
+        return Board.objects.all()
+    return Board.objects.filter(
+        Q(department__in=user.departments.all()) |
+        Q(members=user) |
+        Q(is_global=True)
+    ).distinct()
+
+
+def _can_edit_recurring(user, task):
+    """Criador da tarefa ou admin podem editar/excluir/pausar."""
+    return task.created_by == user or user.can_see_all
 
 
 @login_required
 def recurring_list(request):
-    if not _can_manage_recurring(request.user):
-        return HttpResponseForbidden()
-    tasks = RecurringTask.objects.select_related('board', 'column', 'assignee').order_by('board__name', 'title')
-    if not request.user.can_see_all:
-        tasks = tasks.filter(board__department=request.user.department)
+    accessible = _accessible_boards(request.user).values_list('pk', flat=True)
+    tasks = (RecurringTask.objects
+             .filter(board__in=accessible)
+             .select_related('board', 'column', 'assignee', 'created_by')
+             .order_by('board__name', 'title'))
     return render(request, 'kanban/recurring_list.html', {'tasks': tasks})
 
 
 @login_required
 def recurring_create(request):
-    if not _can_manage_recurring(request.user):
-        return HttpResponseForbidden()
     form = RecurringTaskForm(request.POST or None, user=request.user)
     if request.method == 'POST' and form.is_valid():
         task = form.save(commit=False)
@@ -1052,34 +1062,34 @@ def recurring_create(request):
         task.save()
         messages.success(request, f'Tarefa recorrente "{task.title}" criada.')
         return redirect('kanban:recurring_list')
-    boards = Board.objects.all() if request.user.can_see_all else Board.objects.filter(department=request.user.department)
     return render(request, 'kanban/recurring_form.html', {
-        'form': form, 'title': 'Nova Tarefa Recorrente', 'boards': boards,
+        'form': form, 'title': 'Nova Tarefa Recorrente',
     })
 
 
 @login_required
 def recurring_edit(request, pk):
-    if not _can_manage_recurring(request.user):
+    accessible = _accessible_boards(request.user).values_list('pk', flat=True)
+    task = get_object_or_404(RecurringTask, pk=pk, board__in=accessible)
+    if not _can_edit_recurring(request.user, task):
         return HttpResponseForbidden()
-    task = get_object_or_404(RecurringTask, pk=pk)
     form = RecurringTaskForm(request.POST or None, instance=task, user=request.user)
     if request.method == 'POST' and form.is_valid():
         form.save()
         messages.success(request, f'Tarefa recorrente "{task.title}" atualizada.')
         return redirect('kanban:recurring_list')
-    boards = Board.objects.all() if request.user.can_see_all else Board.objects.filter(department=request.user.department)
     return render(request, 'kanban/recurring_form.html', {
-        'form': form, 'title': f'Editar: {task.title}', 'task': task, 'boards': boards,
+        'form': form, 'title': f'Editar: {task.title}', 'task': task,
     })
 
 
 @login_required
 @require_POST
 def recurring_toggle(request, pk):
-    if not _can_manage_recurring(request.user):
+    accessible = _accessible_boards(request.user).values_list('pk', flat=True)
+    task = get_object_or_404(RecurringTask, pk=pk, board__in=accessible)
+    if not _can_edit_recurring(request.user, task):
         return HttpResponseForbidden()
-    task = get_object_or_404(RecurringTask, pk=pk)
     task.active = not task.active
     task.save(update_fields=['active'])
     status = 'ativada' if task.active else 'pausada'
@@ -1090,9 +1100,10 @@ def recurring_toggle(request, pk):
 @login_required
 @require_POST
 def recurring_delete(request, pk):
-    if not _can_manage_recurring(request.user):
+    accessible = _accessible_boards(request.user).values_list('pk', flat=True)
+    task = get_object_or_404(RecurringTask, pk=pk, board__in=accessible)
+    if not _can_edit_recurring(request.user, task):
         return HttpResponseForbidden()
-    task = get_object_or_404(RecurringTask, pk=pk)
     name = task.title
     task.delete()
     messages.success(request, f'Tarefa recorrente "{name}" excluída.')
@@ -1103,9 +1114,8 @@ def recurring_delete(request, pk):
 @require_POST
 def recurring_run_now(request, pk):
     """Gera o card manualmente, independente do agendamento."""
-    if not _can_manage_recurring(request.user):
-        return HttpResponseForbidden()
-    task = get_object_or_404(RecurringTask, pk=pk)
+    accessible = _accessible_boards(request.user).values_list('pk', flat=True)
+    task = get_object_or_404(RecurringTask, pk=pk, board__in=accessible)
     from django.utils.timezone import now
     card = task.generate_card(now().date())
     messages.success(request, f'Card "{card.title}" gerado no quadro {task.board.name}.')

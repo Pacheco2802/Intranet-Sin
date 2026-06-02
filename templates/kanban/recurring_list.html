@@ -67,7 +67,7 @@
 
     <!-- Ações -->
     <div class="flex items-center gap-2 flex-shrink-0">
-      <!-- Gerar agora -->
+      <!-- Gerar agora — qualquer um com acesso ao board -->
       <form method="post" action="{% url 'kanban:recurring_run_now' task.pk %}">
         {% csrf_token %}
         <button type="submit" class="text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Gerar card agora">
@@ -75,7 +75,8 @@
         </button>
       </form>
 
-      <!-- Pausar/Ativar -->
+      <!-- Pausar/Ativar / Editar / Excluir — somente criador ou admin -->
+      {% if user == task.created_by or user.can_see_all %}
       <form method="post" action="{% url 'kanban:recurring_toggle' task.pk %}">
         {% csrf_token %}
         <button type="submit" class="text-xs px-2 py-1 rounded {% if task.active %}bg-yellow-50 text-yellow-600 hover:bg-yellow-100{% else %}bg-green-50 text-green-600 hover:bg-green-100{% endif %} transition-colors">
@@ -83,12 +84,10 @@
         </button>
       </form>
 
-      <!-- Editar -->
       <a href="{% url 'kanban:recurring_edit' task.pk %}" class="text-xs px-2 py-1 rounded bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors">
         ✏ Editar
       </a>
 
-      <!-- Excluir -->
       <form method="post" action="{% url 'kanban:recurring_delete' task.pk %}"
             onsubmit="return confirm('Excluir tarefa recorrente &quot;{{ task.title }}&quot;? Os cards já gerados não serão apagados.')">
         {% csrf_token %}
@@ -96,6 +95,7 @@
           🗑
         </button>
       </form>
+      {% endif %}
     </div>
 
   </div>
