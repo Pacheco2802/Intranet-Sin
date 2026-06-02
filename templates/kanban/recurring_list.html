@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Tarefas Recorrentes{% endblock %}
+{% block page_title %}Tarefas Recorrentes{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'kanban:board_list' %}" class="btn-secondary text-xs">← Quadros</a>
+<a href="{% url 'kanban:recurring_create' %}" class="btn-primary text-xs">+ Nova Recorrente</a>
+{% endblock %}
+
+{% block content %}
+
+{% if not tasks %}
+<div class="card text-center py-16">
+  <div class="text-5xl mb-4">🔁</div>
+  <p class="text-gray-500 mb-2 font-medium">Nenhuma tarefa recorrente cadastrada.</p>
+  <p class="text-gray-400 text-sm mb-6">Crie tarefas que se repetem automaticamente — diárias, semanais, quinzenais ou mensais.</p>
+  <a href="{% url 'kanban:recurring_create' %}" class="btn-primary inline-block">Criar primeira tarefa</a>
+</div>
+{% else %}
+
+<div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+  🔁 Os cards são gerados automaticamente todo dia às 00h pelo agendador. Você também pode gerar manualmente clicando em <strong>Gerar agora</strong>.
+</div>
+
+<div class="space-y-3">
+  {% for task in tasks %}
+  <div class="card flex items-center gap-4 {% if not task.active %}opacity-60{% endif %}">
+
+    <!-- Indicador ativo/inativo -->
+    <div class="flex-shrink-0">
+      {% if task.active %}
+      <span class="w-2.5 h-2.5 rounded-full bg-green-500 block" title="Ativa"></span>
+      {% else %}
+      <span class="w-2.5 h-2.5 rounded-full bg-gray-300 block" title="Pausada"></span>
+      {% endif %}
+    </div>
+
+    <!-- Info principal -->
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="font-semibold text-gray-900 text-sm">{{ task.title }}</span>
+        <span class="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">
+          {{ task.get_frequency_display }}
+        </span>
+        {% if task.day_of_week is not None and task.frequency in "semanal,quinzenal" %}
+        <span class="text-xs text-gray-400">{{ task.get_day_of_week_display }}</span>
+        {% endif %}
+        {% if task.day_of_month and task.frequency == "mensal" %}
+        <span class="text-xs text-gray-400">dia {{ task.day_of_month }}</span>
+        {% endif %}
+        <span class="text-xs px-2 py-0.5 rounded-full
+          {% if task.priority == 'URGENT' %}bg-purple-100 text-purple-700
+          {% elif task.priority == 'HIGH' %}bg-red-100 text-red-700
+          {% elif task.priority == 'MEDIUM' %}bg-yellow-100 text-yellow-700
+          {% else %}bg-green-100 text-green-700{% endif %}">
+          {{ task.get_priority_display }}
+        </span>
+      </div>
+      <div class="flex items-center gap-3 mt-1 text-xs text-gray-400 flex-wrap">
+        <span>📋 {{ task.board.name }}</span>
+        <span>→ {{ task.column.name }}</span>
+        {% if task.assignee %}<span>👤 {{ task.assignee.get_full_name }}</span>{% endif %}
+        {% if task.due_days_ahead %}<span>⏱ Prazo: {{ task.due_days_ahead }} dia(s) após criação</span>{% endif %}
+        {% if task.last_generated %}<span>Última geração: {{ task.last_generated|date:"d/m/Y" }}</span>
+        {% else %}<span class="text-orange-400">Ainda não gerou nenhum card</span>{% endif %}
+      </div>
+    </div>
+
+    <!-- Ações -->
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <!-- Gerar agora -->
+      <form method="post" action="{% url 'kanban:recurring_run_now' task.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Gerar card agora">
+          ▶ Gerar
+        </button>
+      </form>
+
+      <!-- Pausar/Ativar -->
+      <form method="post" action="{% url 'kanban:recurring_toggle' task.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="text-xs px-2 py-1 rounded {% if task.active %}bg-yellow-50 text-yellow-600 hover:bg-yellow-100{% else %}bg-green-50 text-green-600 hover:bg-green-100{% endif %} transition-colors">
+          {% if task.active %}⏸ Pausar{% else %}▶ Ativar{% endif %}
+        </button>
+      </form>
+
+      <!-- Editar -->
+      <a href="{% url 'kanban:recurring_edit' task.pk %}" class="text-xs px-2 py-1 rounded bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors">
+        ✏ Editar
+      </a>
+
+      <!-- Excluir -->
+      <form method="post" action="{% url 'kanban:recurring_delete' task.pk %}"
+            onsubmit="return confirm('Excluir tarefa recorrente &quot;{{ task.title }}&quot;? Os cards já gerados não serão apagados.')">
+        {% csrf_token %}
+        <button type="submit" class="text-xs px-2 py-1 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
+          🗑
+        </button>
+      </form>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

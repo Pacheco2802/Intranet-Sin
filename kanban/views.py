@@ -11,8 +11,8 @@ from django.views.decorators.http import require_POST
 from core.models import AuditLog, Notification, CustomUser, Department
 from core.middleware import AuditMiddleware
 from core.validators import validate_file_extension, validate_file_size
-from .models import Board, Column, Card, CardComment, CardActivity, SubTask, SubTaskAnexo, CardAnexo
-from .forms import BoardForm, ColumnForm, CardForm, CardCommentForm, SubTaskForm
+from .models import Board, Column, Card, CardComment, CardActivity, SubTask, SubTaskAnexo, CardAnexo, RecurringTask
+from .forms import BoardForm, ColumnForm, CardForm, CardCommentForm, SubTaskForm, RecurringTaskForm
 from .utils import criar_card_automatico, mover_card_para_ultima_coluna, mover_card_para_primeira_coluna
 
 
@@ -1023,3 +1023,100 @@ def minhas_solicitacoes(request):
         'cards': cards,
         'filtro': filtro,
     })
+
+
+# ── Tarefas Recorrentes ───────────────────────────────────────────────────────
+
+def _can_manage_recurring(user):
+    return user.can_see_all or user.role in (user.Role.GERENTE, user.Role.LIDER)
+
+
+@login_required
+def recurring_list(request):
+    if not _can_manage_recurring(request.user):
+        return HttpResponseForbidden()
+    tasks = RecurringTask.objects.select_related('board', 'column', 'assignee').order_by('board__name', 'title')
+    if not request.user.can_see_all:
+        tasks = tasks.filter(board__department=request.user.department)
+    return render(request, 'kanban/recurring_list.html', {'tasks': tasks})
+
+
+@login_required
+def recurring_create(request):
+    if not _can_manage_recurring(request.user):
+        return HttpResponseForbidden()
+    form = RecurringTaskForm(request.POST or None, user=request.user)
+    if request.method == 'POST' and form.is_valid():
+        task = form.save(commit=False)
+        task.created_by = request.user
+        task.save()
+        messages.success(request, f'Tarefa recorrente "{task.title}" criada.')
+        return redirect('kanban:recurring_list')
+    boards = Board.objects.all() if request.user.can_see_all else Board.objects.filter(department=request.user.department)
+    return render(request, 'kanban/recurring_form.html', {
+        'form': form, 'title': 'Nova Tarefa Recorrente', 'boards': boards,
+    })
+
+
+@login_required
+def recurring_edit(request, pk):
+    if not _can_manage_recurring(request.user):
+        return HttpResponseForbidden()
+    task = get_object_or_404(RecurringTask, pk=pk)
+    form = RecurringTaskForm(request.POST or None, instance=task, user=request.user)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, f'Tarefa recorrente "{task.title}" atualizada.')
+        return redirect('kanban:recurring_list')
+    boards = Board.objects.all() if request.user.can_see_all else Board.objects.filter(department=request.user.department)
+    return render(request, 'kanban/recurring_form.html', {
+        'form': form, 'title': f'Editar: {task.title}', 'task': task, 'boards': boards,
+    })
+
+
+@login_required
+@require_POST
+def recurring_toggle(request, pk):
+    if not _can_manage_recurring(request.user):
+        return HttpResponseForbidden()
+    task = get_object_or_404(RecurringTask, pk=pk)
+    task.active = not task.active
+    task.save(update_fields=['active'])
+    status = 'ativada' if task.active else 'pausada'
+    messages.success(request, f'Tarefa "{task.title}" {status}.')
+    return redirect('kanban:recurring_list')
+
+
+@login_required
+@require_POST
+def recurring_delete(request, pk):
+    if not _can_manage_recurring(request.user):
+        return HttpResponseForbidden()
+    task = get_object_or_404(RecurringTask, pk=pk)
+    name = task.title
+    task.delete()
+    messages.success(request, f'Tarefa recorrente "{name}" excluída.')
+    return redirect('kanban:recurring_list')
+
+
+@login_required
+@require_POST
+def recurring_run_now(request, pk):
+    """Gera o card manualmente, independente do agendamento."""
+    if not _can_manage_recurring(request.user):
+        return HttpResponseForbidden()
+    task = get_object_or_404(RecurringTask, pk=pk)
+    from django.utils.timezone import now
+    card = task.generate_card(now().date())
+    messages.success(request, f'Card "{card.title}" gerado no quadro {task.board.name}.')
+    return redirect('kanban:recurring_list')
+
+
+@login_required
+def recurring_columns_api(request, board_pk):
+    """Retorna as colunas de um board para o select dinâmico do formulário."""
+    board = get_object_or_404(Board, pk=board_pk)
+    if not board.can_access(request.user):
+        return JsonResponse({'columns': []})
+    cols = list(board.columns.values('id', 'name').order_by('order'))
+    return JsonResponse({'columns': cols})

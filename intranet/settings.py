@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'kanban',
     'atendimento',
     'agenda',
+    'consultas',
 ]
 
 MIDDLEWARE = [

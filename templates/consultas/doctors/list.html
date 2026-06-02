@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Médicos{% endblock %}
+{% block page_title %}Médicos do Trabalho{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'consultas:agenda' %}" class="btn-secondary text-xs">← Agenda</a>
+<a href="{% url 'consultas:doctor_create' %}" class="btn-primary text-xs">+ Novo Médico</a>
+{% endblock %}
+
+{% block content %}
+
+{% if not doctors %}
+<div class="card text-center py-16">
+  <div class="text-5xl mb-4">⚕</div>
+  <p class="text-gray-500 mb-4">Nenhum médico cadastrado.</p>
+  <a href="{% url 'consultas:doctor_create' %}" class="btn-primary inline-block">Cadastrar primeiro médico</a>
+</div>
+{% else %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for doctor in doctors %}
+  <div class="card flex items-center gap-4 {% if not doctor.active %}opacity-60{% endif %}">
+    <div class="w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0"
+         style="background: {{ doctor.color }}">
+      {{ doctor.name|slice:":1" }}
+    </div>
+    <div class="flex-1 min-w-0">
+      <div class="font-semibold text-gray-800">{{ doctor.name }}</div>
+      {% if doctor.room %}<div class="text-sm text-gray-500">{{ doctor.room }}</div>{% endif %}
+      {% if not doctor.active %}<span class="text-xs text-gray-400">Inativo</span>{% endif %}
+    </div>
+    <a href="{% url 'consultas:doctor_edit' doctor.pk %}"
+       class="text-xs px-2 py-1 rounded bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0">
+      ✎ Editar
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}

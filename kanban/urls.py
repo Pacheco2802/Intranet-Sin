@@ -29,4 +29,12 @@ urlpatterns = [
     path('subtarefa/<int:pk>/toggle/', views.subtask_toggle, name='subtask_toggle'),
     path('subtarefa/<int:pk>/excluir/', views.subtask_delete, name='subtask_delete'),
     path('subtarefa/<int:pk>/anexar/', views.subtask_attach, name='subtask_attach'),
+    # Tarefas recorrentes
+    path('recorrentes/', views.recurring_list, name='recurring_list'),
+    path('recorrentes/nova/', views.recurring_create, name='recurring_create'),
+    path('recorrentes/<int:pk>/editar/', views.recurring_edit, name='recurring_edit'),
+    path('recorrentes/<int:pk>/toggle/', views.recurring_toggle, name='recurring_toggle'),
+    path('recorrentes/<int:pk>/excluir/', views.recurring_delete, name='recurring_delete'),
+    path('recorrentes/<int:pk>/gerar/', views.recurring_run_now, name='recurring_run_now'),
+    path('api/board/<int:board_pk>/colunas/', views.recurring_columns_api, name='recurring_columns_api'),
 ]

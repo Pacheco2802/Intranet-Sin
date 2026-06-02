@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% load consultas_tags %}
+{% block title %}Agenda Médica — {{ date|date:"d/m/Y" }}{% endblock %}
+{% block page_title %}Agenda Médica{% endblock %}
+
+{% block topbar_actions %}
+{% if user.can_see_all %}
+<a href="{% url 'consultas:doctor_list' %}" class="btn-secondary text-xs">⚕ Médicos</a>
+{% endif %}
+<a href="{% url 'consultas:consulta_create' %}?date={{ date|date:'Y-m-d' }}" class="btn-primary text-xs">+ Nova Consulta</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Navegação de data -->
+<div class="flex items-center justify-between mb-5">
+  <a href="?date={{ prev_date|date:'Y-m-d' }}" class="btn-secondary text-sm">← {{ prev_date|date:"d/m" }}</a>
+
+  <div class="text-center">
+    <div class="font-semibold text-gray-800">{{ date|date:"l, d \d\e F \d\e Y" }}</div>
+    {% if date == today %}<span class="text-xs text-blue-600 font-medium">Hoje</span>{% endif %}
+  </div>
+
+  <a href="?date={{ next_date|date:'Y-m-d' }}" class="btn-secondary text-sm">{{ next_date|date:"d/m" }} →</a>
+</div>
+
+{% if not doctors %}
+<div class="card text-center py-16">
+  <div class="text-5xl mb-4">⚕</div>
+  <p class="text-gray-500 mb-2 font-medium">Nenhum médico cadastrado.</p>
+  {% if user.can_see_all %}
+  <a href="{% url 'consultas:doctor_list' %}" class="btn-primary inline-block mt-2">Cadastrar médicos</a>
+  {% endif %}
+</div>
+{% else %}
+
+<div class="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+  <table class="w-full border-collapse">
+    <thead>
+      <tr class="border-b border-gray-200 bg-gray-50">
+        <th class="w-16 text-xs text-gray-400 font-medium text-right pr-3 py-3">Horário</th>
+        {% for doctor in doctors %}
+        <th class="py-3 px-2 text-center min-w-[150px]">
+          <div class="flex flex-col items-center gap-1">
+            <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                 style="background: {{ doctor.color }}">
+              {{ doctor.name|slice:":1" }}
+            </div>
+            <span class="text-sm font-semibold text-gray-700">{{ doctor.name }}</span>
+            {% if doctor.room %}<span class="text-xs text-gray-400">{{ doctor.room }}</span>{% endif %}
+          </div>
+        </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for slot in slots %}
+      <tr class="border-t border-gray-100 hover:bg-gray-50/30">
+        <td class="text-xs text-gray-400 font-mono text-right pr-3 py-1.5 align-top pt-2">{{ slot }}</td>
+        {% for doctor in doctors %}
+        {% with grid_key=doctor.pk|stringformat:"s"|add:"_"|add:slot %}
+        {% with consulta=grid|get_item:grid_key %}
+        <td class="px-1.5 py-1.5 align-top">
+          {% if consulta %}
+            {% include "consultas/_card.html" with c=consulta %}
+          {% else %}
+            <a href="{% url 'consultas:consulta_create' %}?date={{ date|date:'Y-m-d' }}&time={{ slot }}&doctor={{ doctor.pk }}"
+               class="flex items-center justify-center h-8 rounded border-2 border-dashed border-gray-100 text-gray-200 hover:border-blue-300 hover:text-blue-400 hover:bg-blue-50 transition-all text-lg">
+              +
+            </a>
+          {% endif %}
+        </td>
+        {% endwith %}
+        {% endwith %}
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endif %}
+
+<style>
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  border: none;
+  text-decoration: none;
+}
+</style>
+
+{% endblock %}

@@ -231,6 +231,87 @@ class SubTaskAnexo(models.Model):
         return self.nome_original
 
 
+class RecurringTask(models.Model):
+    class Frequency(models.TextChoices):
+        DIARIO     = 'diario',     'Diário'
+        SEMANAL    = 'semanal',    'Semanal'
+        QUINZENAL  = 'quinzenal',  'Quinzenal'
+        MENSAL     = 'mensal',     'Mensal'
+
+    WEEKDAY_CHOICES = [
+        (0, 'Segunda-feira'), (1, 'Terça-feira'), (2, 'Quarta-feira'),
+        (3, 'Quinta-feira'),  (4, 'Sexta-feira'),  (5, 'Sábado'), (6, 'Domingo'),
+    ]
+
+    board        = models.ForeignKey(Board, on_delete=models.CASCADE, related_name='recurring_tasks', verbose_name='Quadro')
+    column       = models.ForeignKey(Column, on_delete=models.CASCADE, related_name='recurring_tasks', verbose_name='Coluna inicial')
+    title        = models.CharField('Título', max_length=200)
+    description  = models.TextField('Descrição', blank=True)
+    assignee     = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='recurring_tasks', verbose_name='Responsável',
+    )
+    priority     = models.CharField('Prioridade', max_length=10, choices=Card.Priority.choices, default=Card.Priority.MEDIUM)
+    tags         = models.CharField('Tags', max_length=200, blank=True)
+    frequency    = models.CharField('Frequência', max_length=15, choices=Frequency.choices)
+    day_of_week  = models.SmallIntegerField('Dia da semana', null=True, blank=True, choices=WEEKDAY_CHOICES,
+                                             help_text='Usado para frequência semanal e quinzenal')
+    day_of_month = models.SmallIntegerField('Dia do mês', null=True, blank=True,
+                                             help_text='Usado para frequência mensal (1–28)')
+    due_days_ahead = models.SmallIntegerField('Prazo (dias após criação)', default=0,
+                                               help_text='0 = sem prazo automático')
+    active         = models.BooleanField('Ativa', default=True)
+    created_by     = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+        related_name='created_recurring_tasks', verbose_name='Criado por',
+    )
+    last_generated = models.DateField('Última geração', null=True, blank=True)
+    created_at     = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Tarefa Recorrente'
+        verbose_name_plural = 'Tarefas Recorrentes'
+        ordering = ['board', 'title']
+
+    def __str__(self):
+        return f'{self.title} ({self.get_frequency_display()})'
+
+    def should_generate_today(self, today) -> bool:
+        from datetime import timedelta
+        lg = self.last_generated
+        f  = self.frequency
+        if f == self.Frequency.DIARIO:
+            return lg is None or lg < today
+        if f == self.Frequency.SEMANAL:
+            return today.weekday() == self.day_of_week and (lg is None or (today - lg).days >= 7)
+        if f == self.Frequency.QUINZENAL:
+            return today.weekday() == self.day_of_week and (lg is None or (today - lg).days >= 14)
+        if f == self.Frequency.MENSAL:
+            return today.day == self.day_of_month and (lg is None or lg.month != today.month or lg.year != today.year)
+        return False
+
+    def generate_card(self, today):
+        from datetime import timedelta
+        suffix = f' — {today.strftime("%d/%m/%Y")}' if self.frequency == self.Frequency.DIARIO else ''
+        tags = ','.join(filter(None, [t.strip() for t in self.tags.split(',') if t.strip()] + ['recorrente']))
+        last = Card.objects.filter(column=self.column).order_by('-order').first()
+        due  = today + timedelta(days=self.due_days_ahead) if self.due_days_ahead else None
+        card = Card.objects.create(
+            column      = self.column,
+            title       = self.title + suffix,
+            description = self.description,
+            assignee    = self.assignee,
+            priority    = self.priority,
+            tags        = tags,
+            due_date    = due,
+            order       = (last.order + 1) if last else 0,
+            creator     = self.created_by,
+        )
+        self.last_generated = today
+        self.save(update_fields=['last_generated'])
+        return card
+
+
 class CardActivity(models.Model):
     card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='activities', verbose_name='Card')
     user = models.ForeignKey(

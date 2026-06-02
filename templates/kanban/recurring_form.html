@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'kanban:recurring_list' %}" class="btn-secondary text-xs">← Tarefas Recorrentes</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto">
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+
+    <!-- Quadro e Coluna -->
+    <div class="card space-y-4">
+      <h3 class="font-semibold text-gray-700 text-sm border-b pb-2">Destino</h3>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Quadro</label>
+        {{ form.board }}
+        {% for err in form.board.errors %}<p class="text-red-500 text-xs mt-1">{{ err }}</p>{% endfor %}
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Coluna inicial</label>
+        {{ form.column }}
+        {% for err in form.column.errors %}<p class="text-red-500 text-xs mt-1">{{ err }}</p>{% endfor %}
+        <p class="text-gray-400 text-xs mt-1">O card será criado nesta coluna automaticamente.</p>
+      </div>
+    </div>
+
+    <!-- Dados do card -->
+    <div class="card space-y-4">
+      <h3 class="font-semibold text-gray-700 text-sm border-b pb-2">Dados do Card</h3>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Título</label>
+        {{ form.title }}
+        {% for err in form.title.errors %}<p class="text-red-500 text-xs mt-1">{{ err }}</p>{% endfor %}
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+          Descrição <span class="text-gray-300 font-normal normal-case">(opcional)</span>
+        </label>
+        {{ form.description }}
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Responsável</label>
+          {{ form.assignee }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Prioridade</label>
+          {{ form.priority }}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+            Tags <span class="text-gray-300 font-normal normal-case">(opcional)</span>
+          </label>
+          {{ form.tags }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+            Prazo automático <span class="text-gray-300 font-normal normal-case">(dias)</span>
+          </label>
+          {{ form.due_days_ahead }}
+          {% for err in form.due_days_ahead.errors %}<p class="text-red-500 text-xs mt-1">{{ err }}</p>{% endfor %}
+          <p class="text-gray-400 text-xs mt-1">0 = sem prazo. Ex: 7 = vence em 7 dias após a criação.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recorrência -->
+    <div class="card space-y-4">
+      <h3 class="font-semibold text-gray-700 text-sm border-b pb-2">Recorrência</h3>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Frequência</label>
+        {{ form.frequency }}
+        {% for err in form.frequency.errors %}<p class="text-red-500 text-xs mt-1">{{ err }}</p>{% endfor %}
+      </div>
+
+      <!-- Dia da semana (semanal/quinzenal) -->
+      <div id="field_day_of_week">
+        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Dia da semana</label>
+        {{ form.day_of_week }}
+        {% for err in form.day_of_week.errors %}<p class="text-red-500 text-xs mt-1">{{ err }}</p>{% endfor %}
+      </div>
+
+      <!-- Dia do mês (mensal) -->
+      <div id="field_day_of_month">
+        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Dia do mês (1–28)</label>
+        {{ form.day_of_month }}
+        {% for err in form.day_of_month.errors %}<p class="text-red-500 text-xs mt-1">{{ err }}</p>{% endfor %}
+      </div>
+
+      {% if task %}
+      <div class="flex items-center gap-2">
+        {{ form.active }}
+        <label class="text-sm text-gray-700">Tarefa ativa (gera cards automaticamente)</label>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="flex gap-3">
+      <button type="submit" class="btn-primary flex-1">Salvar</button>
+      <a href="{% url 'kanban:recurring_list' %}" class="btn-secondary">Cancelar</a>
+    </div>
+
+  </form>
+</div>
+
+<script>
+(function () {
+  const freq     = document.getElementById('id_rt_frequency');
+  const wdField  = document.getElementById('field_day_of_week');
+  const domField = document.getElementById('field_day_of_month');
+
+  function update() {
+    const v = freq ? freq.value : '';
+    wdField.style.display  = (v === 'semanal' || v === 'quinzenal') ? '' : 'none';
+    domField.style.display = (v === 'mensal')  ? '' : 'none';
+  }
+
+  if (freq) { freq.addEventListener('change', update); update(); }
+
+  // Coluna dinâmica por board
+  const boardSel  = document.getElementById('id_rt_board');
+  const columnSel = document.getElementById('id_rt_column');
+
+  if (boardSel && columnSel) {
+    boardSel.addEventListener('change', function () {
+      const boardId = this.value;
+      if (!boardId) { columnSel.innerHTML = '<option value="">— selecione o quadro primeiro —</option>'; return; }
+      fetch(`/kanban/api/board/${boardId}/colunas/`)
+        .then(r => r.json())
+        .then(data => {
+          columnSel.innerHTML = data.columns.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        });
+    });
+  }
+})();
+</script>
+{% endblock %}

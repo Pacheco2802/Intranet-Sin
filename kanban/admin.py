@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Board, Column, Card, CardComment, CardActivity
+from .models import Board, Column, Card, CardComment, CardActivity, RecurringTask
 
 
 class ColumnInline(admin.TabularInline):
@@ -19,3 +19,10 @@ class CardAdmin(admin.ModelAdmin):
     list_display = ('title', 'column', 'assignee', 'priority', 'due_date', 'created_at')
     list_filter = ('priority', 'column__board')
     search_fields = ('title', 'description')
+
+
+@admin.register(RecurringTask)
+class RecurringTaskAdmin(admin.ModelAdmin):
+    list_display = ('title', 'board', 'frequency', 'active', 'last_generated', 'created_by')
+    list_filter  = ('frequency', 'active', 'board')
+    search_fields = ('title',)

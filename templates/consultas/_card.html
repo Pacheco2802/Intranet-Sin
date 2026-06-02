@@ -1,0 +1,72 @@
+<div id="card-{{ c.pk }}"
+     class="rounded-lg border p-2 text-xs w-full
+            {% if c.status == 'agendado' %}bg-blue-50 border-blue-200
+            {% elif c.status == 'confirmado' %}bg-indigo-50 border-indigo-200
+            {% elif c.status == 'presente' %}bg-green-50 border-green-200
+            {% elif c.status == 'faltou' %}bg-red-50 border-red-200
+            {% elif c.status == 'cancelado' %}bg-gray-50 border-gray-200 opacity-60
+            {% elif c.status == 'remarcado' %}bg-amber-50 border-amber-200 opacity-60
+            {% endif %}">
+
+  <div class="font-semibold text-gray-800 truncate mb-0.5">{{ c.patient_name }}</div>
+
+  <div class="mb-1.5">
+    <span class="px-1.5 py-0.5 rounded-full font-medium
+                 {% if c.status == 'agendado' %}bg-blue-100 text-blue-700
+                 {% elif c.status == 'confirmado' %}bg-indigo-100 text-indigo-700
+                 {% elif c.status == 'presente' %}bg-green-100 text-green-700
+                 {% elif c.status == 'faltou' %}bg-red-100 text-red-700
+                 {% elif c.status == 'cancelado' %}bg-gray-100 text-gray-600
+                 {% elif c.status == 'remarcado' %}bg-amber-100 text-amber-700
+                 {% endif %}">
+      {{ c.get_status_display }}
+    </span>
+  </div>
+
+  <!-- Ações rápidas via HTMX -->
+  <div class="flex flex-wrap gap-1">
+    {% if c.status == 'agendado' %}
+    <button hx-post="{% url 'consultas:consulta_status' c.pk %}"
+            hx-vals='{"status": "confirmado"}'
+            hx-target="#card-{{ c.pk }}"
+            hx-swap="outerHTML"
+            class="action-btn bg-indigo-100 text-indigo-700 hover:bg-indigo-200">✓ Confirmar</button>
+    {% elif c.status == 'confirmado' %}
+    <button hx-post="{% url 'consultas:consulta_status' c.pk %}"
+            hx-vals='{"status": "presente"}'
+            hx-target="#card-{{ c.pk }}"
+            hx-swap="outerHTML"
+            class="action-btn bg-green-100 text-green-700 hover:bg-green-200">✓ Presente</button>
+    {% endif %}
+
+    {% if c.status != 'faltou' and c.status != 'cancelado' and c.status != 'remarcado' %}
+    <button hx-post="{% url 'consultas:consulta_status' c.pk %}"
+            hx-vals='{"status": "faltou"}'
+            hx-target="#card-{{ c.pk }}"
+            hx-swap="outerHTML"
+            hx-confirm="Marcar como faltou?"
+            class="action-btn bg-red-100 text-red-600 hover:bg-red-200"
+            title="Faltou">✗ Faltou</button>
+    {% endif %}
+
+    {% if c.status != 'cancelado' and c.status != 'remarcado' %}
+    <a href="{% url 'consultas:consulta_reschedule' c.pk %}"
+       class="action-btn bg-amber-100 text-amber-700 hover:bg-amber-200"
+       title="Remarcar">⟳ Remarcar</a>
+    {% endif %}
+
+    {% if c.status != 'remarcado' %}
+    <a href="{% url 'consultas:consulta_edit' c.pk %}"
+       class="action-btn bg-gray-100 text-gray-600 hover:bg-gray-200"
+       title="Editar">✎</a>
+    {% endif %}
+
+    {% if user == c.created_by or user.can_see_all %}
+    <form method="post" action="{% url 'consultas:consulta_delete' c.pk %}"
+          onsubmit="return confirm('Excluir esta consulta?')">
+      {% csrf_token %}
+      <button type="submit" class="action-btn bg-red-50 text-red-400 hover:bg-red-100" title="Excluir">🗑</button>
+    </form>
+    {% endif %}
+  </div>
+</div>

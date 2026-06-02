@@ -2,6 +2,9 @@
 {% block title %}Quadros Kanban{% endblock %}
 {% block page_title %}Quadros Kanban{% endblock %}
 {% block topbar_actions %}
+{% if user.can_see_all or user.role in "GERENTE,LIDER" %}
+<a href="{% url 'kanban:recurring_list' %}" class="btn-secondary text-xs">🔁 Recorrentes</a>
+{% endif %}
 {% if user.can_see_all %}
 <a href="{% url 'kanban:analise' %}" class="btn-secondary text-xs">Análise</a>
 <a href="{% url 'kanban:board_create' %}" class="btn-primary text-xs">+ Novo Quadro</a>
