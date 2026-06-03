@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
@@ -7,7 +8,8 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 
 from core.models import Notification
-from .models import Event, EventParticipant
+from core.validators import validate_file_extension, validate_file_size
+from .models import Event, EventParticipant, EventDocumento
 from .forms import EventForm
 
 
@@ -59,7 +61,7 @@ def event_create(request):
 @login_required
 def event_detail(request, pk):
     event = get_object_or_404(
-        Event.objects.prefetch_related('participants__user'),
+        Event.objects.prefetch_related('participants__user', 'documentos__enviado_por'),
         pk=pk,
     )
     user = request.user
@@ -73,7 +75,59 @@ def event_detail(request, pk):
         'my_participation': my_participation,
         'is_creator': is_creator,
         'can_edit': is_creator or user.is_admin_ti,
+        'documentos': event.documentos.all(),
     })
+
+
+@login_required
+@require_POST
+def evento_documento_upload(request, pk):
+    event = get_object_or_404(Event, pk=pk)
+    user = request.user
+    is_participant = event.participants.filter(user=user).exists()
+    if not (event.created_by == user or is_participant or user.can_see_all):
+        return HttpResponseForbidden()
+
+    arquivo = request.FILES.get('arquivo')
+    titulo = request.POST.get('titulo', '').strip()
+
+    if not arquivo:
+        messages.error(request, 'Selecione um arquivo.')
+        return redirect('agenda:event_detail', pk=pk)
+
+    if not titulo:
+        titulo = arquivo.name
+
+    try:
+        validate_file_extension(arquivo)
+        validate_file_size(arquivo)
+    except ValidationError as e:
+        messages.error(request, e.message)
+        return redirect('agenda:event_detail', pk=pk)
+
+    EventDocumento.objects.create(
+        event=event,
+        titulo=titulo,
+        arquivo=arquivo,
+        nome_original=arquivo.name,
+        enviado_por=user,
+    )
+    messages.success(request, f'Documento "{titulo}" anexado.')
+    return redirect('agenda:event_detail', pk=pk)
+
+
+@login_required
+@require_POST
+def evento_documento_delete(request, doc_pk):
+    doc = get_object_or_404(EventDocumento, pk=doc_pk)
+    event_pk = doc.event_id
+    user = request.user
+    if not (doc.enviado_por == user or doc.event.created_by == user or user.can_see_all):
+        return HttpResponseForbidden()
+    doc.arquivo.delete(save=False)
+    doc.delete()
+    messages.success(request, 'Documento removido.')
+    return redirect('agenda:event_detail', pk=event_pk)
 
 
 @login_required

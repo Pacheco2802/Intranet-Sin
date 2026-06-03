@@ -189,7 +189,7 @@
         </div>
       </template>
 
-      <p class="text-xs text-gray-400 mt-1.5">Máximo de 5 arquivos, 5 MB cada (10 MB no total).</p>
+      <p class="text-xs text-gray-400 mt-1.5">Máximo de 10 arquivos, 5 MB cada (25 MB no total).</p>
     </div>
 
     <!-- Ações -->
@@ -211,8 +211,8 @@
 
 <script>
 const _MAX_FILE  = 5 * 1024 * 1024;
-const _MAX_TOTAL = 10 * 1024 * 1024;
-const _MAX_COUNT = 5;
+const _MAX_TOTAL = 25 * 1024 * 1024;
+const _MAX_COUNT = 10;
 
 function deptPicker() {
   const depts = [

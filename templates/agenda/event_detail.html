@@ -52,6 +52,66 @@
       {% endif %}
     </div>
 
+    <!-- Documentos -->
+    <div class="card">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-gray-700">
+          📎 Documentos
+          {% if documentos %}<span class="ml-1 text-xs text-gray-400">({{ documentos|length }})</span>{% endif %}
+        </h3>
+      </div>
+
+      {% if documentos %}
+      <ul class="space-y-2 mb-4">
+        {% for doc in documentos %}
+        <li class="flex items-center justify-between gap-2 py-1.5 border-b border-gray-50 last:border-0">
+          <a href="{{ doc.arquivo.url }}" target="_blank"
+             class="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 min-w-0 flex-1 transition-colors">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+            </svg>
+            <span class="truncate">{{ doc.titulo }}</span>
+          </a>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <span class="text-xs text-gray-400">{{ doc.enviado_por.first_name|default:"" }} · {{ doc.created_at|date:"d/m H:i" }}</span>
+            {% if doc.enviado_por == request.user or can_edit %}
+            <form method="post" action="{% url 'agenda:documento_delete' doc.pk %}"
+                  onsubmit="return confirm('Remover este documento?')">
+              {% csrf_token %}
+              <button type="submit" class="text-gray-300 hover:text-red-500 transition-colors text-xs leading-none">✕</button>
+            </form>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <!-- Upload form -->
+      <form method="post" action="{% url 'agenda:documento_upload' event.pk %}"
+            enctype="multipart/form-data" class="space-y-2">
+        {% csrf_token %}
+        <div class="flex gap-2">
+          <input type="text" name="titulo" placeholder="Título do documento (opcional)"
+                 class="form-input text-sm flex-1 py-1.5">
+        </div>
+        <div class="flex gap-2 items-center">
+          <label class="flex-1 flex items-center gap-2 cursor-pointer border border-dashed border-gray-200 rounded-lg px-3 py-2 hover:border-blue-300 hover:bg-blue-50/20 transition-colors">
+            <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+            </svg>
+            <span class="text-sm text-gray-500" id="file-label-agenda">Selecionar arquivo…</span>
+            <input type="file" name="arquivo" class="hidden"
+                   onchange="document.getElementById('file-label-agenda').textContent = this.files[0]?.name || 'Selecionar arquivo…'">
+          </label>
+          <button type="submit" class="btn-primary text-xs py-2 flex-shrink-0">Anexar</button>
+        </div>
+        <p class="text-xs text-gray-400">PDF, DOC, XLS, imagens, ZIP — máximo 5 MB por arquivo.</p>
+      </form>
+    </div>
+
     <!-- Confirm / Decline for participant -->
     {% if my_participation and not event.is_past %}
     <div class="card bg-amber-50 border-amber-200">
