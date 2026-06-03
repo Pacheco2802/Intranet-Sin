@@ -49,7 +49,7 @@ class AtendimentoForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['cpf'].required = True
         self.fields['nome_filiado'].required = True
-        self.fields['assunto'].required = True
+        self.fields['assunto'].required = False
         self.fields['nextqs_fila'].required = False
         self.fields['is_retorno'].required = False
 

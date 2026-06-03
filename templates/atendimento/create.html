@@ -2,24 +2,51 @@
 {% block title %}Novo Atendimento{% endblock %}
 {% block page_title %}Novo Atendimento{% endblock %}
 {% block topbar_actions %}
-<a href="{% url 'atendimento:list' %}" class="btn-secondary text-xs">← Voltar</a>
-<a href="{% url 'atendimento:painel' %}" class="btn-secondary text-xs">📋 Painel do Dia</a>
+<a href="{% url 'atendimento:painel' %}" class="btn-secondary text-xs">← Painel</a>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
-  <form method="post" enctype="multipart/form-data" novalidate>
+<div class="max-w-xl mx-auto">
+  <form method="post" enctype="multipart/form-data" novalidate x-data="{ fila: '', retorno: false }">
     {% csrf_token %}
 
-    <!-- Dados do filiado -->
+    <!-- 1. Fila -->
+    <div class="card mb-4">
+      <h3 class="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">🎫 Para qual fila?</h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+
+        {% for value, label in form.nextqs_fila.field.choices %}
+        {% if value %}
+        <label class="relative cursor-pointer">
+          <input type="radio" name="nextqs_fila" value="{{ value }}"
+                 x-model="fila" class="sr-only peer">
+          <div class="flex flex-col items-center justify-center px-3 py-3 rounded-xl border-2 border-gray-200 text-center
+                      peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300 transition-all">
+            <span class="text-xl font-bold font-mono
+                         {% if value == 'J' %}text-blue-600
+                         {% elif value == 'P' %}text-purple-600
+                         {% elif value == 'T' %}text-orange-600
+                         {% elif value == 'A' %}text-teal-600
+                         {% elif value == 'M' %}text-emerald-600
+                         {% endif %}">{{ value }}</span>
+            <span class="text-xs text-gray-600 mt-1 leading-tight">{{ label }}</span>
+          </div>
+        </label>
+        {% endif %}
+        {% endfor %}
+
+      </div>
+      <p class="text-xs text-gray-400 mt-3">Selecionar a fila emite a senha automaticamente e aciona a impressão do ticket.</p>
+    </div>
+
+    <!-- 2. Dados do filiado -->
     <div class="card mb-4">
       <h3 class="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">👤 Dados do filiado</h3>
 
-      <!-- Resultado do lookup de CPF -->
       <div id="cpf-lookup-result" class="mb-4"></div>
 
-      <div class="space-y-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-medium text-gray-500 mb-1">CPF <span class="text-red-500">*</span></label>
             {{ form.cpf }}
@@ -31,7 +58,7 @@
             {% if form.nome_filiado.errors %}<p class="text-red-500 text-xs mt-1">{{ form.nome_filiado.errors|join:" " }}</p>{% endif %}
           </div>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-medium text-gray-500 mb-1">Telefone</label>
             {{ form.telefone }}
@@ -43,11 +70,11 @@
         </div>
 
         <!-- Retorno (mostrado via JS após lookup) -->
-        <div id="retorno-section" class="hidden space-y-3 pt-2 border-t border-gray-100">
+        <div id="retorno-section" class="hidden space-y-2 pt-2 border-t border-gray-100">
           <div class="flex items-center gap-2">
             {{ form.is_retorno }}
             <label class="text-sm font-medium text-gray-700 cursor-pointer" for="{{ form.is_retorno.id_for_label }}">
-              É um retorno de atendimento anterior?
+              É retorno de atendimento anterior?
             </label>
           </div>
           <div id="retorno-select-wrap" class="hidden">
@@ -60,40 +87,36 @@
       </div>
     </div>
 
-    <!-- Fila NextQS -->
-    <div class="card mb-4">
-      <h3 class="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">🎫 Fila — NextQS</h3>
-      <p class="text-xs text-gray-400 mb-3">Selecionar a fila vai emitir a senha e acionará a impressão automática do ticket.</p>
-      <div>
-        <label class="block text-xs font-medium text-gray-500 mb-1">Fila de atendimento</label>
-        {{ form.nextqs_fila }}
-      </div>
-    </div>
-
-    <!-- Atendimento -->
-    <div class="card mb-4">
-      <h3 class="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">📋 Atendimento</h3>
-      <div class="space-y-4">
+    <!-- 3. Informações adicionais (colapsável) -->
+    <details class="card mb-4 group">
+      <summary class="font-semibold text-gray-700 text-sm cursor-pointer list-none flex items-center justify-between">
+        <span>📝 Informações adicionais <span class="text-gray-400 font-normal">(opcional)</span></span>
+        <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </summary>
+      <div class="mt-4 pt-3 border-t border-gray-100 space-y-3">
         <div>
-          <label class="block text-xs font-medium text-gray-500 mb-1">Assunto <span class="text-red-500">*</span></label>
-          {{ form.assunto }}
-          {% if form.assunto.errors %}<p class="text-red-500 text-xs mt-1">{{ form.assunto.errors|join:" " }}</p>{% endif %}
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-gray-500 mb-1">Descrição inicial</label>
+          <label class="block text-xs font-medium text-gray-500 mb-1">Observações iniciais</label>
           {{ form.descricao }}
         </div>
         <div>
-          <label class="block text-xs font-medium text-gray-500 mb-1">Anexar documento (opcional)</label>
+          <label class="block text-xs font-medium text-gray-500 mb-1">Anexar documento</label>
           <input type="file" name="arquivo" class="form-input text-sm">
         </div>
       </div>
-    </div>
+    </details>
 
     <div class="flex gap-3">
-      <button type="submit" class="btn-primary">Abrir atendimento</button>
-      <a href="{% url 'atendimento:list' %}" class="btn-secondary">Cancelar</a>
+      <button type="submit" class="btn-primary flex-1 flex items-center justify-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+        </svg>
+        Emitir senha
+      </button>
+      <a href="{% url 'atendimento:painel' %}" class="btn-secondary">Cancelar</a>
     </div>
+
   </form>
 </div>
 
@@ -117,7 +140,6 @@ document.addEventListener('htmx:afterRequest', function(e) {
       if (data.telefone) document.getElementById('id_telefone').value = data.telefone;
       if (data.email) document.getElementById('id_email_filiado').value = data.email;
       retornoSection.classList.remove('hidden');
-      // populate retorno_de select
       const sel = document.getElementById('id_retorno_de');
       sel.innerHTML = '<option value="">Selecionar atendimento anterior</option>';
       (data.anteriores || []).forEach(function(a) {

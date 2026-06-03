@@ -91,6 +91,23 @@ _FILA_PARA_DEPT = {
     'M': 'Saúde do Trabalhador',
 }
 
+_FILA_LABELS = {
+    'J': 'Jurídico',
+    'P': 'Previdenciário',
+    'T': 'Trabalhista',
+    'A': 'Andamento de Processo',
+    'M': 'Médico do Trabalho',
+}
+
+
+def _filas_do_usuario(user):
+    """Retorna lista de letras de fila visíveis para o usuário, ou None para admins."""
+    if user.can_see_all:
+        return None
+    dept_names = set(user.departments.values_list('name', flat=True))
+    filas = [alpha for alpha, dept in _FILA_PARA_DEPT.items() if dept in dept_names]
+    return filas if filas else None
+
 
 def _encaminhar_automatico(at, criador):
     """Encaminha automaticamente o atendimento para o departamento correto conforme a fila."""
@@ -230,6 +247,10 @@ def atendimento_create(request):
         # Encaminhamento automático baseado na fila
         _encaminhar_automatico(at, request.user)
 
+        if not at.assunto and at.nextqs_fila:
+            at.assunto = _FILA_LABELS.get(at.nextqs_fila, at.nextqs_fila)
+            at.save(update_fields=['assunto'])
+
         if at.nextqs_fila:
             from .nextqs import emitir_senha
             ok, ticket = emitir_senha(at)
@@ -245,7 +266,7 @@ def atendimento_create(request):
             resource_type='Atendimento', resource_id=at.pk,
             ip=AuditMiddleware.get_client_ip(request),
         )
-        return redirect('atendimento:detail', pk=at.pk)
+        return redirect('atendimento:painel')
 
     return render(request, 'atendimento/create.html', {'form': form})
 
@@ -424,6 +445,10 @@ def nextqs_chamar(request, pk):
         messages.success(request, f'Senha {at.nextqs_fila}{at.numero_senha} chamada no display!')
     else:
         messages.error(request, f'Erro NextQS: {msg}')
+
+    next_url = request.POST.get('next', 'detail')
+    if next_url == 'painel':
+        return redirect('atendimento:painel')
     return redirect('atendimento:detail', pk=pk)
 
 
@@ -540,13 +565,22 @@ def atendimento_painel(request):
     _sync_nextqs_fila()
 
     hoje = localdate()
+    filas = _filas_do_usuario(request.user)
+    is_profissional = filas is not None
+
     base = _qs_visivel(request.user)
+    if filas:
+        base = base.filter(nextqs_fila__in=filas)
+
     triagem = list(base.filter(status=Atendimento.Status.TRIAGEM, created_at__date=hoje))
     encaminhados = list(base.filter(status=Atendimento.Status.ENCAMINHADO, created_at__date=hoje))
     em_andamento = list(base.filter(status=Atendimento.Status.EM_ANDAMENTO, created_at__date=hoje))
     concluidos = list(base.filter(status=Atendimento.Status.CONCLUIDO, concluido_em__date=hoje))
 
     fila_ao_vivo = _fila_nextqs_ao_vivo()
+    if filas:
+        fila_ao_vivo = [t for t in fila_ao_vivo if t.get('alpha') in filas]
+
     senhas_registradas = {
         f'{at.nextqs_fila}{at.numero_senha}'
         for at in triagem + encaminhados + em_andamento + concluidos
@@ -561,15 +595,67 @@ def atendimento_painel(request):
         else:
             at.espera_min = None
 
+    # Rótulo do departamento para o cabeçalho do painel profissional
+    minha_fila_label = ''
+    if filas:
+        dept_names = {_FILA_PARA_DEPT.get(f) for f in filas if _FILA_PARA_DEPT.get(f)}
+        minha_fila_label = ' / '.join(sorted(dept_names))
+
+    # Fila aguardando = triagem + encaminhados (para o profissional, são os que precisam ser chamados)
+    aguardando = triagem + encaminhados
+
     return render(request, 'atendimento/painel.html', {
         'triagem': triagem,
         'encaminhados': encaminhados,
+        'aguardando': aguardando,
         'em_andamento': em_andamento,
         'concluidos': concluidos,
         'hoje': hoje,
         'fila_ao_vivo': fila_ao_vivo,
         'fila_sem_atendimento': fila_sem_atendimento,
+        'is_profissional': is_profissional,
+        'minha_fila_label': minha_fila_label,
     })
+
+
+@login_required
+def atendimento_concluir_rapido(request, pk):
+    at = get_object_or_404(_qs_visivel(request.user), pk=pk)
+    if request.method != 'POST':
+        return redirect('atendimento:detail', pk=pk)
+    if not _pode_agir(at, request.user):
+        return HttpResponseForbidden()
+    if at.status in (Atendimento.Status.CONCLUIDO, Atendimento.Status.CANCELADO):
+        messages.warning(request, 'Este atendimento já foi encerrado.')
+        return redirect('atendimento:painel')
+
+    descricao = request.POST.get('descricao', '').strip()
+    if not descricao:
+        messages.error(request, 'Informe o que foi acordado antes de finalizar.')
+        return redirect('atendimento:painel')
+
+    ts = now()
+    AtendimentoEtapa.objects.create(
+        atendimento=at,
+        tipo=AtendimentoEtapa.Tipo.CONCLUSAO,
+        autor=request.user,
+        departamento=request.user.department,
+        descricao=descricao,
+    )
+    update_fields = ['status', 'concluido_em', 'updated_at']
+    at.status = Atendimento.Status.CONCLUIDO
+    at.concluido_em = ts
+    if not at.iniciado_em:
+        at.iniciado_em = ts
+        update_fields.append('iniciado_em')
+    at.save(update_fields=update_fields)
+    AuditLog.log(
+        request.user, AuditLog.Action.ATENDIMENTO_CLOSE,
+        resource_type='Atendimento', resource_id=at.pk,
+        ip=AuditMiddleware.get_client_ip(request),
+    )
+    messages.success(request, f'Atendimento de {at.nome_filiado} concluído.')
+    return redirect('atendimento:painel')
 
 
 @login_required
