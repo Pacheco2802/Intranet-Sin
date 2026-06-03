@@ -41,9 +41,27 @@ def event_list(request):
     return render(request, 'agenda/list.html', {'upcoming': upcoming, 'past': past})
 
 
+def _salvar_documentos(request, event):
+    """Processa arquivos enviados via name='arquivos' e cria EventDocumento."""
+    for arquivo in request.FILES.getlist('arquivos'):
+        try:
+            validate_file_extension(arquivo)
+            validate_file_size(arquivo)
+        except ValidationError as e:
+            messages.warning(request, f'{arquivo.name}: {e.message}')
+            continue
+        EventDocumento.objects.create(
+            event=event,
+            titulo=arquivo.name,
+            arquivo=arquivo,
+            nome_original=arquivo.name,
+            enviado_por=request.user,
+        )
+
+
 @login_required
 def event_create(request):
-    form = EventForm(request.POST or None, current_user=request.user)
+    form = EventForm(request.POST or None, request.FILES or None, current_user=request.user)
     if request.method == 'POST' and form.is_valid():
         event = form.save(commit=False)
         event.created_by = request.user
@@ -53,6 +71,7 @@ def event_create(request):
             _notify_invite(event, user, request.user)
             ep.notified_invite = True
             ep.save(update_fields=['notified_invite'])
+        _salvar_documentos(request, event)
         messages.success(request, f'Evento "{event.title}" criado.')
         return redirect('agenda:event_detail', pk=event.pk)
     return render(request, 'agenda/event_form.html', {'form': form, 'title': 'Novo Evento'})
@@ -136,19 +155,18 @@ def event_edit(request, pk):
     if not (event.created_by == request.user or request.user.is_admin_ti):
         return HttpResponseForbidden()
     existing_participants = set(event.participants.values_list('user_id', flat=True))
-    form = EventForm(request.POST or None, instance=event, current_user=request.user)
+    form = EventForm(request.POST or None, request.FILES or None, instance=event, current_user=request.user)
     if request.method == 'POST' and form.is_valid():
         event = form.save()
         new_participants = set(u.pk for u in form.cleaned_data['participants'])
-        # Add new participants and notify them
         for user in form.cleaned_data['participants']:
             ep, created = EventParticipant.objects.get_or_create(event=event, user=user)
             if created:
                 _notify_invite(event, user, request.user)
                 ep.notified_invite = True
                 ep.save(update_fields=['notified_invite'])
-        # Remove participants no longer selected
         event.participants.filter(user_id__in=existing_participants - new_participants).delete()
+        _salvar_documentos(request, event)
         messages.success(request, f'Evento "{event.title}" atualizado.')
         return redirect('agenda:event_detail', pk=event.pk)
     return render(request, 'agenda/event_form.html', {'form': form, 'event': event, 'title': f'Editar: {event.title}'})

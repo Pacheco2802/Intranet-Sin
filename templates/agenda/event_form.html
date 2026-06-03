@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="max-w-2xl mx-auto card">
-  <form method="post" class="space-y-4" x-data="eventParticipantPicker()">
+  <form method="post" enctype="multipart/form-data" class="space-y-4" x-data="eventParticipantPicker()">
     {% csrf_token %}
 
     <div>
@@ -100,6 +100,51 @@
       </template>
 
       {% for err in form.participants.errors %}<p class="text-xs text-red-500 mt-1">{{ err }}</p>{% endfor %}
+    </div>
+
+    <!-- Documentos -->
+    <div class="border-t border-gray-100 pt-4" x-data="{
+      files: [], errors: [],
+      onFiles(e) {
+        const MAX = 5 * 1024 * 1024;
+        const raw = Array.from(e.target.files);
+        this.files = raw.map(f => ({ name: f.name, sizeLabel: (f.size/1048576).toFixed(2)+' MB', tooBig: f.size > MAX }));
+        this.errors = [];
+        const big = this.files.filter(f => f.tooBig);
+        if (big.length) this.errors.push(big.length + ' arquivo(s) excedem 5 MB: ' + big.map(f => f.name).join(', ') + '.');
+      }
+    }">
+      <p class="text-sm font-medium text-gray-700 mb-1">📎 Documentos <span class="text-gray-400 font-normal text-xs">(opcional)</span></p>
+      <p class="text-xs text-gray-400 mb-2">PDF, DOC, XLS, imagens, ZIP — máximo 5 MB por arquivo.</p>
+
+      <label class="flex items-center gap-2 cursor-pointer border border-dashed border-gray-200 rounded-xl px-4 py-3 hover:border-blue-300 hover:bg-blue-50/20 transition-colors"
+             :class="errors.length ? 'border-red-300 bg-red-50/20' : ''">
+        <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+        </svg>
+        <span class="text-sm text-gray-500" x-text="files.length ? files.length + ' arquivo(s) selecionado(s)' : 'Selecionar arquivos…'"></span>
+        <input type="file" name="arquivos" multiple class="hidden" @change="onFiles($event)">
+      </label>
+
+      <template x-if="files.length">
+        <ul class="mt-2 space-y-1">
+          <template x-for="(f, i) in files" :key="i">
+            <li class="flex items-center justify-between text-xs px-2 py-1 rounded-lg"
+                :class="f.tooBig ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-600'">
+              <span class="truncate max-w-xs" x-text="f.name"></span>
+              <span class="ml-2 flex-shrink-0 font-mono" x-text="f.sizeLabel"></span>
+            </li>
+          </template>
+        </ul>
+      </template>
+
+      <template x-if="errors.length">
+        <div class="mt-2 space-y-1">
+          <template x-for="(e, i) in errors" :key="i">
+            <p class="text-xs text-red-500">⚠ <span x-text="e"></span></p>
+          </template>
+        </div>
+      </template>
     </div>
 
     <div class="flex gap-3 pt-2">
