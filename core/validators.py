@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'gif', 'zip', 'txt'}
-MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5 MB
 
 
 def validate_file_extension(value):

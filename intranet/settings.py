@@ -169,3 +169,7 @@ NEXTQS_QUEUES = {
     'A': {'id': '69fcecd3f5a07c100b05d9a3', 'label': 'Andamento de Processo'},
     'M': {'id': '6878f94166fd09b66604af9b', 'label': 'Médico do Trabalho'},
 }
+
+# ── Limites de upload ────────────────────────────────────────────────────────
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB — rejeita body acima disso antes de parsear
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5 MB — acima disso usa temp disk em vez de RAM
