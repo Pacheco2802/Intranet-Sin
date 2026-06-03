@@ -15,7 +15,8 @@ urlpatterns = [
     path('<int:pk>/documentos/upload/',    views.documento_upload,    name='documento_upload'),
     path('<int:pk>/aso/',                  views.aso_edit,            name='aso_edit'),
     path('documentos/<int:doc_pk>/excluir/', views.documento_delete,  name='documento_delete'),
-    path('medicos/',                       views.doctor_list,         name='doctor_list'),
+    path('medicos/',                        views.doctor_list,         name='doctor_list'),
     path('medicos/novo/',                  views.doctor_create,       name='doctor_create'),
     path('medicos/<int:pk>/editar/',       views.doctor_edit,         name='doctor_edit'),
+    path('medicos/<int:pk>/grade/',        views.doctor_schedule,     name='doctor_schedule'),
 ]

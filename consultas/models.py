@@ -27,6 +27,57 @@ class Doctor(models.Model):
         return self.name
 
 
+class DoctorSchedule(models.Model):
+    """Grade semanal de atendimento: define dias, horários e duração dos slots por médico."""
+
+    WEEKDAY_CHOICES = [
+        (0, 'Segunda-feira'),
+        (1, 'Terça-feira'),
+        (2, 'Quarta-feira'),
+        (3, 'Quinta-feira'),
+        (4, 'Sexta-feira'),
+        (5, 'Sábado'),
+        (6, 'Domingo'),
+    ]
+
+    doctor       = models.ForeignKey(Doctor, on_delete=models.CASCADE,
+                                     related_name='schedules', verbose_name='Médico')
+    weekday      = models.SmallIntegerField('Dia da semana', choices=WEEKDAY_CHOICES)
+    start_time   = models.TimeField('Início dos atendimentos')
+    end_time     = models.TimeField('Fim dos atendimentos')
+    slot_minutes = models.PositiveSmallIntegerField('Duração de cada atendimento (min)', default=30)
+    break_start  = models.TimeField('Início do intervalo', null=True, blank=True)
+    break_end    = models.TimeField('Fim do intervalo', null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Grade de Atendimento'
+        verbose_name_plural = 'Grade de Atendimento'
+        unique_together = [('doctor', 'weekday')]
+        ordering = ['weekday', 'start_time']
+
+    def __str__(self):
+        return f'{self.doctor} — {self.get_weekday_display()}'
+
+    def compute_slots(self):
+        """Retorna lista de datetime.time com os horários de início válidos."""
+        slots = []
+        t = self.start_time
+        delta = datetime.timedelta(minutes=self.slot_minutes)
+        base = datetime.date.today()
+        while True:
+            slot_end = (datetime.datetime.combine(base, t) + delta).time()
+            if slot_end > self.end_time:
+                break
+            # Pula se o slot se sobrepõe ao intervalo
+            if self.break_start and self.break_end:
+                if t < self.break_end and slot_end > self.break_start:
+                    t = self.break_end
+                    continue
+            slots.append(t)
+            t = slot_end
+        return slots
+
+
 class Consulta(models.Model):
     class Status(models.TextChoices):
         AGENDADO   = 'agendado',    'Agendado'

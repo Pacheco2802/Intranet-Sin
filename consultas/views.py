@@ -12,13 +12,13 @@ from .forms import (
     ASOForm, AtendimentoForm, ConsultaDocumentoForm,
     ConsultaForm, DoctorForm, RescheduleForm,
 )
-from .models import ASO, Atendimento, Consulta, ConsultaDocumento, Doctor
+from .models import ASO, Atendimento, Consulta, ConsultaDocumento, Doctor, DoctorSchedule
 
-# Horários disponíveis: 07:30 até 17:30 em intervalos de 30 min
-SLOTS = []
+# Slots padrão (fallback para médicos sem grade configurada)
+_DEFAULT_SLOTS = []
 _t = datetime.time(7, 30)
 while _t <= datetime.time(17, 30):
-    SLOTS.append(_t)
+    _DEFAULT_SLOTS.append(_t)
     _dt = datetime.datetime.combine(datetime.date.today(), _t) + datetime.timedelta(minutes=30)
     _t = _dt.time()
 
@@ -50,23 +50,66 @@ def agenda(request):
     except (TypeError, ValueError):
         date = datetime.date.today()
 
-    doctors = Doctor.objects.filter(active=True)
-    consultas = Consulta.objects.filter(date=date).select_related('doctor')
+    weekday = date.weekday()  # 0=Seg … 6=Dom
 
-    grid = {}
+    # Médicos com grade para este dia da semana
+    schedules = (DoctorSchedule.objects
+                 .filter(weekday=weekday, doctor__active=True)
+                 .select_related('doctor')
+                 .order_by('doctor__order', 'doctor__name'))
+
+    # Médicos sem nenhuma grade configurada (fallback legado)
+    scheduled_ids = {s.doctor_id for s in schedules}
+    fallback_doctors = (Doctor.objects
+                        .filter(active=True)
+                        .exclude(pk__in=scheduled_ids)
+                        .filter(schedules__isnull=True))
+
+    # Monta doctor_slots: {doctor_id: set de 'HH:MM'}
+    doctor_slots: dict[int, set[str]] = {}
+    doctors_ordered: list = []
+
+    for sched in schedules:
+        slots = sched.compute_slots()
+        doctor_slots[sched.doctor_id] = {s.strftime('%H:%M') for s in slots}
+        doctors_ordered.append(sched.doctor)
+
+    for doc in fallback_doctors:
+        doctor_slots[doc.pk] = {s.strftime('%H:%M') for s in _DEFAULT_SLOTS}
+        doctors_ordered.append(doc)
+
+    doctors_ordered.sort(key=lambda d: (d.order, d.name))
+
+    # Agendamentos do dia
+    consultas = Consulta.objects.filter(date=date).select_related('doctor')
+    grid: dict[str, Consulta] = {}
     for c in consultas:
         grid[f"{c.doctor_id}_{c.time.strftime('%H:%M')}"] = c
 
-    slots_str = [s.strftime('%H:%M') for s in SLOTS]
+    # Eixo Y: união de todos os slots + horários de agendamentos já existentes
+    all_slot_set: set[str] = set()
+    for slots_set in doctor_slots.values():
+        all_slot_set.update(slots_set)
+    for c in consultas:
+        all_slot_set.add(c.time.strftime('%H:%M'))
+    all_slots = sorted(all_slot_set)
+
+    # Lookup plano: '{doctor_pk}_{slot}' → True, para uso no template
+    slot_valid: dict[str, bool] = {}
+    for doc_id, slots_set in doctor_slots.items():
+        for slot in slots_set:
+            slot_valid[f"{doc_id}_{slot}"] = True
 
     return render(request, 'consultas/agenda.html', {
-        'doctors':   doctors,
-        'slots':     slots_str,
-        'grid':      grid,
-        'date':      date,
-        'today':     datetime.date.today(),
-        'prev_date': date - datetime.timedelta(days=1),
-        'next_date': date + datetime.timedelta(days=1),
+        'doctors':    doctors_ordered,
+        'slots':      all_slots,
+        'grid':       grid,
+        'slot_valid': slot_valid,
+        'date':       date,
+        'today':      datetime.date.today(),
+        'prev_date':  date - datetime.timedelta(days=1),
+        'next_date':  date + datetime.timedelta(days=1),
+        'weekday':    weekday,
     })
 
 
@@ -325,6 +368,68 @@ def aso_edit(request, pk):
 
     return render(request, 'consultas/aso_form.html', {
         'form': form, 'consulta': consulta, 'aso': aso,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Grade de atendimento por médico
+# ---------------------------------------------------------------------------
+
+_WEEKDAYS = [
+    (0, 'Segunda-feira'), (1, 'Terça-feira'), (2, 'Quarta-feira'),
+    (3, 'Quinta-feira'),  (4, 'Sexta-feira'),  (5, 'Sábado'), (6, 'Domingo'),
+]
+
+
+@login_required
+def doctor_schedule(request, pk):
+    if not _is_admin(request.user):
+        return HttpResponseForbidden()
+
+    doctor = get_object_or_404(Doctor, pk=pk)
+    existing = {s.weekday: s for s in doctor.schedules.all()}
+
+    if request.method == 'POST':
+        errors = []
+        for weekday, _ in _WEEKDAYS:
+            active = request.POST.get(f'day_{weekday}')
+            if active:
+                start = request.POST.get(f'start_{weekday}', '').strip()
+                end   = request.POST.get(f'end_{weekday}', '').strip()
+                slot  = request.POST.get(f'slot_{weekday}', '30').strip()
+                bk_s  = request.POST.get(f'break_start_{weekday}', '').strip() or None
+                bk_e  = request.POST.get(f'break_end_{weekday}', '').strip() or None
+                if not start or not end:
+                    errors.append(f'Informe início e fim para {_WEEKDAYS[weekday][1]}.')
+                    continue
+                DoctorSchedule.objects.update_or_create(
+                    doctor=doctor, weekday=weekday,
+                    defaults={
+                        'start_time':   start,
+                        'end_time':     end,
+                        'slot_minutes': int(slot) if slot.isdigit() else 30,
+                        'break_start':  bk_s,
+                        'break_end':    bk_e,
+                    },
+                )
+            else:
+                DoctorSchedule.objects.filter(doctor=doctor, weekday=weekday).delete()
+
+        if errors:
+            for e in errors:
+                messages.error(request, e)
+        else:
+            messages.success(request, 'Grade de atendimento salva.')
+            return redirect('consultas:doctor_list')
+
+        existing = {s.weekday: s for s in doctor.schedules.all()}
+
+    days = [
+        {'weekday': wd, 'name': name, 'schedule': existing.get(wd)}
+        for wd, name in _WEEKDAYS
+    ]
+    return render(request, 'consultas/doctors/schedule.html', {
+        'doctor': doctor, 'days': days,
     })
 
 

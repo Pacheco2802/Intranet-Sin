@@ -28,10 +28,17 @@
       {% if doctor.room %}<div class="text-sm text-gray-500">{{ doctor.room }}</div>{% endif %}
       {% if not doctor.active %}<span class="text-xs text-gray-400">Inativo</span>{% endif %}
     </div>
-    <a href="{% url 'consultas:doctor_edit' doctor.pk %}"
-       class="text-xs px-2 py-1 rounded bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0">
-      ✎ Editar
-    </a>
+    <div class="flex gap-1 flex-shrink-0">
+      <a href="{% url 'consultas:doctor_schedule' doctor.pk %}"
+         class="text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+         title="Grade de atendimento">
+        📅 Grade
+      </a>
+      <a href="{% url 'consultas:doctor_edit' doctor.pk %}"
+         class="text-xs px-2 py-1 rounded bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors">
+        ✎ Editar
+      </a>
+    </div>
   </div>
   {% endfor %}
 </div>

@@ -1,11 +1,24 @@
 from django.contrib import admin
-from .models import ASO, Atendimento, Consulta, ConsultaDocumento, Doctor
+from .models import ASO, Atendimento, Consulta, ConsultaDocumento, Doctor, DoctorSchedule
+
+
+class DoctorScheduleInline(admin.TabularInline):
+    model = DoctorSchedule
+    extra = 0
+    fields = ('weekday', 'start_time', 'end_time', 'slot_minutes', 'break_start', 'break_end')
 
 
 @admin.register(Doctor)
 class DoctorAdmin(admin.ModelAdmin):
     list_display = ('name', 'room', 'active', 'order')
     list_editable = ('order', 'active')
+    inlines = [DoctorScheduleInline]
+
+
+@admin.register(DoctorSchedule)
+class DoctorScheduleAdmin(admin.ModelAdmin):
+    list_display  = ('doctor', 'weekday', 'start_time', 'end_time', 'slot_minutes')
+    list_filter   = ('doctor', 'weekday')
 
 
 @admin.register(Consulta)

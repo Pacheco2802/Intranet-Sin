@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Grade de Atendimento — {{ doctor.name }}{% endblock %}
+{% block page_title %}Grade de Atendimento{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'consultas:doctor_list' %}" class="btn-secondary text-xs">← Médicos</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-4">
+
+  <!-- Cabeçalho do médico -->
+  <div class="card flex items-center gap-4">
+    <div class="w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0"
+         style="background: {{ doctor.color }}">
+      {{ doctor.name|slice:":1" }}
+    </div>
+    <div>
+      <p class="font-bold text-gray-800 text-lg">{{ doctor.name }}</p>
+      {% if doctor.room %}<p class="text-sm text-gray-500">{{ doctor.room }}</p>{% endif %}
+      <p class="text-xs text-gray-400 mt-0.5">Configure os dias e horários de atendimento</p>
+    </div>
+  </div>
+
+  <form method="post" class="space-y-2">
+    {% csrf_token %}
+
+    {% for day in days %}
+    <div class="card"
+         x-data="{ active: {{ day.schedule|yesno:'true,false' }} }"
+         :class="active ? '' : 'opacity-60'">
+
+      <!-- Cabeçalho do dia -->
+      <div class="flex items-center justify-between">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" name="day_{{ day.weekday }}" value="1"
+                 {% if day.schedule %}checked{% endif %}
+                 x-model="active"
+                 class="w-4 h-4 rounded accent-green-600">
+          <span class="font-semibold text-gray-700 text-sm">{{ day.name }}</span>
+        </label>
+        <span x-show="!active" class="text-xs text-gray-400">Não atende</span>
+        <span x-show="active"  class="text-xs text-green-600 font-medium">Atende</span>
+      </div>
+
+      <!-- Campos de horário (mostrados apenas quando ativo) -->
+      <div x-show="active" x-transition class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Início *</label>
+          <input type="time" name="start_{{ day.weekday }}"
+                 value="{{ day.schedule.start_time|time:'H:i'|default:'' }}"
+                 :required="active"
+                 class="form-input text-sm py-1.5">
+        </div>
+
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Fim *</label>
+          <input type="time" name="end_{{ day.weekday }}"
+                 value="{{ day.schedule.end_time|time:'H:i'|default:'' }}"
+                 :required="active"
+                 class="form-input text-sm py-1.5">
+        </div>
+
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Duração (min)</label>
+          <input type="number" name="slot_{{ day.weekday }}" min="10" max="120" step="5"
+                 value="{{ day.schedule.slot_minutes|default:30 }}"
+                 class="form-input text-sm py-1.5">
+        </div>
+
+        <div class="sm:col-span-1">
+          <!-- placeholder para alinhamento na grade de 4 colunas -->
+        </div>
+
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Intervalo — início</label>
+          <input type="time" name="break_start_{{ day.weekday }}"
+                 value="{{ day.schedule.break_start|time:'H:i'|default:'' }}"
+                 class="form-input text-sm py-1.5">
+        </div>
+
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Intervalo — fim</label>
+          <input type="time" name="break_end_{{ day.weekday }}"
+                 value="{{ day.schedule.break_end|time:'H:i'|default:'' }}"
+                 class="form-input text-sm py-1.5">
+        </div>
+
+        <!-- Preview dos slots gerados -->
+        {% if day.schedule %}
+        <div class="sm:col-span-4">
+          <p class="text-xs text-gray-400 mb-1">Slots gerados:</p>
+          <div class="flex flex-wrap gap-1">
+            {% for slot in day.schedule.compute_slots %}
+            <span class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-mono">
+              {{ slot|time:"H:i" }}
+            </span>
+            {% empty %}
+            <span class="text-xs text-red-400">Nenhum slot — verifique os horários.</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="flex gap-3 pt-2">
+      <button type="submit" class="btn-primary flex-1">Salvar grade</button>
+      <a href="{% url 'consultas:doctor_list' %}" class="btn-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
