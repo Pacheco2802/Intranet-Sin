@@ -113,7 +113,7 @@ def dashboard(request):
         alert_qs = Card.objects.filter(column__board__isnull=False).select_related('column__board', 'column')
     else:
         alert_qs = my_cards_qs
-    overdue_cards = alert_qs.filter(due_date__lt=today).order_by('due_date')[:10]
+    overdue_cards = alert_qs.filter(due_date__lt=today, final_status='').order_by('due_date')[:10]
     upcoming_cards = alert_qs.filter(due_date__gte=today, due_date__lte=in_3_days).order_by('due_date')[:10]
 
     # Tarefas por departamento (só para admin/presidente)
@@ -124,7 +124,7 @@ def dashboard(request):
             .values('column__board__department__pk', 'column__board__department__name')
             .annotate(
                 total=Count('id'),
-                overdue=Count('id', filter=Q(due_date__lt=today)),
+                overdue=Count('id', filter=Q(due_date__lt=today, final_status='')),
             )
             .order_by('-total')[:12]
         )
@@ -891,7 +891,7 @@ def visao_executiva(request):
 
     vencidos_lista = (
         cards_ativos
-        .filter(due_date__lt=today, due_date__isnull=False)
+        .filter(due_date__lt=today, due_date__isnull=False, final_status='')
         .select_related('column__board__department', 'assignee')
         .order_by('due_date')[:20]
     )
@@ -904,7 +904,7 @@ def visao_executiva(request):
         total_dept   = dc.count()
         ativos_dept  = dc.exclude(column__column_type=CT.STATUS_FINAL).count()
         venc_dept    = dc.exclude(column__column_type=CT.STATUS_FINAL).filter(
-            due_date__lt=today, due_date__isnull=False
+            due_date__lt=today, due_date__isnull=False, final_status=''
         ).count()
         em_and_dept  = dc.filter(column__column_type=CT.EM_ANDAMENTO).count()
         concl_dept   = dc.filter(column__column_type=CT.STATUS_FINAL).count()

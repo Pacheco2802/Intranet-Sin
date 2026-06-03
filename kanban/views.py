@@ -487,7 +487,7 @@ def board_columns_partial(request, pk):
     if assignee_id:
         annotated_cards = annotated_cards.filter(assignee_id=assignee_id)
     if prazo == 'vencidos':
-        annotated_cards = annotated_cards.filter(due_date__lt=today)
+        annotated_cards = annotated_cards.filter(due_date__lt=today, final_status='')
     elif prazo == 'hoje':
         annotated_cards = annotated_cards.filter(due_date=today)
     elif prazo == 'semana':
@@ -700,7 +700,7 @@ def analise(request):
 
     ativas_com_prazo = all_cards.exclude(column__column_type=CT.STATUS_FINAL).filter(due_date__isnull=False)
     no_prazo = ativas_com_prazo.filter(due_date__gte=today).count()
-    vencidos = ativas_com_prazo.filter(due_date__lt=today).count()
+    vencidos = ativas_com_prazo.filter(due_date__lt=today, final_status='').count()
 
     concluidos = all_cards.filter(final_status='concluido').count()
     nao_concluidos = all_cards.filter(final_status='nao_concluido').count()
@@ -728,7 +728,7 @@ def analise(request):
             'em_andamento': dc.filter(column__column_type=CT.EM_ANDAMENTO).count(),
             'status_final': dc.filter(column__column_type=CT.STATUS_FINAL).count(),
             'vencidos': dc.exclude(column__column_type=CT.STATUS_FINAL).filter(
-                due_date__lt=today, due_date__isnull=False
+                due_date__lt=today, due_date__isnull=False, final_status=''
             ).count(),
             'concluidos_com_atraso': dc.filter(
                 final_status__in=['concluido', 'nao_concluido', 'cancelado'],
