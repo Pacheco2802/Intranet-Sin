@@ -1,0 +1,23 @@
+<details data-group="{{ item.parent_id }}"
+         class="kanban-group bg-purple-50/60 border border-purple-200 rounded-lg">
+  <summary class="flex items-center justify-between gap-2 px-2.5 py-2 cursor-pointer select-none list-none">
+    <div class="min-w-0">
+      <div class="flex items-center gap-1.5">
+        <span class="group-caret text-purple-500 text-xs inline-block transition-transform">▸</span>
+        <span class="text-purple-600">📦</span>
+        <span class="text-sm font-medium text-gray-800 truncate">{{ item.parent_title }}</span>
+      </div>
+      <span class="text-xs text-gray-500 ml-5">
+        {{ item.total }} subtarefa{{ item.total|pluralize }} · {{ item.done }} concluída{{ item.done|pluralize }}
+      </span>
+    </div>
+    <span class="flex-shrink-0 text-xs text-purple-700 bg-purple-100 rounded-full px-2 py-0.5 font-medium">
+      {{ item.done }}/{{ item.total }}
+    </span>
+  </summary>
+  <div class="px-2 pb-2 pt-1 space-y-2">
+    {% for card in item.cards %}
+      {% include "kanban/partials/board_card.html" with card=card in_group=True is_final=is_final %}
+    {% endfor %}
+  </div>
+</details>

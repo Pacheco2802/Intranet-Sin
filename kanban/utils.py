@@ -1,4 +1,93 @@
+from django.utils import timezone
+
 from .models import Board, Column, Card, CardActivity
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AJUSTES DE EXIBIÇÃO DO BOARD
+#
+#   COLUMN_ITEM_LIMIT → quantos itens cada coluna ativa mostra antes do
+#                       botão "ver mais". Aumente/diminua aqui. (0 = sem limite)
+#
+#   STALE_DAYS        → a partir de quantos dias parado na mesma coluna o card
+#                       recebe o aviso de "envelhecimento" (⏱).
+#
+#   O LIMITE WIP (trabalho em andamento) NÃO fica aqui: é por coluna, no campo
+#   "Limite WIP" ao editar a coluna (lápis no cabeçalho) ou no Django admin.
+#   0 = sem limite.
+# ─────────────────────────────────────────────────────────────────────────────
+COLUMN_ITEM_LIMIT = 20
+STALE_DAYS = 5
+
+
+def build_grouped_columns(columns, limit=COLUMN_ITEM_LIMIT):
+    """Converte colunas (com cards prefetchados/anotados) em itens agrupados.
+
+    Cada coluna recebe os atributos:
+      - grouped_items: lista de itens, onde cada item é
+          {'type': 'card', 'card': Card, 'sort': int, 'overflow': bool}  ou
+          {'type': 'group', 'parent_id', 'parent_title', 'parent_board_id',
+           'cards': [Card, ...], 'done': int, 'total': int, 'sort': int, 'overflow': bool}
+      - is_final: bool (coluna de status final)
+      - total_items: int (nº de itens após agrupar)
+      - extra_count: int (itens além do limite, em colunas não-finais)
+
+    Cards com source_subtask são agrupados pelo card-pai (source_subtask.card).
+    """
+    cols = list(columns)
+    today = timezone.now().date()
+    for col in cols:
+        cards = list(col.cards.all())   # já anotados + select_related
+        col.is_final = (col.column_type == Column.ColumnType.STATUS_FINAL)
+        items, groups = [], {}
+        for card in cards:
+            # ── Envelhecimento: dias parado nesta coluna (proxy: updated_at) ──
+            card.days_in_column = (today - card.updated_at.date()).days
+            card.is_stale = (not col.is_final) and card.days_in_column >= STALE_DAYS
+
+            parent_id = card.source_subtask.card_id if card.source_subtask_id else None
+            if parent_id:
+                g = groups.get(parent_id)
+                if not g:
+                    parent = card.source_subtask.card
+                    g = {
+                        'type': 'group',
+                        'parent_id': parent_id,
+                        'parent_title': parent.title,
+                        'parent_board_id': parent.column.board_id,
+                        'cards': [],
+                        'done': 0,
+                        'total': 0,
+                        'sort': card.order,
+                    }
+                    groups[parent_id] = g
+                    items.append(g)
+                g['cards'].append(card)
+                g['total'] += 1
+                if card.source_subtask.is_done:
+                    g['done'] += 1
+                if card.order < g['sort']:
+                    g['sort'] = card.order
+            else:
+                items.append({'type': 'card', 'card': card, 'sort': card.order})
+
+        items.sort(key=lambda i: i['sort'])
+
+        # ── WIP: nº real de cards x limite da coluna (0 = sem limite) ──
+        col.card_count = len(cards)
+        col.wip_exceeded = bool(col.wip_limit) and col.card_count > col.wip_limit
+
+        col.total_items = len(items)
+        if not col.is_final:
+            for idx, it in enumerate(items):
+                it['overflow'] = idx >= limit
+            col.extra_count = max(0, len(items) - limit)
+        else:
+            for it in items:
+                it['overflow'] = False
+            col.extra_count = 0
+        col.grouped_items = items
+    return cols
 
 
 def _get_or_create_first_column(department, creator):

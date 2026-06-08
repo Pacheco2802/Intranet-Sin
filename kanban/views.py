@@ -13,7 +13,7 @@ from core.middleware import AuditMiddleware
 from core.validators import validate_file_extension, validate_file_size
 from .models import Board, Column, Card, CardComment, CardActivity, SubTask, SubTaskAnexo, CardAnexo, RecurringTask
 from .forms import BoardForm, ColumnForm, CardForm, CardCommentForm, SubTaskForm, RecurringTaskForm
-from .utils import criar_card_automatico, mover_card_para_ultima_coluna, mover_card_para_primeira_coluna
+from .utils import criar_card_automatico, mover_card_para_ultima_coluna, mover_card_para_primeira_coluna, build_grouped_columns
 
 
 @login_required
@@ -42,18 +42,43 @@ def board_list(request):
     })
 
 
+def _annotated_cards_qs():
+    """Queryset base de cards com contagens + relações para o board."""
+    return Card.objects.annotate(
+        comment_count=Count('comments', distinct=True),
+        subtask_total=Count('subtasks', distinct=True),
+        subtask_done=Count('subtasks', filter=Q(subtasks__is_done=True), distinct=True),
+    ).select_related('assignee', 'creator', 'source_subtask__card__column')
+
+
+def _apply_card_filters(qs, request, today):
+    """Aplica os filtros de prioridade/responsável/prazo vindos do #board-filters."""
+    from datetime import timedelta
+    priority = request.GET.get('priority')
+    assignee_id = request.GET.get('assignee')
+    prazo = request.GET.get('prazo')
+    if priority:
+        qs = qs.filter(priority=priority)
+    if assignee_id:
+        qs = qs.filter(assignee_id=assignee_id)
+    if prazo == 'vencidos':
+        qs = qs.filter(due_date__lt=today, final_status='')
+    elif prazo == 'hoje':
+        qs = qs.filter(due_date=today)
+    elif prazo == 'semana':
+        qs = qs.filter(due_date__gte=today, due_date__lte=today + timedelta(days=7))
+    return qs
+
+
 @login_required
 def board_detail(request, pk):
     board = get_object_or_404(Board, pk=pk)
     if not board.can_access(request.user):
         return HttpResponseForbidden()
-    annotated_cards = Card.objects.annotate(
-        comment_count=Count('comments', distinct=True),
-        subtask_total=Count('subtasks', distinct=True),
-        subtask_done=Count('subtasks', filter=Q(subtasks__is_done=True), distinct=True),
-    ).select_related('assignee', 'creator')
-    columns = board.columns.prefetch_related(
-        Prefetch('cards', queryset=annotated_cards)
+    columns = build_grouped_columns(
+        board.columns.prefetch_related(
+            Prefetch('cards', queryset=_annotated_cards_qs())
+        )
     )
     board_members = CustomUser.objects.filter(
         assigned_cards__column__board=board, is_active=True
@@ -178,7 +203,9 @@ def card_detail(request, board_pk, pk):
     subtasks = card.subtasks.select_related('assignee', 'target_department').prefetch_related(
         'anexos__enviado_por',
         'kanban_cards__anexos__enviado_por',
-        'kanban_cards__column__board',
+        'kanban_cards__column__board__department',
+        'kanban_cards__comments__author',
+        'kanban_cards__activities__user',
     )
     done_count = subtasks.filter(is_done=True).count()
     card_anexos = card.anexos.select_related('enviado_por').all()
@@ -426,7 +453,14 @@ def card_move_direction(request, pk):
     old_col = card.column
     card.column = target_col
     card.order = 0
-    card.save(update_fields=['column', 'order'])
+    save_fields = ['column', 'order']
+    # Ao sair de uma coluna de status final, limpa o desfecho para reeditar
+    if old_col.column_type == Column.ColumnType.STATUS_FINAL and target_col.column_type != Column.ColumnType.STATUS_FINAL:
+        card.final_status = ''
+        card.final_notes = ''
+        card.completed_at = None
+        save_fields += ['final_status', 'final_notes', 'completed_at']
+    card.save(update_fields=save_fields)
     if target_col.column_type == Column.ColumnType.STATUS_FINAL:
         _propagar_conclusao_para_subtarefa(card, request.user)
     CardActivity.objects.create(
@@ -469,32 +503,14 @@ def board_columns_partial(request, pk):
         return HttpResponseForbidden()
 
     from django.utils import timezone as tz
-    from datetime import timedelta
     today = tz.now().date()
 
-    annotated_cards = Card.objects.annotate(
-        comment_count=Count('comments', distinct=True),
-        subtask_total=Count('subtasks', distinct=True),
-        subtask_done=Count('subtasks', filter=Q(subtasks__is_done=True), distinct=True),
-    ).select_related('assignee', 'creator')
+    annotated_cards = _apply_card_filters(_annotated_cards_qs(), request, today)
 
-    priority = request.GET.get('priority')
-    assignee_id = request.GET.get('assignee')
-    prazo = request.GET.get('prazo')
-
-    if priority:
-        annotated_cards = annotated_cards.filter(priority=priority)
-    if assignee_id:
-        annotated_cards = annotated_cards.filter(assignee_id=assignee_id)
-    if prazo == 'vencidos':
-        annotated_cards = annotated_cards.filter(due_date__lt=today, final_status='')
-    elif prazo == 'hoje':
-        annotated_cards = annotated_cards.filter(due_date=today)
-    elif prazo == 'semana':
-        annotated_cards = annotated_cards.filter(due_date__gte=today, due_date__lte=today + timedelta(days=7))
-
-    columns = board.columns.prefetch_related(
-        Prefetch('cards', queryset=annotated_cards)
+    columns = build_grouped_columns(
+        board.columns.prefetch_related(
+            Prefetch('cards', queryset=annotated_cards)
+        )
     )
     return render(request, 'kanban/partials/board_columns.html', {
         'board': board,

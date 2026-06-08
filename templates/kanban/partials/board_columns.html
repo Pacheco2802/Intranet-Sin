@@ -1,12 +1,19 @@
 {% for col in columns %}
 <div class="kanban-column flex-shrink-0 w-72 bg-gray-100 rounded-xl flex flex-col max-h-full"
-     data-column-id="{{ col.pk }}">
+     data-column-id="{{ col.pk }}"
+     style="border-top:3px solid {{ col.color }}">
   <!-- Column header -->
   <div class="flex items-center justify-between px-4 py-3">
     <div class="flex items-center gap-2">
       <div class="w-3 h-3 rounded-full" style="background-color:{{ col.color }}"></div>
       <h3 class="font-semibold text-gray-700 text-sm">{{ col.name }}</h3>
-      <span class="text-xs bg-gray-200 text-gray-600 rounded-full px-2">{{ col.cards.count }}</span>
+      {% if col.wip_limit %}
+      <span class="text-xs rounded-full px-2 py-0.5 font-medium
+        {% if col.wip_exceeded %}bg-red-100 text-red-700{% else %}bg-gray-200 text-gray-600{% endif %}"
+        title="Cards na coluna / limite WIP">{{ col.card_count }} / {{ col.wip_limit }}</span>
+      {% else %}
+      <span class="text-xs bg-gray-200 text-gray-600 rounded-full px-2">{{ col.total_items }}</span>
+      {% endif %}
     </div>
     <div class="flex items-center gap-1">
       {% if user.is_admin_ti %}
@@ -31,22 +38,35 @@
     </div>
   </div>
 
+  {% if col.wip_exceeded %}
+  <div class="mx-3 mb-2 text-[11px] text-red-600 bg-red-50 border border-red-100 rounded px-2 py-1">
+    ⚠ Limite de trabalho em andamento excedido ({{ col.wip_limit }})
+  </div>
+  {% endif %}
+
   <!-- Cards -->
-  <div class="flex-1 overflow-y-auto px-3 pb-3 space-y-2" id="column-{{ col.pk }}">
-    {% if col.column_type == 'status_final' %}
-      {% for card in col.cards.all|slice:":15" %}
-        {% include "kanban/partials/board_card.html" %}
+  <div class="flex-1 overflow-y-auto px-3 pb-3 space-y-2 kanban-cards" id="column-{{ col.pk }}" data-col="{{ col.pk }}">
+    {% if col.is_final %}
+      {% for item in col.grouped_items|slice:":15" %}
+        {% include "kanban/partials/_board_item.html" with is_final=col.is_final %}
       {% endfor %}
-      {% if col.cards.count > 15 %}
+      {% if col.total_items > 15 %}
       <a href="{% url 'kanban:board_finalizados' board.pk col.pk %}"
          class="block text-center text-xs text-gray-400 hover:text-blue-600 py-2 transition-colors">
-        Ver todos {{ col.cards.count }} finalizados →
+        Ver todos {{ col.total_items }} finalizados →
       </a>
       {% endif %}
     {% else %}
-      {% for card in col.cards.all %}
-        {% include "kanban/partials/board_card.html" %}
+      {% for item in col.grouped_items %}
+        {% include "kanban/partials/_board_item.html" with is_final=col.is_final %}
       {% endfor %}
+      {% if col.extra_count %}
+      <button type="button"
+              class="ver-mais-btn block w-full text-center text-xs text-gray-400 hover:text-blue-600 py-2 transition-colors"
+              data-col="{{ col.pk }}">
+        + ver mais {{ col.extra_count }}
+      </button>
+      {% endif %}
     {% endif %}
   </div>
 

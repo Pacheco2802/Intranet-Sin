@@ -1,0 +1,7 @@
+<div class="kc-item{% if item.overflow %} kc-overflow{% endif %}">
+  {% if item.type == 'group' %}
+    {% include "kanban/partials/board_group.html" %}
+  {% else %}
+    {% include "kanban/partials/board_card.html" with card=item.card is_final=is_final %}
+  {% endif %}
+</div>

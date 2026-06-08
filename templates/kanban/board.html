@@ -15,6 +15,7 @@
 {% elif user.can_manage_users %}
 <a href="{% url 'kanban:board_access' board.pk %}" class="btn-secondary text-xs">Acessos</a>
 {% endif %}
+<button type="button" id="btn-compact" class="btn-secondary text-xs" title="Alternar modo compacto">▤ Compacto</button>
 <a href="{% url 'kanban:card_create' board.pk %}" class="btn-primary text-xs">+ Card</a>
 {% endblock %}
 
@@ -34,6 +35,9 @@
 
 <!-- Filtros -->
 <form id="board-filters" class="flex flex-wrap items-center gap-2 mb-4">
+  <input type="text" id="board-search" placeholder="🔎 Buscar tarefa..."
+         autocomplete="off"
+         class="text-xs form-input py-1 w-48">
   <select name="priority" class="text-xs form-input py-1 w-auto">
     <option value="">Todas as prioridades</option>
     <option value="LOW">Baixa</option>
@@ -73,4 +77,107 @@
      hx-swap="innerHTML">
   {% include "kanban/partials/board_columns.html" %}
 </div>
+
+<style>
+  /* Modo compacto: esconde extras e enxuga os tiles */
+  #board-columns.compact .kc-extra { display: none; }
+  #board-columns.compact .kanban-card { padding: .45rem .6rem; }
+  #board-columns.compact .kanban-card p { font-size: .8rem; line-height: 1.2; }
+  /* Paginação "ver mais": esconde overflow até revelar */
+  .kanban-cards .kc-overflow { display: none; }
+  .kanban-cards.show-all .kc-overflow { display: block; }
+  .kanban-cards.show-all .ver-mais-btn { display: none; }
+  /* Grupos colapsáveis */
+  .kanban-group > summary::-webkit-details-marker { display: none; }
+  .kanban-group > summary::marker { content: ""; }
+  .kanban-group[open] > summary .group-caret { transform: rotate(90deg); }
+  /* Faixa de cor da prioridade à esquerda do card */
+  .kc-stripe { position: relative; }
+  .kc-stripe::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    border-radius: .5rem 0 0 .5rem; background: var(--prio, #94a3b8);
+  }
+  /* Busca rápida: oculta itens fora do filtro */
+  .kc-item.kc-hidden { display: none; }
+</style>
+
+<script>
+(function () {
+  const BC = document.getElementById('board-columns');
+  if (!BC) return;
+
+  // ── Modo compacto (persistido; sobrevive ao polling pois #board-columns é estável)
+  function applyCompact() {
+    BC.classList.toggle('compact', localStorage.kanbanCompact === '1');
+  }
+  const btn = document.getElementById('btn-compact');
+  if (btn) btn.addEventListener('click', function () {
+    const on = BC.classList.toggle('compact');
+    localStorage.kanbanCompact = on ? '1' : '0';
+  });
+
+  // ── Grupos abertos (reaplicados após cada swap do HTMX)
+  function applyGroups() {
+    let open = [];
+    try { open = JSON.parse(localStorage.kanbanGroups || '[]'); } catch (e) {}
+    BC.querySelectorAll('details[data-group]').forEach(function (d) {
+      d.open = open.indexOf(d.dataset.group) !== -1;
+    });
+  }
+  BC.addEventListener('toggle', function (e) {
+    const d = e.target;
+    if (!d.matches || !d.matches('details[data-group]')) return;
+    let set;
+    try { set = new Set(JSON.parse(localStorage.kanbanGroups || '[]')); } catch (e) { set = new Set(); }
+    if (d.open) set.add(d.dataset.group); else set.delete(d.dataset.group);
+    localStorage.kanbanGroups = JSON.stringify([...set]);
+  }, true);
+
+  // ── "Ver mais" (revela overflow da coluna; persistido por coluna)
+  function applyShowAll() {
+    let cols = [];
+    try { cols = JSON.parse(localStorage.kanbanShowAll || '[]'); } catch (e) {}
+    BC.querySelectorAll('.kanban-cards[data-col]').forEach(function (c) {
+      c.classList.toggle('show-all', cols.indexOf(c.dataset.col) !== -1);
+    });
+  }
+  BC.addEventListener('click', function (e) {
+    const b = e.target.closest('.ver-mais-btn');
+    if (!b) return;
+    const colId = b.dataset.col;
+    const cont = BC.querySelector('.kanban-cards[data-col="' + colId + '"]');
+    if (cont) cont.classList.add('show-all');
+    let set;
+    try { set = new Set(JSON.parse(localStorage.kanbanShowAll || '[]')); } catch (e) { set = new Set(); }
+    set.add(colId);
+    localStorage.kanbanShowAll = JSON.stringify([...set]);
+    b.style.display = 'none';
+  });
+
+  // ── Busca rápida (client-side; filtra por texto, sobrevive ao polling)
+  let currentSearch = '';
+  function applySearch() {
+    const term = currentSearch.trim().toLowerCase();
+    BC.querySelectorAll('.kc-item').forEach(function (it) {
+      if (!term) { it.classList.remove('kc-hidden'); return; }
+      const hit = (it.textContent || '').toLowerCase().indexOf(term) !== -1;
+      it.classList.toggle('kc-hidden', !hit);
+    });
+  }
+  const search = document.getElementById('board-search');
+  if (search) search.addEventListener('input', function () {
+    currentSearch = this.value;
+    applySearch();
+  });
+
+  // Reaplica estado a cada troca de conteúdo do board (polling 5s / filtros)
+  document.body.addEventListener('htmx:afterSwap', function (e) {
+    if (e.target && e.target.id === 'board-columns') {
+      applyCompact(); applyGroups(); applyShowAll(); applySearch();
+    }
+  });
+
+  applyCompact(); applyGroups(); applyShowAll();
+})();
+</script>
 {% endblock %}
