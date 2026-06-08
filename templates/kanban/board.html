@@ -59,6 +59,13 @@
     <option value="hoje">Vencem hoje</option>
     <option value="semana">Próximos 7 dias</option>
   </select>
+  <select name="sort" class="text-xs form-input py-1 w-auto">
+    <option value="">Ordenar: padrão</option>
+    <option value="priority">Prioridade</option>
+    <option value="due_date">Prazo</option>
+    <option value="title">Nome A→Z</option>
+    <option value="updated">Atualização recente</option>
+  </select>
   <button type="button"
           onclick="this.form.reset(); htmx.trigger('#board-columns', 'change')"
           class="text-xs text-gray-400 hover:text-gray-600 underline">

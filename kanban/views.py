@@ -75,10 +75,12 @@ def board_detail(request, pk):
     board = get_object_or_404(Board, pk=pk)
     if not board.can_access(request.user):
         return HttpResponseForbidden()
+    sort_by = request.GET.get('sort', '')
     columns = build_grouped_columns(
         board.columns.prefetch_related(
             Prefetch('cards', queryset=_annotated_cards_qs())
-        )
+        ),
+        sort_by=sort_by,
     )
     board_members = CustomUser.objects.filter(
         assigned_cards__column__board=board, is_active=True
@@ -506,11 +508,13 @@ def board_columns_partial(request, pk):
     today = tz.now().date()
 
     annotated_cards = _apply_card_filters(_annotated_cards_qs(), request, today)
+    sort_by = request.GET.get('sort', '')
 
     columns = build_grouped_columns(
         board.columns.prefetch_related(
             Prefetch('cards', queryset=annotated_cards)
-        )
+        ),
+        sort_by=sort_by,
     )
     return render(request, 'kanban/partials/board_columns.html', {
         'board': board,

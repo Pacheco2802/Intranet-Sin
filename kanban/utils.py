@@ -19,8 +19,36 @@ from .models import Board, Column, Card, CardActivity
 COLUMN_ITEM_LIMIT = 20
 STALE_DAYS = 5
 
+_PRIORITY_ORDER = {'URGENT': 0, 'HIGH': 1, 'MEDIUM': 2, 'LOW': 3, '': 4}
 
-def build_grouped_columns(columns, limit=COLUMN_ITEM_LIMIT):
+
+def _card_of(item):
+    return item['card'] if item['type'] == 'card' else item['cards'][0]
+
+
+def _item_sort_key(item, sort_by):
+    card = _card_of(item)
+    if sort_by == 'priority':
+        return (_PRIORITY_ORDER.get(getattr(card, 'priority', ''), 4), -card.created_at.timestamp())
+    if sort_by == 'due_date':
+        d = card.due_date.toordinal() if card.due_date else 99999
+        return (d, -card.created_at.timestamp())
+    if sort_by == 'title':
+        t = card.title if item['type'] == 'card' else item.get('parent_title', '')
+        return t.lower()
+    if sort_by == 'updated':
+        return -card.updated_at.timestamp()
+    # padrão: order field, depois mais novo primeiro
+    return (item['sort'], -card.created_at.timestamp())
+
+
+def _final_sort_key(item):
+    card = _card_of(item)
+    ts = card.completed_at.timestamp() if card.completed_at else card.updated_at.timestamp()
+    return -ts
+
+
+def build_grouped_columns(columns, limit=COLUMN_ITEM_LIMIT, sort_by=''):
     """Converte colunas (com cards prefetchados/anotados) em itens agrupados.
 
     Cada coluna recebe os atributos:
@@ -71,7 +99,12 @@ def build_grouped_columns(columns, limit=COLUMN_ITEM_LIMIT):
             else:
                 items.append({'type': 'card', 'card': card, 'sort': card.order})
 
-        items.sort(key=lambda i: i['sort'])
+        if col.is_final:
+            items.sort(key=_final_sort_key)
+        elif sort_by:
+            items.sort(key=lambda i: _item_sort_key(i, sort_by))
+        else:
+            items.sort(key=lambda i: i['sort'])
 
         # ── WIP: nº real de cards x limite da coluna (0 = sem limite) ──
         col.card_count = len(cards)
