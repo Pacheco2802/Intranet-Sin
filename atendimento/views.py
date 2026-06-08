@@ -421,52 +421,48 @@ def nextqs_chamar(request, pk):
     def _redir():
         return redirect('atendimento:painel') if next_url == 'painel' else redirect('atendimento:detail', pk=pk)
 
-    with transaction.atomic():
-        at = get_object_or_404(
-            _qs_visivel(request.user).select_for_update(),
-            pk=pk,
+    at = get_object_or_404(_qs_visivel(request.user), pk=pk)
+
+    # Bloqueia se já foi chamado por outro atendente
+    if (
+        at.status == Atendimento.Status.EM_ANDAMENTO
+        and at.responsavel_id
+        and at.responsavel_id != request.user.pk
+    ):
+        nome = at.responsavel.get_full_name() or at.responsavel.email
+        messages.warning(request, f'Esta senha já foi chamada por {nome}.')
+        return _redir()
+
+    if not (at.numero_senha and at.nextqs_fila):
+        messages.error(request, 'Este atendimento não tem número de senha NextQS.')
+        return _redir()
+
+    agent_id = request.user.nextqs_agent_id or getattr(settings, 'NEXTQS_SYSTEM_AGENT_ID', '')
+    if not agent_id:
+        messages.error(request, 'Agent ID não configurado. Contate o administrador do sistema.')
+        return _redir()
+
+    from .nextqs import chamar_senha
+    ok, msg = chamar_senha(at, agent_id)
+    if ok:
+        ts = now()
+        update_fields = ['status', 'responsavel', 'updated_at']
+        at.status = Atendimento.Status.EM_ANDAMENTO
+        at.responsavel = request.user
+        if not at.iniciado_em:
+            at.iniciado_em = ts
+            update_fields.append('iniciado_em')
+        at.save(update_fields=update_fields)
+        AtendimentoEtapa.objects.create(
+            atendimento=at,
+            tipo=AtendimentoEtapa.Tipo.NOTA,
+            autor=request.user,
+            departamento=request.user.department,
+            descricao=f'Senha {at.nextqs_fila}{at.numero_senha} chamada. Atendimento iniciado por {request.user.get_full_name() or request.user.email}.',
         )
-
-        # Bloqueia se já foi chamado por outro atendente
-        if (
-            at.status == Atendimento.Status.EM_ANDAMENTO
-            and at.responsavel_id
-            and at.responsavel_id != request.user.pk
-        ):
-            nome = at.responsavel.get_full_name() or at.responsavel.email
-            messages.warning(request, f'Esta senha já foi chamada por {nome}.')
-            return _redir()
-
-        if not (at.numero_senha and at.nextqs_fila):
-            messages.error(request, 'Este atendimento não tem número de senha NextQS.')
-            return _redir()
-
-        agent_id = request.user.nextqs_agent_id or getattr(settings, 'NEXTQS_SYSTEM_AGENT_ID', '')
-        if not agent_id:
-            messages.error(request, 'Agent ID não configurado. Contate o administrador do sistema.')
-            return _redir()
-
-        from .nextqs import chamar_senha
-        ok, msg = chamar_senha(at, agent_id)
-        if ok:
-            ts = now()
-            update_fields = ['status', 'responsavel', 'updated_at']
-            at.status = Atendimento.Status.EM_ANDAMENTO
-            at.responsavel = request.user  # sempre grava quem clicou dentro do lock
-            if not at.iniciado_em:
-                at.iniciado_em = ts
-                update_fields.append('iniciado_em')
-            at.save(update_fields=update_fields)
-            AtendimentoEtapa.objects.create(
-                atendimento=at,
-                tipo=AtendimentoEtapa.Tipo.NOTA,
-                autor=request.user,
-                departamento=request.user.department,
-                descricao=f'Senha {at.nextqs_fila}{at.numero_senha} chamada. Atendimento iniciado por {request.user.get_full_name() or request.user.email}.',
-            )
-            messages.success(request, f'Senha {at.nextqs_fila}{at.numero_senha} chamada no display!')
-        else:
-            messages.error(request, f'Erro NextQS: {msg}')
+        messages.success(request, f'Senha {at.nextqs_fila}{at.numero_senha} chamada no display!')
+    else:
+        messages.error(request, f'Erro NextQS: {msg}')
 
     return _redir()
 
