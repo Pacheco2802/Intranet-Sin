@@ -395,3 +395,19 @@
 
 {% endif %}
 {% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Cancela o swap do HTMX se o profissional estiver digitando no textarea de conclusão
+document.body.addEventListener('htmx:beforeSwap', function (e) {
+  if (e.detail.target && e.detail.target.id === 'painel-content') {
+    var digitando = Array.from(
+      e.detail.target.querySelectorAll('textarea')
+    ).some(function (t) { return t.value.trim().length > 0; });
+    if (digitando) {
+      e.detail.shouldSwap = false;
+    }
+  }
+});
+</script>
+{% endblock %}
