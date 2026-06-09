@@ -17,8 +17,8 @@
     {% endif %}
     <div class="flex items-center gap-1.5">
       {% if card.completed_at %}<span class="text-[11px] text-gray-300">{{ card.completed_at|date:"d/m" }}</span>{% endif %}
-      {# Botão reabrir — visível apenas no hover, somente para membros #}
-      {% if not forloop.parentloop.first %}
+      {# Botão reabrir — não exibir para cards de grupo (subtasks), pois mover individualmente causa divisão do grupo #}
+      {% if not in_group and not forloop.parentloop.first %}
       <form method="post" action="{% url 'kanban:card_move_direction' card.pk %}"
             class="opacity-0 group-hover:opacity-100 transition-opacity">
         {% csrf_token %}

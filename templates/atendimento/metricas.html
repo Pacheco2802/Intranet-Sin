@@ -3,136 +3,366 @@
 {% block page_title %}Métricas de Atendimento{% endblock %}
 {% block topbar_actions %}
 <a href="{% url 'atendimento:painel' %}" class="btn-secondary text-xs">← Painel</a>
-<button hx-get="{% url 'atendimento:metricas' %}?periodo={{ periodo }}"
-        hx-target="#metricas-content"
-        hx-swap="outerHTML"
-        hx-select="#metricas-content"
-        class="btn-secondary text-xs">
-  ↻ Atualizar
-</button>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto space-y-6" id="metricas-content">
 
-  <!-- Filtro de período -->
-  <div class="flex items-center gap-2">
-    <span class="text-xs text-gray-500 font-medium">Período:</span>
-    <a href="?periodo=hoje"
-       class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors
-              {% if periodo == 'hoje' %}bg-accent text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
-      Hoje
-    </a>
-    <a href="?periodo=semana"
-       class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors
-              {% if periodo == 'semana' %}bg-accent text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
-      Últimos 7 dias
-    </a>
-    <a href="?periodo=mes"
-       class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors
-              {% if periodo == 'mes' %}bg-accent text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
-      Este mês
-    </a>
-    {% if periodo != 'hoje' %}
-    <span class="text-xs text-gray-400 ml-2">desde {{ desde|date:"d/m/Y" }}</span>
+<!-- Filtro de período -->
+<div class="flex items-center gap-2 mb-6 flex-wrap">
+  <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Período:</span>
+  <a href="?periodo=hoje"   class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors {% if periodo == 'hoje' %}bg-accent text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">Hoje</a>
+  <a href="?periodo=semana" class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors {% if periodo == 'semana' %}bg-accent text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">7 dias</a>
+  <a href="?periodo=mes"    class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors {% if periodo == 'mes' %}bg-accent text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">Este mês</a>
+  <a href="?periodo=3m"     class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors {% if periodo == '3m' %}bg-accent text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">3 meses</a>
+  {% if periodo != 'hoje' %}<span class="text-xs text-gray-400 ml-1">desde {{ desde|date:"d/m/Y" }}</span>{% endif %}
+</div>
+
+<!-- KPIs -->
+<div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+
+  <div class="card text-center border-t-4 border-t-gray-400">
+    <p class="text-3xl font-bold text-gray-800">{{ total }}</p>
+    <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Total</p>
+  </div>
+
+  <div class="card text-center border-t-4 border-t-emerald-400">
+    <p class="text-3xl font-bold text-emerald-600">{{ total_concluidos }}</p>
+    <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Concluídos</p>
+  </div>
+
+  <div class="card text-center border-t-4 {% if taxa_conclusao >= 80 %}border-t-emerald-400{% elif taxa_conclusao >= 50 %}border-t-amber-400{% else %}border-t-red-400{% endif %}">
+    <p class="text-3xl font-bold {% if taxa_conclusao >= 80 %}text-emerald-600{% elif taxa_conclusao >= 50 %}text-amber-600{% else %}text-red-600{% endif %}">{{ taxa_conclusao }}%</p>
+    <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Taxa conclusão</p>
+  </div>
+
+  <div class="card text-center border-t-4 {% if total_abertos %}border-t-amber-400{% else %}border-t-gray-200{% endif %}">
+    <p class="text-3xl font-bold {% if total_abertos %}text-amber-600{% else %}text-gray-300{% endif %}">{{ total_abertos }}</p>
+    <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Em aberto</p>
+  </div>
+
+  <div class="card text-center border-t-4 border-t-blue-400">
+    <p class="text-3xl font-bold {% if avg_espera == '—' %}text-gray-300{% else %}text-blue-600{% endif %}">{{ avg_espera }}</p>
+    <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Espera média</p>
+  </div>
+
+  <div class="card text-center border-t-4 border-t-purple-400">
+    <p class="text-3xl font-bold {% if avg_servico == '—' %}text-gray-300{% else %}text-purple-600{% endif %}">{{ avg_servico }}</p>
+    <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Duração média</p>
+  </div>
+
+  <div class="card text-center border-t-4 {% if total_retornos %}border-t-orange-400{% else %}border-t-gray-200{% endif %}">
+    <p class="text-3xl font-bold {% if total_retornos %}text-orange-600{% else %}text-gray-300{% endif %}">{{ total_retornos }}</p>
+    <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Retornos</p>
+  </div>
+
+</div>
+
+<!-- Tendência + Pico de horário -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+  <div class="card">
+    <h2 class="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wide">Tendência diária — abertos e concluídos</h2>
+    {% if total_concluidos %}
+    <div style="height:200px; position:relative;">
+      <canvas id="chartTrend"></canvas>
+    </div>
+    {% else %}
+    <div class="flex items-center justify-center h-48 text-gray-300">
+      <div class="text-center"><div class="text-4xl mb-2">📊</div><p class="text-sm">Sem dados no período</p></div>
+    </div>
     {% endif %}
   </div>
 
-  <!-- Cards de resumo -->
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-    <div class="card text-center">
-      <p class="text-3xl font-bold text-gray-900">{{ total }}</p>
-      <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Abertos</p>
+  <div class="card">
+    <h2 class="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wide">Picos de movimento — hora do dia</h2>
+    {% if total_concluidos %}
+    <div style="height:200px; position:relative;">
+      <canvas id="chartHora"></canvas>
     </div>
-    <div class="card text-center">
-      <p class="text-3xl font-bold text-emerald-600">{{ total_concluidos }}</p>
-      <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Concluídos</p>
+    {% else %}
+    <div class="flex items-center justify-center h-48 text-gray-300">
+      <div class="text-center"><div class="text-4xl mb-2">🕐</div><p class="text-sm">Sem dados no período</p></div>
     </div>
-    <div class="card text-center">
-      <p class="text-3xl font-bold {% if avg_espera == '—' %}text-gray-300{% else %}text-blue-600{% endif %}">{{ avg_espera }}</p>
-      <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Espera média</p>
-    </div>
-    <div class="card text-center">
-      <p class="text-3xl font-bold {% if avg_servico == '—' %}text-gray-300{% else %}text-amber-600{% endif %}">{{ avg_servico }}</p>
-      <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Duração média</p>
-    </div>
+    {% endif %}
   </div>
-
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-    <!-- Por operador -->
-    <div class="lg:col-span-2 card">
-      <h2 class="text-sm font-semibold text-gray-900 mb-4">Por operador</h2>
-      {% if operadores %}
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-b border-gray-100">
-              <th class="text-left text-xs font-semibold text-gray-400 uppercase tracking-wide pb-2">Operador</th>
-              <th class="text-center text-xs font-semibold text-gray-400 uppercase tracking-wide pb-2">Concluídos</th>
-              <th class="text-center text-xs font-semibold text-gray-400 uppercase tracking-wide pb-2">Espera média</th>
-              <th class="text-center text-xs font-semibold text-gray-400 uppercase tracking-wide pb-2">Duração média</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-50">
-            {% for op in operadores %}
-            <tr>
-              <td class="py-2.5 pr-4">
-                <p class="font-medium text-gray-800">{{ op.nome }}</p>
-              </td>
-              <td class="py-2.5 text-center">
-                <span class="text-emerald-700 font-bold">{{ op.n }}</span>
-              </td>
-              <td class="py-2.5 text-center">
-                <span class="font-mono text-sm text-blue-600">{{ op.avg_espera }}</span>
-              </td>
-              <td class="py-2.5 text-center">
-                <span class="font-mono text-sm text-amber-600">{{ op.avg_servico }}</span>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-      <p class="text-sm text-gray-400 text-center py-8">Nenhum atendimento concluído no período.</p>
-      {% endif %}
-    </div>
-
-    <!-- Por fila -->
-    <div class="card">
-      <h2 class="text-sm font-semibold text-gray-900 mb-4">Por fila</h2>
-      {% if por_fila %}
-      <div class="space-y-3">
-        {% for fila, qtd in por_fila.items %}
-        <div>
-          <div class="flex items-center justify-between mb-1">
-            <span class="text-xs text-gray-600 font-medium">{{ fila }}</span>
-            <span class="text-xs font-bold text-gray-800">{{ qtd }}</span>
-          </div>
-          <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div class="h-full bg-accent rounded-full"
-                 style="width: {% widthratio qtd total_concluidos 100 %}%"></div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <p class="text-sm text-gray-400 text-center py-8">Nenhum dado de fila.</p>
-      {% endif %}
-    </div>
-
-  </div>
-
-  {% if total_abertos %}
-  <div class="card border-l-4 border-amber-400 flex items-center gap-3">
-    <span class="text-amber-500 text-xl">⚠</span>
-    <p class="text-sm text-amber-700">
-      <strong>{{ total_abertos }}</strong> atendimento{{ total_abertos|pluralize }} ainda em aberto no período.
-      <a href="{% url 'atendimento:list' %}?status=EM_ANDAMENTO" class="underline font-medium ml-1">Ver lista →</a>
-    </p>
-  </div>
-  {% endif %}
 
 </div>
+
+<!-- SLA + Por dia da semana + Por fila -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+  <!-- SLA de espera -->
+  <div class="card">
+    <h2 class="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wide">SLA — tempo de espera</h2>
+    {% if sla.total %}
+    <div class="space-y-3">
+      <div>
+        <div class="flex justify-between items-center mb-1">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <span class="text-sm text-gray-700">Até 5 min</span>
+          </div>
+          <span class="text-sm font-bold text-emerald-700">{{ sla.ate5 }}
+            <span class="text-xs font-normal text-gray-400">({% widthratio sla.ate5 sla.total 100 %}%)</span>
+          </span>
+        </div>
+        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div class="h-full bg-emerald-500 rounded-full" style="width:{% widthratio sla.ate5 sla.total 100 %}%"></div>
+        </div>
+      </div>
+      <div>
+        <div class="flex justify-between items-center mb-1">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+            <span class="text-sm text-gray-700">5 a 15 min</span>
+          </div>
+          <span class="text-sm font-bold text-blue-700">{{ sla.ate15 }}
+            <span class="text-xs font-normal text-gray-400">({% widthratio sla.ate15 sla.total 100 %}%)</span>
+          </span>
+        </div>
+        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div class="h-full bg-blue-400 rounded-full" style="width:{% widthratio sla.ate15 sla.total 100 %}%"></div>
+        </div>
+      </div>
+      <div>
+        <div class="flex justify-between items-center mb-1">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+            <span class="text-sm text-gray-700">15 a 30 min</span>
+          </div>
+          <span class="text-sm font-bold text-amber-700">{{ sla.ate30 }}
+            <span class="text-xs font-normal text-gray-400">({% widthratio sla.ate30 sla.total 100 %}%)</span>
+          </span>
+        </div>
+        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div class="h-full bg-amber-400 rounded-full" style="width:{% widthratio sla.ate30 sla.total 100 %}%"></div>
+        </div>
+      </div>
+      <div>
+        <div class="flex justify-between items-center mb-1">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+            <span class="text-sm text-gray-700">Mais de 30 min</span>
+          </div>
+          <span class="text-sm font-bold text-red-700">{{ sla.mais30 }}
+            <span class="text-xs font-normal text-gray-400">({% widthratio sla.mais30 sla.total 100 %}%)</span>
+          </span>
+        </div>
+        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div class="h-full bg-red-500 rounded-full" style="width:{% widthratio sla.mais30 sla.total 100 %}%"></div>
+        </div>
+      </div>
+      <p class="text-xs text-gray-400 pt-1 border-t border-gray-100">{{ sla.total }} atendimentos com tempo de espera registrado</p>
+    </div>
+    {% else %}
+    <p class="text-sm text-gray-400 italic text-center py-8">Sem dados de espera no período.</p>
+    {% endif %}
+  </div>
+
+  <!-- Por dia da semana -->
+  <div class="card">
+    <h2 class="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wide">Volume por dia da semana</h2>
+    {% if total_concluidos %}
+    <div style="height:200px; position:relative;">
+      <canvas id="chartDow"></canvas>
+    </div>
+    {% else %}
+    <div class="flex items-center justify-center h-48 text-gray-300">
+      <div class="text-center"><p class="text-sm">Sem dados no período</p></div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Por fila -->
+  <div class="card">
+    <h2 class="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wide">Por fila de atendimento</h2>
+    {% if filas_stats %}
+    <div class="space-y-3">
+      {% for f in filas_stats %}
+      <div class="flex items-start justify-between gap-3 pb-2 border-b border-gray-50 last:border-0">
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium text-gray-800 truncate">{{ f.nome }}</p>
+          <div class="flex items-center gap-3 mt-1">
+            <span class="text-xs text-blue-600">⏱ espera: {{ f.avg_espera }}</span>
+            <span class="text-xs text-purple-600">🔧 duração: {{ f.avg_servico }}</span>
+          </div>
+        </div>
+        <span class="flex-shrink-0 text-lg font-bold text-gray-900">{{ f.n }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-gray-400 italic text-center py-8">Sem dados de fila no período.</p>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Por operador -->
+<div class="card">
+  <h2 class="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wide">Desempenho por operador</h2>
+  {% if operadores %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-100">
+          <th class="text-left text-xs font-semibold text-gray-400 uppercase tracking-wide pb-2 pr-4">Operador</th>
+          <th class="text-center text-xs font-semibold text-emerald-400 uppercase tracking-wide pb-2 px-3">Concluídos</th>
+          <th class="text-center text-xs font-semibold text-blue-400 uppercase tracking-wide pb-2 px-3">Espera média</th>
+          <th class="text-center text-xs font-semibold text-purple-400 uppercase tracking-wide pb-2 px-3">Duração média</th>
+          <th class="text-left text-xs font-semibold text-gray-400 uppercase tracking-wide pb-2 pl-4">Volume relativo</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for op in operadores %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="py-3 pr-4">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 text-xs font-bold flex-shrink-0">
+                {{ op.nome|first|upper }}
+              </div>
+              <span class="font-medium text-gray-800">{{ op.nome }}</span>
+            </div>
+          </td>
+          <td class="py-3 px-3 text-center">
+            <span class="text-emerald-700 font-bold text-base">{{ op.n }}</span>
+          </td>
+          <td class="py-3 px-3 text-center">
+            <span class="font-mono text-sm text-blue-600">{{ op.avg_espera }}</span>
+          </td>
+          <td class="py-3 px-3 text-center">
+            <span class="font-mono text-sm text-purple-600">{{ op.avg_servico }}</span>
+          </td>
+          <td class="py-3 pl-4 w-40">
+            <div class="flex items-center gap-2">
+              <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div class="h-full bg-accent rounded-full"
+                     style="width:{% widthratio op.n max_op 100 %}%"></div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-sm text-gray-400 italic text-center py-8">Nenhum atendimento concluído no período.</p>
+  {% endif %}
+</div>
+
+{% if total_abertos %}
+<div class="mt-4 card border-l-4 border-amber-400 flex items-center gap-3">
+  <span class="text-amber-500 text-xl flex-shrink-0">⚠</span>
+  <p class="text-sm text-amber-700">
+    <strong>{{ total_abertos }}</strong> atendimento{{ total_abertos|pluralize }} ainda em aberto no período selecionado.
+    <a href="{% url 'atendimento:list' %}?status=EM_ANDAMENTO" class="underline font-medium ml-1">Ver lista →</a>
+  </p>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+{% if total_concluidos %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const isDark    = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+  const tickColor = isDark ? '#94a3b8' : '#9ca3af';
+  Chart.defaults.font = { family: 'inherit', size: 11 };
+  Chart.defaults.color = tickColor;
+
+  // Tendência diária
+  new Chart(document.getElementById('chartTrend'), {
+    type: 'line',
+    data: {
+      labels: {{ chart_labels|safe }},
+      datasets: [
+        {
+          label: 'Abertos',
+          data: {{ chart_total|safe }},
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,0.08)',
+          borderWidth: 2,
+          pointRadius: 2,
+          fill: true,
+          tension: 0.3,
+        },
+        {
+          label: 'Concluídos',
+          data: {{ chart_concluidos|safe }},
+          borderColor: '#22c55e',
+          backgroundColor: 'rgba(34,197,94,0.08)',
+          borderWidth: 2,
+          pointRadius: 2,
+          fill: true,
+          tension: 0.3,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } } },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { maxTicksLimit: 12 } },
+        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { stepSize: 1, precision: 0 } },
+      }
+    }
+  });
+
+  // Pico por hora
+  new Chart(document.getElementById('chartHora'), {
+    type: 'bar',
+    data: {
+      labels: {{ hora_labels|safe }},
+      datasets: [{
+        label: 'Atendimentos',
+        data: {{ hora_data|safe }},
+        backgroundColor: 'rgba(139,92,246,0.75)',
+        borderColor: '#7c3aed',
+        borderWidth: 1,
+        borderRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: gridColor } },
+        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { stepSize: 1, precision: 0 } },
+      }
+    }
+  });
+
+  // Por dia da semana
+  new Chart(document.getElementById('chartDow'), {
+    type: 'bar',
+    data: {
+      labels: {{ dow_labels|safe }},
+      datasets: [{
+        label: 'Atendimentos',
+        data: {{ dow_data|safe }},
+        backgroundColor: [
+          'rgba(59,130,246,0.75)','rgba(59,130,246,0.75)','rgba(59,130,246,0.75)',
+          'rgba(59,130,246,0.75)','rgba(59,130,246,0.75)',
+          'rgba(148,163,184,0.5)','rgba(148,163,184,0.5)',
+        ],
+        borderRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: gridColor } },
+        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { stepSize: 1, precision: 0 } },
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

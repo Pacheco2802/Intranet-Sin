@@ -702,37 +702,122 @@ def analise(request):
         return HttpResponseForbidden()
 
     from django.utils import timezone
+    from django.db.models import F as DbF, Avg
+    from django.db.models.functions import TruncDate
+    from datetime import timedelta
+    from collections import Counter
     from core.models import Department
 
     today = timezone.now().date()
     CT = Column.ColumnType
 
+    periodo = request.GET.get('periodo', '30d')
+    if periodo == '7d':
+        desde = today - timedelta(days=6)
+    elif periodo == '90d':
+        desde = today - timedelta(days=89)
+    else:
+        desde = today - timedelta(days=29)
+        periodo = '30d'
+
     lider_depts = request.user.departments.all() if request.user.is_lider else None
 
-    all_cards = Card.objects.select_related('column')
+    all_cards = Card.objects.select_related('column__board__department', 'assignee')
     if lider_depts is not None:
         all_cards = all_cards.filter(column__board__department__in=lider_depts)
 
-    total = all_cards.count()
-    a_fazer = all_cards.filter(column__column_type=CT.A_FAZER).count()
+    # ── Snapshot atual ──────────────────────────────────────────────────────────
+    total     = all_cards.count()
+    a_fazer   = all_cards.filter(column__column_type=CT.A_FAZER).count()
     em_andamento = all_cards.filter(column__column_type=CT.EM_ANDAMENTO).count()
     status_final = all_cards.filter(column__column_type=CT.STATUS_FINAL).count()
+    total_ativos = a_fazer + em_andamento
 
     ativas_com_prazo = all_cards.exclude(column__column_type=CT.STATUS_FINAL).filter(due_date__isnull=False)
     no_prazo = ativas_com_prazo.filter(due_date__gte=today).count()
-    vencidos = ativas_com_prazo.filter(due_date__lt=today, final_status='').count()
+    vencidos  = ativas_com_prazo.filter(due_date__lt=today, final_status='').count()
 
-    concluidos = all_cards.filter(final_status='concluido').count()
+    stale_cutoff = today - timedelta(days=5)
+    stale_count = all_cards.exclude(column__column_type=CT.STATUS_FINAL).filter(
+        updated_at__date__lte=stale_cutoff
+    ).count()
+
+    # ── Finalizados no período ──────────────────────────────────────────────────
+    fin_periodo = all_cards.filter(
+        column__column_type=CT.STATUS_FINAL,
+        completed_at__date__gte=desde,
+    )
+    throughput = fin_periodo.count()
+
+    ct_list = list(fin_periodo.filter(completed_at__isnull=False).values_list('created_at', 'completed_at'))
+    cycle_days = [(c - cr).days for cr, c in ct_list if c > cr]
+    cycle_time_avg = round(sum(cycle_days) / len(cycle_days), 1) if cycle_days else None
+
+    # ── Desfechos ───────────────────────────────────────────────────────────────
+    concluidos    = all_cards.filter(final_status='concluido').count()
     nao_concluidos = all_cards.filter(final_status='nao_concluido').count()
-    cancelados = all_cards.filter(final_status='cancelado').count()
-
-    from django.db.models import F
+    cancelados    = all_cards.filter(final_status='cancelado').count()
     concluidos_com_atraso = all_cards.filter(
         final_status__in=['concluido', 'nao_concluido', 'cancelado'],
-        due_date__isnull=False,
-        completed_at__isnull=False,
-    ).filter(completed_at__date__gt=F('due_date')).count()
+        due_date__isnull=False, completed_at__isnull=False,
+    ).filter(completed_at__date__gt=DbF('due_date')).count()
 
+    # ── Throughput diário (chart) ────────────────────────────────────────────────
+    n_days = (today - desde).days + 1
+    date_range = [desde + timedelta(days=i) for i in range(n_days)]
+    daily_raw = list(
+        fin_periodo.annotate(dia=TruncDate('completed_at'))
+        .values('dia').annotate(n=Count('id')).order_by('dia')
+    )
+    daily_map = {d['dia']: d['n'] for d in daily_raw}
+    chart_labels     = json.dumps([d.strftime('%d/%m') for d in date_range])
+    chart_throughput = json.dumps([daily_map.get(d, 0) for d in date_range])
+
+    # ── Distribuição por prioridade (ativos) ────────────────────────────────────
+    prio_qs  = all_cards.exclude(column__column_type=CT.STATUS_FINAL).values('priority').annotate(n=Count('id'))
+    prio_map = {p['priority']: p['n'] for p in prio_qs}
+    prioridades = [
+        {'label': 'Urgente', 'key': 'URGENT', 'color': '#7c3aed', 'n': prio_map.get('URGENT', 0)},
+        {'label': 'Alta',    'key': 'HIGH',   'color': '#ef4444', 'n': prio_map.get('HIGH', 0)},
+        {'label': 'Média',   'key': 'MEDIUM', 'color': '#f59e0b', 'n': prio_map.get('MEDIUM', 0)},
+        {'label': 'Baixa',   'key': 'LOW',    'color': '#22c55e', 'n': prio_map.get('LOW', 0)},
+    ]
+
+    # ── Por responsável ──────────────────────────────────────────────────────────
+    resp_qs = (
+        all_cards.filter(assignee__isnull=False)
+        .values('assignee__id', 'assignee__first_name', 'assignee__last_name')
+        .annotate(
+            total=Count('id'),
+            ativos=Count('id', filter=~Q(column__column_type=CT.STATUS_FINAL)),
+            finalizados=Count('id', filter=Q(column__column_type=CT.STATUS_FINAL)),
+            vencidos_r=Count('id', filter=Q(
+                due_date__lt=today, due_date__isnull=False, final_status='',
+            ) & ~Q(column__column_type=CT.STATUS_FINAL)),
+        ).order_by('-total')[:15]
+    )
+    por_responsavel = [
+        {
+            'nome': f"{r['assignee__first_name']} {r['assignee__last_name']}".strip() or '—',
+            'total': r['total'],
+            'ativos': r['ativos'],
+            'finalizados': r['finalizados'],
+            'vencidos': r['vencidos_r'],
+        }
+        for r in resp_qs
+    ]
+    max_resp_total = max((r['total'] for r in por_responsavel), default=1)
+
+    # ── Top tags ────────────────────────────────────────────────────────────────
+    tags_counter = Counter()
+    for tags_str in all_cards.exclude(tags='').values_list('tags', flat=True):
+        for tag in tags_str.split(','):
+            t = tag.strip().lower()
+            if t:
+                tags_counter[t] += 1
+    top_tags = tags_counter.most_common(12)
+
+    # ── Por departamento ─────────────────────────────────────────────────────────
     dept_stats = []
     depts_iter = (
         lider_depts.filter(boards__isnull=False).distinct().order_by('name')
@@ -752,23 +837,35 @@ def analise(request):
             ).count(),
             'concluidos_com_atraso': dc.filter(
                 final_status__in=['concluido', 'nao_concluido', 'cancelado'],
-                due_date__isnull=False,
-                completed_at__isnull=False,
-            ).filter(completed_at__date__gt=F('due_date')).count(),
+                due_date__isnull=False, completed_at__isnull=False,
+            ).filter(completed_at__date__gt=DbF('due_date')).count(),
         })
 
     return render(request, 'kanban/analise.html', {
+        'periodo': periodo,
+        'desde': desde,
+        'hoje': today,
         'total': total,
         'a_fazer': a_fazer,
         'em_andamento': em_andamento,
         'status_final': status_final,
+        'total_ativos': total_ativos,
         'no_prazo': no_prazo,
         'vencidos': vencidos,
+        'stale_count': stale_count,
+        'throughput': throughput,
+        'cycle_time_avg': cycle_time_avg,
         'concluidos': concluidos,
         'nao_concluidos': nao_concluidos,
         'cancelados': cancelados,
         'concluidos_com_atraso': concluidos_com_atraso,
         'dept_stats': dept_stats,
+        'prioridades': prioridades,
+        'por_responsavel': por_responsavel,
+        'max_resp_total': max_resp_total,
+        'top_tags': top_tags,
+        'chart_labels': chart_labels,
+        'chart_throughput': chart_throughput,
     })
 
 

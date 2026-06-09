@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.timezone import now, localdate
@@ -700,66 +700,130 @@ def atendimento_filiado(request, cpf_hash):
 
 @login_required
 def atendimento_metricas(request):
-    periodo = request.GET.get('periodo', 'hoje')
+    from django.db.models.functions import TruncDate
+    from django.utils.timezone import localtime
+
+    periodo = request.GET.get('periodo', 'mes')
     hoje = localdate()
 
-    if periodo == 'semana':
-        desde = hoje - timedelta(days=6)
-    elif periodo == 'mes':
-        desde = hoje.replace(day=1)
-    else:
+    if periodo == 'hoje':
         desde = hoje
-        periodo = 'hoje'
+    elif periodo == 'semana':
+        desde = hoje - timedelta(days=6)
+    elif periodo == '3m':
+        desde = hoje - timedelta(days=89)
+    else:
+        desde = hoje.replace(day=1)
+        periodo = 'mes'
 
     base = _qs_visivel(request.user).filter(created_at__date__gte=desde)
-    concluidos_qs = base.filter(
-        status=Atendimento.Status.CONCLUIDO
-    ).select_related('responsavel')
+    concluidos_qs = base.filter(status=Atendimento.Status.CONCLUIDO).select_related('responsavel')
 
-    total = base.count()
+    total           = base.count()
     total_concluidos = concluidos_qs.count()
-    total_abertos = base.exclude(
+    total_cancelados = base.filter(status=Atendimento.Status.CANCELADO).count()
+    total_retornos   = base.filter(is_retorno=True).count()
+    total_abertos    = base.exclude(
         status__in=[Atendimento.Status.CONCLUIDO, Atendimento.Status.CANCELADO]
     ).count()
+    taxa_conclusao = round(total_concluidos / total * 100) if total else 0
 
     esperas, servicos = [], []
     por_operador = defaultdict(lambda: {'n': 0, 'esperas': [], 'servicos': []})
-    por_fila = defaultdict(int)
-    fila_labels = dict(Atendimento._meta.get_field('nextqs_fila').choices)
+    por_fila     = defaultdict(lambda: {'n': 0, 'esperas': [], 'servicos': []})
+    horas        = defaultdict(int)
+    dias_semana  = defaultdict(int)
+    fila_labels  = dict(Atendimento._meta.get_field('nextqs_fila').choices)
 
     for at in concluidos_qs:
-        if at.iniciado_em:
+        hora_local = localtime(at.created_at).hour
+        horas[hora_local] += 1
+        dias_semana[at.created_at.weekday()] += 1
+
+        e = s = None
+        if at.iniciado_em and at.created_at:
             e = (at.iniciado_em - at.created_at).total_seconds() / 60
-            esperas.append(e)
+            if e >= 0:
+                esperas.append(e)
         if at.iniciado_em and at.concluido_em:
             s = (at.concluido_em - at.iniciado_em).total_seconds() / 60
-            servicos.append(s)
+            if s >= 0:
+                servicos.append(s)
+
         if at.responsavel:
             nome = at.responsavel.get_full_name() or at.responsavel.email
-            por_operador[nome]['n'] += 1
-            if at.iniciado_em:
-                por_operador[nome]['esperas'].append(
-                    (at.iniciado_em - at.created_at).total_seconds() / 60
-                )
-            if at.iniciado_em and at.concluido_em:
-                por_operador[nome]['servicos'].append(
-                    (at.concluido_em - at.iniciado_em).total_seconds() / 60
-                )
+            d = por_operador[nome]
+            d['n'] += 1
+            if e is not None and e >= 0:
+                d['esperas'].append(e)
+            if s is not None and s >= 0:
+                d['servicos'].append(s)
+
         if at.nextqs_fila:
             label = fila_labels.get(at.nextqs_fila, at.nextqs_fila)
-            por_fila[label] += 1
+            d = por_fila[label]
+            d['n'] += 1
+            if e is not None and e >= 0:
+                d['esperas'].append(e)
+            if s is not None and s >= 0:
+                d['servicos'].append(s)
 
-    avg_espera = int(sum(esperas) / len(esperas)) if esperas else None
-    avg_servico = int(sum(servicos) / len(servicos)) if servicos else None
+    avg_espera_min  = round(sum(esperas) / len(esperas)) if esperas else None
+    avg_servico_min = round(sum(servicos) / len(servicos)) if servicos else None
+
+    # SLA de espera
+    sla = {
+        'ate5':  sum(1 for e in esperas if e <= 5),
+        'ate15': sum(1 for e in esperas if 5 < e <= 15),
+        'ate30': sum(1 for e in esperas if 15 < e <= 30),
+        'mais30': sum(1 for e in esperas if e > 30),
+        'total': len(esperas),
+    }
+
+    # Tendência diária
+    n_days = (hoje - desde).days + 1
+    date_range = [desde + timedelta(days=i) for i in range(n_days)]
+    daily_raw = list(
+        base.annotate(dia=TruncDate('created_at'))
+        .values('dia')
+        .annotate(
+            total=Count('id'),
+            concluidos=Count('id', filter=Q(status=Atendimento.Status.CONCLUIDO)),
+        )
+        .order_by('dia')
+    )
+    daily_map    = {d['dia']: d for d in daily_raw}
+    chart_labels     = json.dumps([d.strftime('%d/%m') for d in date_range])
+    chart_total      = json.dumps([daily_map.get(d, {}).get('total', 0) for d in date_range])
+    chart_concluidos = json.dumps([daily_map.get(d, {}).get('concluidos', 0) for d in date_range])
+
+    # Por hora (8h-18h)
+    hora_labels = json.dumps([f'{h:02d}h' for h in range(8, 19)])
+    hora_data   = json.dumps([horas.get(h, 0) for h in range(8, 19)])
+
+    # Por dia da semana
+    dow_labels = json.dumps(['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'])
+    dow_data   = json.dumps([dias_semana.get(i, 0) for i in range(7)])
 
     operadores = sorted([
         {
             'nome': nome,
             'n': d['n'],
-            'avg_espera': _fmt_min(int(sum(d['esperas']) / len(d['esperas'])) if d['esperas'] else None),
-            'avg_servico': _fmt_min(int(sum(d['servicos']) / len(d['servicos'])) if d['servicos'] else None),
+            'avg_espera': _fmt_min(round(sum(d['esperas']) / len(d['esperas'])) if d['esperas'] else None),
+            'avg_servico': _fmt_min(round(sum(d['servicos']) / len(d['servicos'])) if d['servicos'] else None),
         }
         for nome, d in por_operador.items()
+    ], key=lambda x: x['n'], reverse=True)
+    max_op = max((o['n'] for o in operadores), default=1)
+
+    filas_stats = sorted([
+        {
+            'nome': nome,
+            'n': d['n'],
+            'avg_espera': _fmt_min(round(sum(d['esperas']) / len(d['esperas'])) if d['esperas'] else None),
+            'avg_servico': _fmt_min(round(sum(d['servicos']) / len(d['servicos'])) if d['servicos'] else None),
+        }
+        for nome, d in por_fila.items()
     ], key=lambda x: x['n'], reverse=True)
 
     return render(request, 'atendimento/metricas.html', {
@@ -768,9 +832,21 @@ def atendimento_metricas(request):
         'hoje': hoje,
         'total': total,
         'total_concluidos': total_concluidos,
+        'total_cancelados': total_cancelados,
+        'total_retornos': total_retornos,
         'total_abertos': total_abertos,
-        'avg_espera': _fmt_min(avg_espera),
-        'avg_servico': _fmt_min(avg_servico),
+        'taxa_conclusao': taxa_conclusao,
+        'avg_espera': _fmt_min(avg_espera_min),
+        'avg_servico': _fmt_min(avg_servico_min),
+        'sla': sla,
         'operadores': operadores,
-        'por_fila': dict(sorted(por_fila.items(), key=lambda x: x[1], reverse=True)),
+        'max_op': max_op,
+        'filas_stats': filas_stats,
+        'chart_labels': chart_labels,
+        'chart_total': chart_total,
+        'chart_concluidos': chart_concluidos,
+        'hora_labels': hora_labels,
+        'hora_data': hora_data,
+        'dow_labels': dow_labels,
+        'dow_data': dow_data,
     })
