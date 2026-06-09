@@ -48,8 +48,13 @@ def emitir_senha(at):
         return False, str(exc)
 
 
+def _service_desk(queue_info):
+    """Retorna o service_desk_id da fila, com fallback para o global."""
+    return queue_info.get('service_desk_id') or settings.NEXTQS_SERVICE_DESK
+
+
 def chamar_senha(at, agent_id):
-    """Chama a senha no display da recepção (Sala 14)."""
+    """Chama a senha no display. Usa o service_desk_id da fila se configurado."""
     if not settings.NEXTQS_API_KEY:
         return False, 'NEXTQS_API_KEY não configurado.'
     queue_info = settings.NEXTQS_QUEUES.get(at.nextqs_fila)
@@ -57,7 +62,7 @@ def chamar_senha(at, agent_id):
         return False, 'Fila não reconhecida.'
     payload = {
         'queue_id': queue_info['id'],
-        'service_desk_id': settings.NEXTQS_SERVICE_DESK,
+        'service_desk_id': _service_desk(queue_info),
         'ticket': at.numero_senha,
         'alpha': at.nextqs_fila,
         'customer_name': at.nome_filiado[:30],
@@ -88,7 +93,7 @@ def cancelar_senha(at, agent_id):
             f'{settings.NEXTQS_API_BASE}/v1/organization/actions/directcall',
             json={
                 'queue_id': queue_info['id'],
-                'service_desk_id': settings.NEXTQS_SERVICE_DESK,
+                'service_desk_id': _service_desk(queue_info),
                 'ticket': at.numero_senha,
                 'alpha': at.nextqs_fila,
                 'customer_name': at.nome_filiado[:30],
@@ -103,7 +108,11 @@ def cancelar_senha(at, agent_id):
             return False, 'service_origin_id não retornado pelo NextQS.'
         r2 = requests.post(
             f'{settings.NEXTQS_API_BASE}/v1/organization/actions/noshow',
-            json={'service_origin_id': service_origin_id, 'agent_id': agent_id},
+            json={
+                'service_origin_id': service_origin_id,
+                'agent_id': agent_id,
+                'service_desk_id': _service_desk(queue_info),
+            },
             headers=_headers(),
             timeout=8,
         )

@@ -167,7 +167,7 @@ NEXTQS_QUEUES = {
     'P': {'id': '69fcebfed8b1da6f24097e97', 'label': 'Previdenciário'},
     'T': {'id': '69fceca7f5a07c100b05d99c', 'label': 'Trabalhista'},
     'A': {'id': '69fcecd3f5a07c100b05d9a3', 'label': 'Andamento de Processo'},
-    'M': {'id': '6878f94166fd09b66604af9b', 'label': 'Médico do Trabalho'},
+    'M': {'id': '6878f94166fd09b66604af9b', 'label': 'Médico do Trabalho', 'service_desk_id': '6878fa784a7dcacce60bf671'},
 }
 
 # ── Limites de upload ────────────────────────────────────────────────────────
