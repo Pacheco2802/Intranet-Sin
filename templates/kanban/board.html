@@ -106,6 +106,9 @@
   }
   /* Busca rápida: oculta itens fora do filtro */
   .kc-item.kc-hidden { display: none; }
+  /* Durante busca ativa, revela todos os cards (inclusive os do "ver mais") */
+  #board-columns.is-searching .kc-overflow { display: block; }
+  #board-columns.is-searching .ver-mais-btn { display: none; }
 </style>
 
 <script>
@@ -165,6 +168,8 @@
   let currentSearch = '';
   function applySearch() {
     const term = currentSearch.trim().toLowerCase();
+    // Revela overflow durante busca ativa; restaura quando limpa
+    BC.classList.toggle('is-searching', !!term);
     BC.querySelectorAll('.kc-item').forEach(function (it) {
       if (!term) { it.classList.remove('kc-hidden'); return; }
       const hit = (it.textContent || '').toLowerCase().indexOf(term) !== -1;

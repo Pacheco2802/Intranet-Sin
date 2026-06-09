@@ -726,7 +726,8 @@ def atendimento_metricas(request):
     total_abertos    = base.exclude(
         status__in=[Atendimento.Status.CONCLUIDO, Atendimento.Status.CANCELADO]
     ).count()
-    taxa_conclusao = round(total_concluidos / total * 100) if total else 0
+    n_dias_periodo = (hoje - desde).days + 1
+    media_por_dia  = round(total / n_dias_periodo, 1) if n_dias_periodo else 0
 
     esperas, servicos = [], []
     por_operador = defaultdict(lambda: {'n': 0, 'esperas': [], 'servicos': []})
@@ -780,22 +781,24 @@ def atendimento_metricas(request):
         'total': len(esperas),
     }
 
-    # Tendência diária
-    n_days = (hoje - desde).days + 1
-    date_range = [desde + timedelta(days=i) for i in range(n_days)]
-    daily_raw = list(
-        base.annotate(dia=TruncDate('created_at'))
-        .values('dia')
-        .annotate(
-            total=Count('id'),
-            concluidos=Count('id', filter=Q(status=Atendimento.Status.CONCLUIDO)),
-        )
-        .order_by('dia')
+    # Pareto por fila
+    fila_labels_dict = dict(Atendimento._meta.get_field('nextqs_fila').choices)
+    pareto_raw = list(
+        base.exclude(nextqs_fila='')
+        .values('nextqs_fila').annotate(n=Count('id'))
+        .order_by('-n')
     )
-    daily_map    = {d['dia']: d for d in daily_raw}
-    chart_labels     = json.dumps([d.strftime('%d/%m') for d in date_range])
-    chart_total      = json.dumps([daily_map.get(d, {}).get('total', 0) for d in date_range])
-    chart_concluidos = json.dumps([daily_map.get(d, {}).get('concluidos', 0) for d in date_range])
+    pareto_total = sum(p['n'] for p in pareto_raw)
+    pareto_labels, pareto_values, pareto_cumulative = [], [], []
+    cumsum = 0
+    for p in pareto_raw:
+        pareto_labels.append(fila_labels_dict.get(p['nextqs_fila'], p['nextqs_fila']))
+        pareto_values.append(p['n'])
+        cumsum += p['n']
+        pareto_cumulative.append(round(cumsum / pareto_total * 100, 1) if pareto_total else 0)
+    pareto_labels_json     = json.dumps(pareto_labels)
+    pareto_values_json     = json.dumps(pareto_values)
+    pareto_cumulative_json = json.dumps(pareto_cumulative)
 
     # Por hora (8h-18h)
     hora_labels = json.dumps([f'{h:02d}h' for h in range(8, 19)])
@@ -835,16 +838,17 @@ def atendimento_metricas(request):
         'total_cancelados': total_cancelados,
         'total_retornos': total_retornos,
         'total_abertos': total_abertos,
-        'taxa_conclusao': taxa_conclusao,
+        'media_por_dia': media_por_dia,
         'avg_espera': _fmt_min(avg_espera_min),
         'avg_servico': _fmt_min(avg_servico_min),
         'sla': sla,
         'operadores': operadores,
         'max_op': max_op,
         'filas_stats': filas_stats,
-        'chart_labels': chart_labels,
-        'chart_total': chart_total,
-        'chart_concluidos': chart_concluidos,
+        'pareto_labels': pareto_labels_json,
+        'pareto_values': pareto_values_json,
+        'pareto_cumulative': pareto_cumulative_json,
+        'pareto_total': pareto_total,
         'hora_labels': hora_labels,
         'hora_data': hora_data,
         'dow_labels': dow_labels,
