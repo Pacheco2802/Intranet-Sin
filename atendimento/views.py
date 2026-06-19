@@ -85,7 +85,6 @@ def _notificar_encaminhamento(atendimento, para_dept, actor):
 
 # Mapeamento fila NextQS → nome do departamento destino
 _FILA_PARA_DEPT = {
-    'J': 'Jurídico',
     'P': 'Jurídico',
     'T': 'Jurídico',
     'A': 'Jurídico',
@@ -93,7 +92,7 @@ _FILA_PARA_DEPT = {
 }
 
 _FILA_LABELS = {
-    'J': 'Jurídico',
+    'J': 'Jurídico',       # mantido apenas para exibir registros históricos
     'P': 'Previdenciário',
     'T': 'Trabalhista',
     'A': 'Andamento de Processo',

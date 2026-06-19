@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Financeiro{% endblock %}
+{% block page_title %}Financeiro{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-5">
+
+  <!-- Ações rápidas -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <a href="{% url 'financeiro:reembolso_create' %}" class="card card-hover flex items-start gap-3 hover:border-accent">
+      <div class="text-2xl">🧾</div>
+      <div>
+        <p class="font-semibold text-gray-900">Solicitar reembolso</p>
+        <p class="text-sm text-gray-500 mt-0.5">Envie o papel assinado e o comprovante de pagamento.</p>
+      </div>
+    </a>
+    {% if pode_lancar %}
+    <a href="{% url 'financeiro:atividade_create' %}" class="card card-hover flex items-start gap-3 hover:border-accent">
+      <div class="text-2xl">📋</div>
+      <div>
+        <p class="font-semibold text-gray-900">Lançar atividade de diretoria</p>
+        <p class="text-sm text-gray-500 mt-0.5">Registre evento, data, horas e a comprovação de presença.</p>
+      </div>
+    </a>
+    {% endif %}
+    {% if is_aprovador %}
+    <a href="{% url 'financeiro:atividade_list' %}?aba=aprovar" class="card card-hover flex items-start gap-3 hover:border-accent">
+      <div class="text-2xl">✅</div>
+      <div>
+        <p class="font-semibold text-gray-900">Aprovar atividades</p>
+        <p class="text-sm text-gray-500 mt-0.5">Revise e aprove as atividades dos diretores.</p>
+      </div>
+    </a>
+    {% endif %}
+    {% if is_financeiro %}
+    <a href="{% url 'financeiro:a_pagar' %}" class="card card-hover flex items-start gap-3 hover:border-accent">
+      <div class="text-2xl">💸</div>
+      <div>
+        <p class="font-semibold text-gray-900">A pagar</p>
+        <p class="text-sm text-gray-500 mt-0.5">Confirme os pagamentos de reembolsos e de diretoria.</p>
+      </div>
+    </a>
+    {% endif %}
+  </div>
+
+  <!-- Indicadores -->
+  {% if is_financeiro or is_aprovador %}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    {% if is_financeiro %}
+    <a href="{% url 'financeiro:a_pagar' %}" class="card text-center hover:border-accent">
+      <p class="text-3xl font-bold text-amber-500">{{ reembolsos_pendentes }}</p>
+      <p class="text-xs text-gray-500 mt-1">Reembolsos a pagar</p>
+      {% if total_reemb_pendente %}<p class="text-sm font-semibold text-amber-600 mt-0.5">R$ {{ total_reemb_pendente|floatformat:2 }}</p>{% endif %}
+    </a>
+    <a href="{% url 'financeiro:a_pagar' %}" class="card text-center hover:border-accent">
+      <p class="text-3xl font-bold text-blue-600">{{ diretoria_a_pagar }}</p>
+      <p class="text-xs text-gray-500 mt-1">Atividades a pagar</p>
+    </a>
+    {% endif %}
+    {% if is_aprovador %}
+    <a href="{% url 'financeiro:atividade_list' %}?aba=aprovar" class="card text-center hover:border-accent">
+      <p class="text-3xl font-bold text-amber-500">{{ atividades_pendentes }}</p>
+      <p class="text-xs text-gray-500 mt-1">Atividades para aprovar</p>
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Meus reembolsos -->
+  <div class="card">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-semibold text-gray-900">Meus reembolsos</h3>
+      <a href="{% url 'financeiro:reembolso_list' %}" class="text-xs text-blue-600 hover:text-blue-800">Ver todos →</a>
+    </div>
+    {% for r in meus_reembolsos %}
+    <a href="{% url 'financeiro:reembolso_detail' r.pk %}" class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 -mx-2 px-2 rounded">
+      <div>
+        <p class="text-sm font-medium text-gray-800">{{ r.titulo }}</p>
+        <p class="text-xs text-gray-400">R$ {{ r.valor }} · {{ r.created_at|date:"d/m/Y" }}</p>
+      </div>
+      {% include "financeiro/partials/status_badge.html" with label=r.get_status_display color=r.status_color %}
+    </a>
+    {% empty %}
+    <p class="text-sm text-gray-400 py-3">Você ainda não solicitou reembolsos.</p>
+    {% endfor %}
+  </div>
+
+  {% if pode_lancar %}
+  <!-- Minhas atividades -->
+  <div class="card">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-semibold text-gray-900">Minhas atividades de diretoria</h3>
+      <a href="{% url 'financeiro:atividade_list' %}" class="text-xs text-blue-600 hover:text-blue-800">Ver todas →</a>
+    </div>
+    {% for a in minhas_atividades %}
+    <a href="{% url 'financeiro:atividade_detail' a.pk %}" class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 -mx-2 px-2 rounded">
+      <div>
+        <p class="text-sm font-medium text-gray-800">{{ a.titulo }}</p>
+        <p class="text-xs text-gray-400">{{ a.horas }}h · {{ a.data_atividade|date:"d/m/Y" }}</p>
+      </div>
+      {% include "financeiro/partials/status_badge.html" with label=a.get_status_display color=a.status_color %}
+    </a>
+    {% empty %}
+    <p class="text-sm text-gray-400 py-3">Nenhuma atividade lançada ainda.</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

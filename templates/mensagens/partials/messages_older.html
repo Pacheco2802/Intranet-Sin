@@ -35,6 +35,8 @@
     <div class="max-w-xs lg:max-w-md xl:max-w-lg">
       {% if msg.sender != request.user %}
       <p class="text-xs font-semibold text-gray-500 mb-1 ml-1">{{ msg.sender.get_full_name|default:msg.sender.email }}</p>
+      {% else %}
+      <p class="text-xs font-semibold text-gray-400 mb-1 mr-1 text-right">{{ request.user.get_full_name|default:request.user.email }}</p>
       {% endif %}
 
       <div class="{% if msg.sender == request.user %}bg-accent text-white rounded-2xl rounded-br-sm{% else %}bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-bl-sm shadow-sm{% endif %} px-4 py-2.5">

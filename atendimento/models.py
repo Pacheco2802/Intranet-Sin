@@ -40,6 +40,7 @@ class Atendimento(models.Model):
                  ('A', 'Andamento de Processo'), ('M', 'Médico do Trabalho')],
     )
     is_retorno = models.BooleanField('É retorno?', default=False)
+    is_preferencial = models.BooleanField('Atendimento preferencial', default=False)
     retorno_de = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='retornos', verbose_name='Retorno do atendimento',

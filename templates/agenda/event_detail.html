@@ -28,10 +28,16 @@
         </div>
         <div>
           <p class="font-semibold text-gray-800">{{ event.start_datetime|date:"l, d \d\e F \d\e Y" }}</p>
+          {% if event.is_multiday %}
+          <p class="text-sm text-gray-500">
+            {{ event.start_datetime|date:"H:i" }} → {{ event.end_datetime|date:"d \d\e F \d\e Y, H:i" }}
+          </p>
+          {% else %}
           <p class="text-sm text-gray-500">
             {{ event.start_datetime|date:"H:i" }}
             {% if event.end_datetime %} → {{ event.end_datetime|date:"H:i" }}{% endif %}
           </p>
+          {% endif %}
         </div>
       </div>
 

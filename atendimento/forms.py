@@ -23,7 +23,7 @@ class AtendimentoForm(forms.ModelForm):
         model = Atendimento
         fields = (
             'cpf', 'nome_filiado', 'telefone', 'email_filiado',
-            'nextqs_fila', 'is_retorno',
+            'nextqs_fila', 'is_retorno', 'is_preferencial',
             'assunto', 'descricao',
         )
         widgets = {
@@ -41,6 +41,7 @@ class AtendimentoForm(forms.ModelForm):
             'email_filiado': forms.EmailInput(attrs={'class': 'form-input', 'id': 'id_email_filiado'}),
             'nextqs_fila': forms.Select(attrs={'class': 'form-input'}),
             'is_retorno': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-accent rounded'}),
+            'is_preferencial': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-amber-500 rounded'}),
             'assunto': forms.TextInput(attrs={'class': 'form-input'}),
             'descricao': forms.Textarea(attrs={'rows': 4, 'class': 'form-input', 'placeholder': 'Descreva o motivo do atendimento...'}),
         }
@@ -52,6 +53,15 @@ class AtendimentoForm(forms.ModelForm):
         self.fields['assunto'].required = False
         self.fields['nextqs_fila'].required = False
         self.fields['is_retorno'].required = False
+        self.fields['is_preferencial'].required = False
+        # J (Jurídico genérico) removida — usar P, T ou A conforme o tipo
+        self.fields['nextqs_fila'].choices = [
+            ('', '---------'),
+            ('P', 'Previdenciário'),
+            ('T', 'Trabalhista'),
+            ('A', 'Andamento de Processo'),
+            ('M', 'Médico do Trabalho'),
+        ]
 
     def clean_cpf(self):
         cpf = self.cleaned_data.get('cpf', '')

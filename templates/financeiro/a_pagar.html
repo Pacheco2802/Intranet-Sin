@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+{% block title %}Financeiro — Pagamentos{% endblock %}
+{% block page_title %}Financeiro — Pagamentos{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'financeiro:home' %}" class="btn-secondary text-xs">← Financeiro</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6"
+     x-data="{
+       aba: '{{ request.GET.aba|default:'pagar' }}',
+       sub: 'diretoria',
+       confirmModal: false,
+       confirmTitulo: '',
+       confirmMsg: '',
+       pendingForm: null
+     }">
+
+  <!-- Modal de confirmação de pagamento -->
+  <template x-if="confirmModal">
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+        <div class="text-3xl mb-3 text-center">💸</div>
+        <p class="text-lg font-bold text-gray-900 text-center mb-1" x-text="confirmTitulo"></p>
+        <p class="text-sm text-gray-600 text-center mb-5" x-text="confirmMsg"></p>
+        <div class="flex gap-3">
+          <button @click="pendingForm.submit(); confirmModal=false"
+                  class="flex-1 py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors">
+            Confirmar pagamento
+          </button>
+          <button @click="confirmModal=false; pendingForm=null" class="btn-secondary flex-1 text-sm">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Filtro de competência -->
+  <form method="get" class="flex items-center gap-2 flex-wrap">
+    <input type="hidden" name="aba" :value="aba">
+    <label class="text-xs font-medium text-gray-500">Filtrar por mês:</label>
+    <select name="competencia" class="form-input text-xs py-1.5 w-48">
+      <option value="">Todos os meses</option>
+      {% for mes in meses_disponiveis %}
+      <option value="{{ mes.value }}" {% if competencia_filtro == mes.value %}selected{% endif %}>{{ mes.label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn-secondary text-xs py-1.5">Aplicar</button>
+    {% if competencia_filtro %}
+    <a href="{% url 'financeiro:a_pagar' %}" class="btn-secondary text-xs py-1.5">Limpar</a>
+    {% endif %}
+    <span class="text-xs text-gray-400 ml-1">Teto diretoria: {{ teto }}h/mês</span>
+  </form>
+
+  <!-- Cards de resumo -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="card cursor-pointer hover:border-amber-300 transition-colors" @click="aba='pagar'">
+      <p class="text-xs text-gray-500 font-medium">Reembolsos a pagar</p>
+      <p class="text-2xl font-bold text-amber-600 mt-1">{{ reembolsos|length }}</p>
+      <p class="text-xs text-amber-600 font-semibold mt-0.5">R$ {{ total_reemb_pendente|floatformat:2 }}</p>
+    </div>
+    <div class="card cursor-pointer hover:border-blue-300 transition-colors" @click="aba='pagar'">
+      <p class="text-xs text-gray-500 font-medium">Diretoria a pagar</p>
+      <p class="text-2xl font-bold text-blue-600 mt-1">{{ grupos|length }}</p>
+      <p class="text-xs text-blue-600 font-semibold mt-0.5">R$ {{ total_dir_pendente|floatformat:2 }}</p>
+    </div>
+    <div class="card cursor-pointer hover:border-emerald-300 transition-colors" @click="aba='realizados'; sub='reembolsos'">
+      <p class="text-xs text-gray-500 font-medium">Reembolsos pagos</p>
+      <p class="text-2xl font-bold text-emerald-600 mt-1">{{ reembolsos_pagos|length }}</p>
+      <p class="text-xs text-emerald-600 font-semibold mt-0.5">R$ {{ total_reemb_pago|floatformat:2 }}</p>
+    </div>
+    <div class="card cursor-pointer hover:border-emerald-300 transition-colors" @click="aba='realizados'; sub='diretoria'">
+      <p class="text-xs text-gray-500 font-medium">Pag. diretoria realizados</p>
+      <p class="text-2xl font-bold text-emerald-600 mt-1">{{ pagamentos_dir|length }}</p>
+      <p class="text-xs text-emerald-600 font-semibold mt-0.5">R$ {{ total_dir_pago|floatformat:2 }}</p>
+    </div>
+  </div>
+
+  <!-- Abas principais -->
+  <div class="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+    <button @click="aba='pagar'"
+            :class="aba==='pagar' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'"
+            class="px-5 py-2 rounded-lg text-sm font-semibold transition-all">
+      💳 A pagar
+      {% if reembolsos|length or grupos|length %}
+      <span class="ml-1.5 text-xs bg-amber-500 text-white font-bold px-1.5 py-0.5 rounded-full">
+        {{ reembolsos|length|add:grupos|length }}
+      </span>
+      {% endif %}
+    </button>
+    <button @click="aba='realizados'"
+            :class="aba==='realizados' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'"
+            class="px-5 py-2 rounded-lg text-sm font-semibold transition-all">
+      ✅ Pagamentos realizados
+    </button>
+  </div>
+
+  <!-- ══════════════════ ABA: A PAGAR ══════════════════ -->
+  <div x-show="aba==='pagar'" class="space-y-6">
+
+    <!-- Reembolsos pendentes -->
+    <section>
+      <h2 class="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+        🧾 Reembolsos aguardando pagamento
+        <span class="text-xs font-normal text-gray-400">({{ reembolsos|length }})</span>
+      </h2>
+      <div class="card p-0 overflow-hidden">
+        {% if reembolsos %}
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-100 bg-gray-50">
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Solicitante</th>
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Título</th>
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Valor</th>
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 hidden md:table-cell">Documentos</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            {% for r in reembolsos %}
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="px-4 py-3 font-medium text-gray-900">{{ r.solicitante.get_full_name|default:r.solicitante.email }}</td>
+              <td class="px-4 py-3 text-gray-700">{{ r.titulo }}</td>
+              <td class="px-4 py-3 font-bold text-gray-900">R$ {{ r.valor }}</td>
+              <td class="px-4 py-3 hidden md:table-cell">
+                <a href="{{ r.papel_assinado.url }}" target="_blank" class="text-xs text-blue-600 hover:underline mr-2">papel</a>
+                <a href="{{ r.comprovante.url }}" target="_blank" class="text-xs text-blue-600 hover:underline">comprovante</a>
+              </td>
+              <td class="px-4 py-3 text-right whitespace-nowrap">
+                <a href="{% url 'financeiro:reembolso_detail' r.pk %}" class="text-xs text-gray-400 hover:text-gray-600 font-medium mr-3">Ver</a>
+                <form method="post" action="{% url 'financeiro:reembolso_pagar' r.pk %}" class="inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{% url 'financeiro:a_pagar' %}">
+                  <button type="button"
+                          @click="confirmTitulo='Confirmar pagamento?'; confirmMsg='R$ {{ r.valor }} para {{ r.solicitante.get_full_name|default:r.solicitante.email|escapejs }}'; pendingForm=$el.closest('form'); confirmModal=true"
+                          class="text-xs py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-colors">
+                    💸 Pagar
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="border-t-2 border-gray-200 bg-gray-50">
+            <tr>
+              <td colspan="2" class="px-4 py-2 text-xs font-bold text-gray-500 uppercase">Total</td>
+              <td class="px-4 py-2 font-bold text-gray-900">R$ {{ total_reemb_pendente|floatformat:2 }}</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+        {% else %}
+        <div class="text-center py-10">
+          <p class="text-3xl mb-2">✅</p>
+          <p class="text-sm text-gray-500 font-medium">Nenhum reembolso aguardando pagamento.</p>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- Diretoria a pagar -->
+    <section>
+      <h2 class="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+        📋 Diretoria a pagar
+        <span class="text-xs font-normal text-gray-400">(aprovado pela coord. geral)</span>
+      </h2>
+      <div class="card p-0 overflow-hidden">
+        {% if grupos %}
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-100 bg-gray-50">
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Diretor</th>
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Mês ref.</th>
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 hidden sm:table-cell">Atividades</th>
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Horas</th>
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Valor</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            {% for g in grupos %}
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="px-4 py-3 font-medium text-gray-900">{{ g.diretor.get_full_name|default:g.diretor.email }}</td>
+              <td class="px-4 py-3 text-gray-600">{{ g.competencia|date:"m/Y" }}</td>
+              <td class="px-4 py-3 text-gray-500 hidden sm:table-cell">{{ g.qtd }}</td>
+              <td class="px-4 py-3 text-gray-700">
+                {{ g.horas_pagas }}h
+                {% if g.excedeu %}<span class="block text-xs text-amber-600">⚠ de {{ g.horas_totais }}h</span>{% endif %}
+              </td>
+              <td class="px-4 py-3 font-bold text-gray-900">R$ {{ g.valor_total }}</td>
+              <td class="px-4 py-3 text-right">
+                <form method="post" action="{% url 'financeiro:diretoria_pagar' %}" class="inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="diretor" value="{{ g.diretor.pk }}">
+                  <input type="hidden" name="competencia" value="{{ g.competencia_str }}">
+                  <button type="button"
+                          @click="confirmTitulo='Confirmar pagamento?'; confirmMsg='R$ {{ g.valor_total }} para {{ g.diretor.get_full_name|default:g.diretor.email|escapejs }} — {{ g.competencia|date:'m/Y' }}'; pendingForm=$el.closest('form'); confirmModal=true"
+                          class="text-xs py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-colors whitespace-nowrap">
+                    💸 Pagar
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="border-t-2 border-gray-200 bg-gray-50">
+            <tr>
+              <td colspan="4" class="px-4 py-2 text-xs font-bold text-gray-500 uppercase hidden sm:table-cell">Total</td>
+              <td colspan="1" class="px-4 py-2 text-xs font-bold text-gray-500 uppercase sm:hidden">Total</td>
+              <td class="px-4 py-2 font-bold text-gray-900">R$ {{ total_dir_pendente|floatformat:2 }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+        {% else %}
+        <div class="text-center py-10">
+          <p class="text-3xl mb-2">✅</p>
+          <p class="text-sm text-gray-500 font-medium">Nenhuma atividade aprovada aguardando pagamento.</p>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ══════════════════ ABA: REALIZADOS ══════════════════ -->
+  <div x-show="aba==='realizados'" class="space-y-4">
+
+    <!-- Sub-abas -->
+    <div class="flex gap-1 border-b border-gray-200">
+      <button @click="sub='diretoria'"
+              :class="sub==='diretoria' ? 'border-b-2 border-accent text-accent' : 'text-gray-500 hover:text-gray-700'"
+              class="px-4 py-2 text-sm font-semibold -mb-px transition-colors">
+        Diretoria
+        <span class="ml-1 text-xs font-normal text-gray-400">({{ pagamentos_dir|length }})</span>
+      </button>
+      <button @click="sub='reembolsos'"
+              :class="sub==='reembolsos' ? 'border-b-2 border-accent text-accent' : 'text-gray-500 hover:text-gray-700'"
+              class="px-4 py-2 text-sm font-semibold -mb-px transition-colors">
+        Reembolsos
+        <span class="ml-1 text-xs font-normal text-gray-400">({{ reembolsos_pagos|length }})</span>
+      </button>
+    </div>
+
+    <!-- Sub: diretoria realizados -->
+    <div x-show="sub==='diretoria'">
+      <div class="card p-0 overflow-hidden">
+        {% if pagamentos_dir %}
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-100 bg-gray-50">
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Diretor</th>
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Mês ref.</th>
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 hidden sm:table-cell">Horas pagas</th>
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Valor</th>
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 hidden md:table-cell">Pago por</th>
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 hidden md:table-cell">Data</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            {% for p in pagamentos_dir %}
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="px-4 py-3 font-medium text-gray-900">{{ p.diretor.get_full_name|default:p.diretor.email }}</td>
+              <td class="px-4 py-3 text-gray-600">{{ p.competencia|date:"m/Y" }}</td>
+              <td class="px-4 py-3 text-gray-600 hidden sm:table-cell">{{ p.horas_pagas }}h</td>
+              <td class="px-4 py-3 font-bold text-emerald-700">R$ {{ p.valor_total }}</td>
+              <td class="px-4 py-3 text-gray-500 hidden md:table-cell text-xs">{{ p.pago_por.get_full_name|default:p.pago_por.email|default:"—" }}</td>
+              <td class="px-4 py-3 text-gray-400 text-xs hidden md:table-cell">{{ p.pago_em|date:"d/m/Y" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="border-t-2 border-gray-200 bg-gray-50">
+            <tr>
+              <td colspan="3" class="px-4 py-2 text-xs font-bold text-gray-500 uppercase hidden sm:table-cell">Total</td>
+              <td colspan="1" class="px-4 py-2 text-xs font-bold text-gray-500 uppercase sm:hidden">Total</td>
+              <td class="px-4 py-2 font-bold text-emerald-700 text-sm">R$ {{ total_dir_pago|floatformat:2 }}</td>
+              <td colspan="2" class="hidden md:table-cell"></td>
+            </tr>
+          </tfoot>
+        </table>
+        {% else %}
+        <p class="text-sm text-gray-400 text-center py-8">Nenhum pagamento de diretoria realizado{% if competencia_filtro %} no mês selecionado{% endif %}.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Sub: reembolsos realizados -->
+    <div x-show="sub==='reembolsos'">
+      <div class="card p-0 overflow-hidden">
+        {% if reembolsos_pagos %}
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-100 bg-gray-50">
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Solicitante</th>
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Título</th>
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Valor</th>
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 hidden md:table-cell">Pago por</th>
+              <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 hidden md:table-cell">Data</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            {% for r in reembolsos_pagos %}
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="px-4 py-3 font-medium text-gray-900">{{ r.solicitante.get_full_name|default:r.solicitante.email }}</td>
+              <td class="px-4 py-3 text-gray-700">{{ r.titulo }}</td>
+              <td class="px-4 py-3 font-bold text-emerald-700">R$ {{ r.valor }}</td>
+              <td class="px-4 py-3 text-gray-500 text-xs hidden md:table-cell">{{ r.pago_por.get_full_name|default:r.pago_por.email|default:"—" }}</td>
+              <td class="px-4 py-3 text-gray-400 text-xs hidden md:table-cell">{{ r.pago_em|date:"d/m/Y"|default:"—" }}</td>
+              <td class="px-4 py-3 text-right">
+                <a href="{% url 'financeiro:reembolso_detail' r.pk %}" class="text-xs text-gray-400 hover:text-gray-600">Ver →</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="border-t-2 border-gray-200 bg-gray-50">
+            <tr>
+              <td colspan="2" class="px-4 py-2 text-xs font-bold text-gray-500 uppercase">Total</td>
+              <td class="px-4 py-2 font-bold text-emerald-700 text-sm">R$ {{ total_reemb_pago|floatformat:2 }}</td>
+              <td colspan="3" class="hidden md:table-cell"></td>
+            </tr>
+          </tfoot>
+        </table>
+        {% else %}
+        <p class="text-sm text-gray-400 text-center py-8">Nenhum reembolso pago{% if competencia_filtro %} no mês selecionado{% endif %}.</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

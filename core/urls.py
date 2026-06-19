@@ -40,6 +40,8 @@ urlpatterns = [
 
     path('notificacoes/', views.notification_list, name='notification_list'),
     path('notificacoes/contagem/', views.topbar_counts, name='topbar_counts'),
+    path('notificacoes/recentes/', views.notification_dropdown, name='notification_dropdown'),
+    path('notificacoes/abrir/<int:pk>/', views.notification_go, name='notification_go'),
     path('notificacoes/<int:pk>/lida/', views.notification_mark_read, name='notification_mark_read'),
     path('notificacoes/marcar-todas/', views.notification_mark_all_read, name='notification_mark_all_read'),
 

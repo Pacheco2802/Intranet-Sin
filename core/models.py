@@ -67,6 +67,11 @@ class CustomUser(AbstractUser):
     is_approved = models.BooleanField('Aprovado', default=False)
     can_post_comunicado   = models.BooleanField('Pode criar comunicados', default=False)
     can_access_consultas  = models.BooleanField('Acesso à Agenda Médica', default=False)
+    is_aprovador_diretoria = models.BooleanField('Aprova atividades de diretoria', default=False)
+    valor_hora_diretoria = models.DecimalField(
+        'Valor/hora diretoria', max_digits=8, decimal_places=2, null=True, blank=True,
+        help_text='Opcional. Se vazio, usa o valor padrão do módulo Financeiro.'
+    )
     nextqs_agent_id = models.CharField('Agent ID NextQS', max_length=50, blank=True)
     lgpd_consent = models.BooleanField('Consentimento LGPD', default=False)
     lgpd_consent_date = models.DateTimeField('Data do consentimento', null=True, blank=True)
@@ -105,6 +110,10 @@ class CustomUser(AbstractUser):
     @property
     def can_see_all(self):
         return self.role in (self.Role.ADMIN_TI, self.Role.PRESIDENTE, self.Role.COORD_GERAL, self.Role.DIRETOR, self.Role.LIDER)
+
+    @property
+    def is_financeiro(self):
+        return self.is_admin_ti or self.departments.filter(slug='financeiro').exists()
 
     def anonymize(self):
         uid = hashlib.sha256(str(self.pk).encode()).hexdigest()[:8]
@@ -210,6 +219,14 @@ class AuditLog(models.Model):
         ATENDIMENTO_CREATE = 'ATEND_CREATE', 'Atendimento criado'
         ATENDIMENTO_UPDATE = 'ATEND_UPDATE', 'Atendimento atualizado'
         ATENDIMENTO_CLOSE = 'ATEND_CLOSE', 'Atendimento concluído'
+        REEMB_CREATE = 'REEMB_CREATE', 'Reembolso solicitado'
+        REEMB_APPROVE = 'REEMB_APPROVE', 'Reembolso aprovado'
+        REEMB_PAY = 'REEMB_PAY', 'Reembolso pago'
+        REEMB_REJECT = 'REEMB_REJECT', 'Reembolso rejeitado'
+        DIRAT_CREATE = 'DIRAT_CREATE', 'Atividade de diretoria criada'
+        DIRAT_APPROVE = 'DIRAT_APPROVE', 'Atividade de diretoria aprovada'
+        DIRAT_REJECT = 'DIRAT_REJECT', 'Atividade de diretoria rejeitada'
+        DIRAT_PAY = 'DIRAT_PAY', 'Pagamento de diretoria realizado'
 
     user = models.ForeignKey(
         CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
@@ -251,6 +268,11 @@ class Notification(models.Model):
         CARD_MOVED = 'CARD_MOVED', 'Card movido de coluna'
         EVENT_INVITE = 'EVENT_INVITE', 'Convite para evento'
         EVENT_REMINDER = 'EVENT_REMINDER', 'Lembrete de evento'
+        REEMBOLSO_NOVO = 'REEMBOLSO_NOVO', 'Novo reembolso para análise'
+        REEMBOLSO_STATUS = 'REEMBOLSO_STATUS', 'Atualização do seu reembolso'
+        DIRETORIA_NOVA = 'DIRETORIA_NOVA', 'Nova atividade para aprovar'
+        DIRETORIA_STATUS = 'DIRETORIA_STATUS', 'Atualização da sua atividade'
+        DIRETORIA_PAGO = 'DIRETORIA_PAGO', 'Pagamento de diretoria realizado'
 
     user = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE,

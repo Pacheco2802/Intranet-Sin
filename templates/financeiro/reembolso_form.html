@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Solicitar reembolso{% endblock %}
+{% block page_title %}Solicitar reembolso{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'financeiro:reembolso_list' %}" class="btn-secondary text-xs">← Reembolsos</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto space-y-4">
+
+  <!-- Intro -->
+  <div class="card bg-blue-50 border border-blue-100">
+    <p class="text-sm text-blue-800 font-medium mb-1">Como funciona?</p>
+    <p class="text-sm text-blue-700">Preencha os dados abaixo e anexe os documentos necessários. O financeiro vai analisar e confirmar o pagamento em breve.</p>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="card space-y-5" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="text-red-500 text-sm">{{ form.non_field_errors }}</div>{% endif %}
+
+    <div>
+      <label class="block text-xs font-medium text-gray-500 mb-1">Título <span class="text-red-500">*</span></label>
+      {{ form.titulo }}
+      <p class="text-xs text-gray-400 mt-1">Ex: "Reembolso passagem — reunião SP — 10/06/2026"</p>
+      {% if form.titulo.errors %}<p class="text-red-500 text-xs mt-1">{{ form.titulo.errors|join:" " }}</p>{% endif %}
+    </div>
+
+    <div>
+      <label class="block text-xs font-medium text-gray-500 mb-1">Valor (R$) <span class="text-red-500">*</span></label>
+      {{ form.valor }}
+      {% if form.valor.errors %}<p class="text-red-500 text-xs mt-1">{{ form.valor.errors|join:" " }}</p>{% endif %}
+    </div>
+
+    <div>
+      <label class="block text-xs font-medium text-gray-500 mb-1">Descrição <span class="text-gray-400 font-normal">(opcional)</span></label>
+      {{ form.descricao }}
+      <p class="text-xs text-gray-400 mt-1">Descreva o motivo e detalhes da despesa.</p>
+      {% if form.descricao.errors %}<p class="text-red-500 text-xs mt-1">{{ form.descricao.errors|join:" " }}</p>{% endif %}
+    </div>
+
+    <!-- Papel assinado -->
+    <div x-data="{ nome1: '' }" @change="nome1 = $event.target.files?.[0]?.name || ''">
+      <label class="block text-xs font-medium text-gray-500 mb-1">Papel assinado <span class="text-red-500">*</span></label>
+      <label for="id_papel_assinado"
+             class="flex items-center gap-3 border-2 border-dashed rounded-xl px-4 py-3 cursor-pointer transition-colors"
+             :class="nome1 ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:border-accent'">
+        <span class="text-xl flex-shrink-0" x-text="nome1 ? '✅' : '📄'"></span>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium truncate" :class="nome1 ? 'text-green-700' : 'text-gray-400'" x-text="nome1 || 'Selecionar arquivo...'"></p>
+          <p class="text-xs text-gray-400">Formulário de reembolso com assinatura do responsável</p>
+        </div>
+        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-lg font-medium flex-shrink-0">Escolher</span>
+      </label>
+      <div class="hidden">{{ form.papel_assinado }}</div>
+      {% if form.papel_assinado.errors %}<p class="text-red-500 text-xs mt-1">{{ form.papel_assinado.errors|join:" " }}</p>{% endif %}
+    </div>
+
+    <!-- Comprovante -->
+    <div x-data="{ nome2: '' }" @change="nome2 = $event.target.files?.[0]?.name || ''">
+      <label class="block text-xs font-medium text-gray-500 mb-1">Comprovante de pagamento <span class="text-red-500">*</span></label>
+      <label for="id_comprovante"
+             class="flex items-center gap-3 border-2 border-dashed rounded-xl px-4 py-3 cursor-pointer transition-colors"
+             :class="nome2 ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:border-accent'">
+        <span class="text-xl flex-shrink-0" x-text="nome2 ? '✅' : '🧾'"></span>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium truncate" :class="nome2 ? 'text-green-700' : 'text-gray-400'" x-text="nome2 || 'Selecionar arquivo...'"></p>
+          <p class="text-xs text-gray-400">Nota fiscal, recibo ou extrato da despesa realizada</p>
+        </div>
+        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-lg font-medium flex-shrink-0">Escolher</span>
+      </label>
+      <div class="hidden">{{ form.comprovante }}</div>
+      {% if form.comprovante.errors %}<p class="text-red-500 text-xs mt-1">{{ form.comprovante.errors|join:" " }}</p>{% endif %}
+    </div>
+
+    <p class="text-xs text-gray-400">Formatos aceitos: PDF, DOC, XLS, JPG, PNG. Máx. 5 MB por arquivo.</p>
+
+    <div class="flex gap-3 pt-2">
+      <button type="submit" class="btn-primary flex-1">Enviar reembolso</button>
+      <a href="{% url 'financeiro:reembolso_list' %}" class="btn-secondary">Cancelar</a>
+    </div>
+  </form>
+
+  <!-- O que acontece depois -->
+  <div class="card bg-gray-50 border border-gray-100">
+    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">O que acontece depois?</p>
+    <div class="space-y-2.5">
+      <div class="flex items-start gap-3">
+        <span class="w-5 h-5 rounded-full bg-accent text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
+        <p class="text-sm text-gray-600">Você envia o formulário com os documentos.</p>
+      </div>
+      <div class="flex items-start gap-3">
+        <span class="w-5 h-5 rounded-full bg-gray-300 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+        <p class="text-sm text-gray-600">O financeiro analisa os documentos e confirma os dados.</p>
+      </div>
+      <div class="flex items-start gap-3">
+        <span class="w-5 h-5 rounded-full bg-gray-300 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
+        <p class="text-sm text-gray-600">O pagamento é realizado e você recebe uma notificação.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

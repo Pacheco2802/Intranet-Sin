@@ -18,7 +18,8 @@ class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
         ('Informações da Intranet', {
             'fields': ('role', 'departments', 'phone', 'bio', 'avatar', 'created_by',
-                       'can_post_comunicado', 'can_access_consultas')
+                       'can_post_comunicado', 'can_access_consultas',
+                       'is_aprovador_diretoria')
         }),
         ('LGPD', {
             'fields': ('lgpd_consent', 'lgpd_consent_date')

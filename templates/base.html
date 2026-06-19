@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Intranet{% endblock %} — SINSAÚDE-SP</title>
-  <!-- Anti-FOUC: aplica tema antes do render -->
   <script>(function(){var t=localStorage.getItem('darkMode');document.documentElement.setAttribute('data-theme',t==='1'?'dark':'light');})();</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
@@ -81,7 +80,6 @@
     [data-theme="dark"] .form-input { background:rgba(255,255,255,.06); color:var(--ink-1); border-color:var(--border-std); }
     [data-theme="dark"] .form-input:focus { background:rgba(255,255,255,.09); }
     [data-theme="dark"] .card { background:var(--surf-card); border-color:var(--border-soft); }
-    /* Tailwind bg/text overrides */
     [data-theme="dark"] .bg-white { background-color:#1e293b !important; }
     [data-theme="dark"] .bg-gray-50 { background-color:#1e293b !important; }
     [data-theme="dark"] .bg-gray-100 { background-color:#263348 !important; }
@@ -97,12 +95,33 @@
     [data-theme="dark"] .border-gray-100 { border-color:rgba(255,255,255,.07) !important; }
     [data-theme="dark"] .border-gray-200 { border-color:rgba(255,255,255,.10) !important; }
     [data-theme="dark"] .divide-gray-100 > * + * { border-color:rgba(255,255,255,.07) !important; }
-    /* Kanban */
     [data-theme="dark"] .kanban-column { background:#1e293b !important; }
     [data-theme="dark"] .kanban-card { background:#0f172a !important; border-color:rgba(255,255,255,.08) !important; }
     [data-theme="dark"] .kanban-card:hover { border-color:rgba(59,130,246,.3) !important; }
-    /* Inputs e selects genéricos */
     html[data-theme="dark"] { color-scheme: dark; }
+
+    /* ── Dark mode: hover background variants ── */
+    [data-theme="dark"] .hover\:bg-white:hover,
+    [data-theme="dark"] .hover\:bg-white\/70:hover,
+    [data-theme="dark"] .hover\:bg-white\/60:hover,
+    [data-theme="dark"] .hover\:bg-white\/80:hover  { background-color:#263348 !important; }
+    [data-theme="dark"] .hover\:bg-gray-50:hover    { background-color:#1e293b !important; }
+    [data-theme="dark"] .hover\:bg-gray-100:hover   { background-color:#263348 !important; }
+    [data-theme="dark"] .hover\:bg-gray-200:hover   { background-color:#334155 !important; }
+    /* ── Dark mode: hover text variants ── */
+    [data-theme="dark"] .hover\:text-gray-900:hover { color:#f1f5f9 !important; }
+    [data-theme="dark"] .hover\:text-gray-800:hover { color:#e2e8f0 !important; }
+    [data-theme="dark"] .hover\:text-gray-700:hover { color:#cbd5e1 !important; }
+    [data-theme="dark"] .hover\:text-gray-600:hover { color:#94a3b8 !important; }
+    /* ── Dark mode: hover border variants ── */
+    [data-theme="dark"] .hover\:border-gray-200:hover { border-color:rgba(255,255,255,.10) !important; }
+    [data-theme="dark"] .hover\:border-gray-300:hover { border-color:rgba(255,255,255,.15) !important; }
+    /* ── Dark mode: opacity/bg combos usadas em cards e listas ── */
+    [data-theme="dark"] .hover\:bg-blue-50:hover    { background-color:rgba(59,130,246,.08) !important; }
+    [data-theme="dark"] .hover\:bg-blue-50\/20:hover{ background-color:rgba(59,130,246,.06) !important; }
+    [data-theme="dark"] .hover\:border-blue-300:hover{ border-color:rgba(59,130,246,.35) !important; }
+    /* ── Dark mode: opacity variants para links em listas ── */
+    [data-theme="dark"] .hover\:opacity-100:hover   { opacity:1 !important; }
     [data-theme="dark"] input:not([type=submit]):not([type=button]):not([type=checkbox]):not([type=radio]),
     [data-theme="dark"] select,
     [data-theme="dark"] textarea {
@@ -112,7 +131,6 @@
     }
     [data-theme="dark"] select option { background:#1e293b; color:#f1f5f9; }
     [data-theme="dark"] input::placeholder, [data-theme="dark"] textarea::placeholder { color:var(--ink-4) !important; }
-    /* Tabelas */
     [data-theme="dark"] thead { background:#1e293b !important; }
     [data-theme="dark"] th, [data-theme="dark"] td { border-color:rgba(255,255,255,.07) !important; color:var(--ink-2); }
     [data-theme="dark"] tbody tr:hover { background:rgba(255,255,255,.03) !important; }
@@ -189,40 +207,55 @@
       transform: translateY(-1px);
     }
 
-    /* ── Rail ── */
-    .rail-btn {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: .25rem;
-      width: 64px; padding: .6rem 0;
-      border-radius: 8px; cursor: pointer;
-      color: rgba(255,255,255,.5);
-      transition: color .15s, background .15s;
-      text-decoration: none; position: relative;
+    /* ── Sidebar ── */
+    .sidebar {
+      display: flex; flex-direction: column;
+      background: #1b2c4a;
+      flex-shrink: 0; height: 100vh;
+      overflow: hidden;
+      transition: width .2s ease;
+      z-index: 20;
     }
-    .rail-btn:hover { color: rgba(255,255,255,.9); background: rgba(255,255,255,.07); }
-    .rail-btn.active { color: #fff; background: rgba(26,107,69,.2); }
-    .rail-btn.active::before {
+
+    .sb-item {
+      display: flex; align-items: center; gap: .55rem;
+      padding: .4rem .6rem;
+      border-radius: 6px;
+      font-size: .8rem; font-weight: 500;
+      color: rgba(255,255,255,.62);
+      text-decoration: none; cursor: pointer;
+      transition: color .15s, background .15s;
+      white-space: nowrap; position: relative;
+      border: none; background: transparent; width: 100%; text-align: left;
+    }
+    .sb-item:hover { color: rgba(255,255,255,.95); background: rgba(255,255,255,.07); }
+    .sb-item.active { color: #fff; background: rgba(26,107,69,.22); }
+    .sb-item.active::before {
       content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-      width: 3px; height: 56%; background: #4ade80;
+      width: 3px; height: 60%; background: #4ade80;
       border-radius: 0 3px 3px 0;
     }
-    .rail-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
-    .rail-label { font-size: .6rem; font-weight: 500; letter-spacing: .03em; white-space: nowrap; }
-
-    /* ── Panel nav ── */
-    .nav-item {
-      display: flex; align-items: center; gap: .625rem;
-      padding: .45rem .75rem;
-      border-radius: 6px;
-      font-size: .8125rem; font-weight: 500;
-      color: rgba(255,255,255,.65);
-      text-decoration: none;
-      transition: color .15s, background .15s;
+    .sb-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: .85; }
+    .sb-item.active svg { opacity: 1; }
+    .sb-item-sub {
+      padding-left: 2.1rem; font-size: .75rem;
+      color: rgba(255,255,255,.32);
     }
-    .nav-item:hover { color: rgba(255,255,255,.95); background: rgba(255,255,255,.07); }
-    .nav-item.active { color: #fff; background: rgba(26,107,69,.22); }
-    .nav-item svg { width: 15px; height: 15px; flex-shrink: 0; opacity: .8; }
-    .nav-item.active svg { opacity: 1; }
+    .sb-item-sub:hover { color: rgba(255,255,255,.7); background: rgba(255,255,255,.05); }
+    .sb-item-sub.active { color: rgba(255,255,255,.9); background: rgba(26,107,69,.15); }
+
+    .sb-section {
+      font-size: .65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .07em;
+      color: rgba(255,255,255,.22);
+      padding: .75rem .7rem .25rem;
+    }
+
+    /* Collapsed icon-only centering */
+    .sidebar-collapsed .sb-item { justify-content: center; padding: .45rem 0; gap: 0; }
+    .sidebar-collapsed .sb-item svg { width: 18px; height: 18px; opacity: .7; }
+    .sidebar-collapsed .sb-item.active svg { opacity: 1; }
+    .sidebar-collapsed .sb-item:hover svg { opacity: 1; }
 
     /* ── Avatar ── */
     .avatar {
@@ -251,272 +284,240 @@
 {% if user.is_authenticated %}
 <div class="flex h-screen overflow-hidden">
 
-  <!-- ── ICON RAIL ── -->
-  <nav class="flex flex-col items-center bg-rail w-[64px] flex-shrink-0 py-3 gap-0.5 z-20">
+  <!-- ── SIDEBAR ── -->
+  <nav class="sidebar"
+       :class="panelOpen ? 'sidebar-expanded' : 'sidebar-collapsed'"
+       :style="panelOpen ? 'width:224px' : 'width:52px'">
 
-    <!-- Logo mark -->
-    <div class="w-8 h-8 rounded-lg flex items-center justify-center mb-4 flex-shrink-0"
-         style="background: rgba(26,107,69,.9); box-shadow: 0 2px 8px rgba(26,107,69,.4);">
-      <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-      </svg>
-    </div>
-
-    <a href="{% url 'core:dashboard' %}"
-       class="rail-btn {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
-       title="Dashboard">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-      <span class="rail-label">Início</span>
-    </a>
-
-    <a href="{% url 'mensagens:inbox' %}"
-       class="rail-btn {% if 'mensagens' in request.path %}active{% endif %}"
-       title="Mensagens">
-      <div class="relative" id="rail-chat-badge">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-        {% if unread_messages_count > 0 %}
-        <span class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none">{{ unread_messages_count }}</span>
-        {% endif %}
-      </div>
-      <span class="rail-label">Chat</span>
-    </a>
-
-    <a href="{% url 'comunicados:list' %}"
-       class="rail-btn {% if 'comunicados' in request.path %}active{% endif %}"
-       title="Comunicados">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
-      <span class="rail-label">Avisos</span>
-    </a>
-
-    <a href="{% url 'kanban:board_list' %}"
-       class="rail-btn {% if 'kanban' in request.path and request.resolver_match.url_name not in 'solicitar_rapida,meu_kanban,minhas_solicitacoes' %}active{% endif %}"
-       title="Kanban">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
-      <span class="rail-label">Kanban</span>
-    </a>
-
-    <a href="{% url 'kanban:solicitar_rapida' %}"
-       class="rail-btn {% if request.resolver_match.url_name == 'solicitar_rapida' %}active{% endif %}"
-       title="Nova Solicitação">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-      </svg>
-      <span class="rail-label">Solicitar</span>
-    </a>
-
-    <a href="{% url 'agenda:event_list' %}"
-       class="rail-btn {% if 'agenda' in request.path %}active{% endif %}"
-       title="Agenda">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-      <span class="rail-label">Agenda</span>
-    </a>
-
-    {% if user.can_access_consultas or user.can_see_all %}
-    <a href="{% url 'consultas:agenda' %}"
-       class="rail-btn {% if 'consultas' in request.path %}active{% endif %}"
-       title="Agenda Médica">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-      <span class="rail-label">Medicina</span>
-    </a>
-    {% endif %}
-
-    <a href="{% url 'atendimento:list' %}"
-       class="rail-btn {% if 'atendimento' in request.path %}active{% endif %}"
-       title="Atendimentos">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
-      <span class="rail-label">Atend.</span>
-    </a>
-
-    <a href="{% url 'core:team_list' %}"
-       class="rail-btn {% if 'equipes' in request.path %}active{% endif %}"
-       title="Equipes">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-      <span class="rail-label">Equipes</span>
-    </a>
-
-    {% if user.can_manage_users %}
-    <a href="{% url 'core:department_list' %}"
-       class="rail-btn {% if 'departamentos' in request.path %}active{% endif %}"
-       title="Departamentos">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-      <span class="rail-label">Depto.</span>
-    </a>
-    <a href="{% url 'core:user_list' %}"
-       class="rail-btn {% if 'usuarios' in request.path %}active{% endif %}"
-       title="Usuários">
-      <div class="relative">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-        {% if pending_count %}<span class="absolute -top-1 -right-1 bg-amber-400 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{{ pending_count }}</span>{% endif %}
-      </div>
-      <span class="rail-label">Usuários</span>
-    </a>
-    <a href="{% url 'core:audit_log_list' %}"
-       class="rail-btn {% if 'logs' in request.path %}active{% endif %}"
-       title="Logs de Auditoria">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-      <span class="rail-label">Logs</span>
-    </a>
-    {% endif %}
-    {% if user.can_see_all %}
-    <a href="{% url 'core:visao_executiva' %}"
-       class="rail-btn {% if 'visao-executiva' in request.path %}active{% endif %}"
-       title="Visão Executiva">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-      <span class="rail-label">Executivo</span>
-    </a>
-    {% endif %}
-
-    <div class="flex-1"></div>
-
-    <!-- Toggle dark mode -->
-    <button @click="toggleDark()" class="rail-btn" title="Alternar tema">
-      <svg x-show="!darkMode" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px;height:20px">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-      </svg>
-      <svg x-show="darkMode" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px;height:20px">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-      </svg>
-      <span class="rail-label" x-text="darkMode ? 'Claro' : 'Escuro'"></span>
-    </button>
-
-    <a href="{% url 'core:profile' %}" class="rail-btn" title="{{ user.get_full_name|default:user.username }}">
-      {% if user.avatar %}
-        <img src="{{ user.avatar.url }}" class="avatar w-8 h-8">
-      {% else %}
-        <div class="avatar w-8 h-8 text-xs">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
-      {% endif %}
-      <span class="rail-label">Perfil</span>
-    </a>
-
-    <a href="{% url 'core:logout' %}" class="rail-btn" style="color:rgba(255,255,255,.4);"
-       onmouseenter="this.style.color='#f87171'" onmouseleave="this.style.color='rgba(255,255,255,.4)'"
-       title="Sair">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-      <span class="rail-label">Sair</span>
-    </a>
-  </nav>
-
-  <!-- ── SIDE PANEL ── -->
-  <div class="bg-panel flex-shrink-0 overflow-hidden transition-all duration-200 ease-out"
-       style="border-right: 1px solid rgba(255,255,255,.06);"
-       :style="panelOpen ? 'width:248px' : 'width:0px'">
-    <div class="w-[248px] h-full flex flex-col py-5 px-3" x-cloak>
-
-      <!-- Panel header -->
-      <div class="px-2 mb-5">
-        <p class="text-white font-semibold text-sm leading-tight">{{ user.get_full_name|default:user.username }}</p>
-        <p class="text-[11px] mt-0.5" style="color:rgba(255,255,255,.4);">
+    <!-- Header: logo + user info -->
+    <div class="flex items-center gap-2.5 flex-shrink-0 px-2.5 py-3"
+         style="border-bottom:1px solid rgba(255,255,255,.07); min-height:52px;">
+      <a href="{% url 'core:dashboard' %}" class="flex-shrink-0"
+         title="SINSAÚDE-SP">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center"
+             style="background:rgba(26,107,69,.9); box-shadow:0 2px 6px rgba(26,107,69,.35);">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+          </svg>
+        </div>
+      </a>
+      <div class="min-w-0 flex-1 overflow-hidden" x-show="panelOpen" x-cloak>
+        <p class="text-white text-xs font-semibold leading-tight truncate">{{ user.get_full_name|default:user.username }}</p>
+        <p class="text-[10px] truncate mt-0.5" style="color:rgba(255,255,255,.38);">
           {{ user.get_role_display }}{% for d in user.departments.all %} · {{ d }}{% endfor %}
         </p>
       </div>
-
-      <!-- Panel nav -->
-      <nav class="space-y-0.5 flex-1 overflow-y-auto">
-        <a href="{% url 'core:dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-          Dashboard
-        </a>
-
-        <a href="{% url 'mensagens:inbox' %}" class="nav-item {% if 'mensagens' in request.path %}active{% endif %}">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-          Chat
-          {% if unread_messages_count > 0 %}
-          <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style="background:rgba(239,68,68,.8); color:#fff;">{{ unread_messages_count }}</span>
-          {% endif %}
-        </a>
-        <a href="{% url 'mensagens:new_conversation' %}" class="nav-item pl-8 text-xs" style="color:rgba(255,255,255,.38);">
-          + Nova conversa
-        </a>
-
-        <a href="{% url 'comunicados:list' %}" class="nav-item {% if 'comunicados' in request.path %}active{% endif %}">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
-          Comunicados
-        </a>
-
-        <a href="{% url 'agenda:event_list' %}" class="nav-item {% if 'agenda' in request.path %}active{% endif %}">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-          Agenda
-        </a>
-        <a href="{% url 'agenda:event_create' %}" class="nav-item pl-8 text-xs" style="color:rgba(255,255,255,.38);">
-          + Novo evento
-        </a>
-
-        {% if user.can_access_consultas or user.can_see_all %}
-        <a href="{% url 'consultas:agenda' %}" class="nav-item {% if 'consultas' in request.path %}active{% endif %}">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-          Agenda Médica
-        </a>
-        <a href="{% url 'consultas:consulta_create' %}" class="nav-item pl-8 text-xs" style="color:rgba(255,255,255,.38);">
-          + Nova consulta
-        </a>
-        {% endif %}
-
-        <a href="{% url 'atendimento:list' %}" class="nav-item {% if 'atendimento' in request.path %}active{% endif %}">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
-          Atendimentos
-        </a>
-        <a href="{% url 'atendimento:painel' %}" class="nav-item pl-8 text-xs" style="color:rgba(255,255,255,.38);">
-          📋 Painel do Dia
-        </a>
-        <a href="{% url 'atendimento:create' %}" class="nav-item pl-8 text-xs" style="color:rgba(255,255,255,.38);">
-          + Novo atendimento
-        </a>
-
-        <a href="{% url 'kanban:board_list' %}" class="nav-item {% if 'kanban' in request.path and request.resolver_match.url_name not in 'solicitar_rapida,meu_kanban,minhas_solicitacoes' %}active{% endif %}">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
-          Kanban
-        </a>
-        <a href="{% url 'kanban:meu_kanban' %}" class="nav-item pl-8 text-xs {% if request.resolver_match.url_name == 'meu_kanban' %}active{% endif %}">
-          🗂 Meu Kanban
-        </a>
-        <a href="{% url 'kanban:minhas_solicitacoes' %}" class="nav-item pl-8 text-xs {% if request.resolver_match.url_name == 'minhas_solicitacoes' %}active{% endif %}">
-          📋 Minhas solicitações
-        </a>
-        <a href="{% url 'kanban:solicitar_rapida' %}" class="nav-item pl-8 text-xs {% if request.resolver_match.url_name == 'solicitar_rapida' %}active{% endif %}" style="color:rgba(255,255,255,.38);">
-          ⚡ Nova solicitação
-        </a>
-
-        <a href="{% url 'core:team_list' %}" class="nav-item {% if 'equipes' in request.path %}active{% endif %}">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-          Equipes
-        </a>
-
-        {% if user.can_manage_users %}
-        <div class="pt-4 pb-1 px-2">
-          <p class="text-[10px] font-semibold uppercase tracking-widest" style="color:rgba(255,255,255,.25);">Administração</p>
-        </div>
-        <a href="{% url 'core:department_list' %}" class="nav-item {% if 'departamentos' in request.path %}active{% endif %}">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-          Departamentos
-        </a>
-        <a href="{% url 'core:user_list' %}" class="nav-item {% if 'usuarios' in request.path %}active{% endif %}">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-          Usuários
-          {% if pending_count %}<span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style="background:rgba(245,158,11,.85);color:#fff;">{{ pending_count }}</span>{% endif %}
-        </a>
-        <a href="{% url 'core:audit_log_list' %}" class="nav-item {% if 'logs' in request.path %}active{% endif %}">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          Logs de Auditoria
-        </a>
-        {% endif %}
-        {% if user.can_see_all %}
-        <a href="{% url 'core:visao_executiva' %}" class="nav-item {% if 'visao-executiva' in request.path %}active{% endif %}">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-          Visão Executiva
-        </a>
-        {% endif %}
-      </nav>
-
-      <!-- LGPD -->
-      <div class="mt-auto pt-3 space-y-0.5" style="border-top:1px solid rgba(255,255,255,.08);">
-        <a href="{% url 'core:lgpd_policy' %}" class="nav-item text-xs" style="color:rgba(255,255,255,.3);">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-          Política LGPD
-        </a>
-      </div>
     </div>
-  </div>
+
+    <!-- Nav items (scrollable) -->
+    <div class="flex-1 overflow-y-auto py-2 space-y-0.5 px-1.5" style="scrollbar-width:none;">
+
+      <!-- Dashboard — link direto -->
+      <a href="{% url 'core:dashboard' %}"
+         class="sb-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+         title="Dashboard">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        <span x-show="panelOpen" x-cloak>Dashboard</span>
+      </a>
+
+      <!-- Comunicados — link direto -->
+      <a href="{% url 'comunicados:list' %}"
+         class="sb-item {% if 'comunicados' in request.path %}active{% endif %}"
+         title="Comunicados">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+        <span x-show="panelOpen" x-cloak>Comunicados</span>
+      </a>
+
+      <!-- Chat — accordion -->
+      <div x-data="{ open: {% if 'mensagens' in request.path %}true{% else %}false{% endif %} }">
+        <a href="{% url 'mensagens:inbox' %}"
+           @click="if (panelOpen) { $event.preventDefault(); open = !open; }"
+           class="sb-item {% if 'mensagens' in request.path %}active{% endif %}"
+           :class="!panelOpen && 'justify-center'"
+           title="Chat">
+          <div class="relative flex-shrink-0">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+            {% if unread_messages_count > 0 %}<span class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-bold rounded-full min-w-[13px] h-[13px] flex items-center justify-center px-0.5 leading-none">{{ unread_messages_count }}</span>{% endif %}
+          </div>
+          <span x-show="panelOpen" x-cloak class="flex-1">Chat{% if unread_messages_count > 0 %} <span class="text-[10px] font-bold px-1 py-0.5 rounded-full ml-1" style="background:rgba(239,68,68,.8);color:#fff;">{{ unread_messages_count }}</span>{% endif %}</span>
+          <svg x-show="panelOpen" x-cloak :class="open ? 'rotate-90' : ''" class="w-3 h-3 ml-auto flex-shrink-0 transition-transform duration-150" style="opacity:.4;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+        </a>
+        <div x-show="open && panelOpen" x-cloak class="space-y-0.5 mt-0.5">
+          <a href="{% url 'mensagens:inbox' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">Caixa de entrada</a>
+          <a href="{% url 'mensagens:new_conversation' %}" class="sb-item sb-item-sub">+ Nova conversa</a>
+        </div>
+      </div>
+
+      <!-- Agenda — accordion -->
+      <div x-data="{ open: {% if 'agenda' in request.path %}true{% else %}false{% endif %} }">
+        <a href="{% url 'agenda:event_list' %}"
+           @click="if (panelOpen) { $event.preventDefault(); open = !open; }"
+           class="sb-item {% if 'agenda' in request.path %}active{% endif %}"
+           :class="!panelOpen && 'justify-center'"
+           title="Agenda">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span x-show="panelOpen" x-cloak class="flex-1">Agenda</span>
+          <svg x-show="panelOpen" x-cloak :class="open ? 'rotate-90' : ''" class="w-3 h-3 ml-auto flex-shrink-0 transition-transform duration-150" style="opacity:.4;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+        </a>
+        <div x-show="open && panelOpen" x-cloak class="space-y-0.5 mt-0.5">
+          <a href="{% url 'agenda:event_list' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'event_list' %}active{% endif %}">Ver agenda</a>
+          <a href="{% url 'agenda:event_create' %}" class="sb-item sb-item-sub">+ Novo evento</a>
+        </div>
+      </div>
+
+      <!-- Atendimento — accordion -->
+      <div x-data="{ open: {% if 'atendimento' in request.path %}true{% else %}false{% endif %} }">
+        <a href="{% url 'atendimento:painel' %}"
+           @click="if (panelOpen) { $event.preventDefault(); open = !open; }"
+           class="sb-item {% if 'atendimento' in request.path %}active{% endif %}"
+           :class="!panelOpen && 'justify-center'"
+           title="Atendimento">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+          <span x-show="panelOpen" x-cloak class="flex-1">Atendimento</span>
+          <svg x-show="panelOpen" x-cloak :class="open ? 'rotate-90' : ''" class="w-3 h-3 ml-auto flex-shrink-0 transition-transform duration-150" style="opacity:.4;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+        </a>
+        <div x-show="open && panelOpen" x-cloak class="space-y-0.5 mt-0.5">
+          <a href="{% url 'atendimento:painel' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'painel' %}active{% endif %}">Painel do dia</a>
+          <a href="{% url 'atendimento:list' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'list' and 'atendimento' in request.path %}active{% endif %}">Todos os atendimentos</a>
+          <a href="{% url 'atendimento:create' %}" class="sb-item sb-item-sub">+ Novo atendimento</a>
+        </div>
+      </div>
+
+      {% if user.can_access_consultas or user.can_see_all %}
+      <!-- Agenda Médica — accordion -->
+      <div x-data="{ open: {% if 'consultas' in request.path %}true{% else %}false{% endif %} }">
+        <a href="{% url 'consultas:agenda' %}"
+           @click="if (panelOpen) { $event.preventDefault(); open = !open; }"
+           class="sb-item {% if 'consultas' in request.path %}active{% endif %}"
+           :class="!panelOpen && 'justify-center'"
+           title="Agenda Médica">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+          <span x-show="panelOpen" x-cloak class="flex-1">Agenda Médica</span>
+          <svg x-show="panelOpen" x-cloak :class="open ? 'rotate-90' : ''" class="w-3 h-3 ml-auto flex-shrink-0 transition-transform duration-150" style="opacity:.4;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+        </a>
+        <div x-show="open && panelOpen" x-cloak class="space-y-0.5 mt-0.5">
+          <a href="{% url 'consultas:agenda' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'agenda' %}active{% endif %}">Ver agenda</a>
+          <a href="{% url 'consultas:consulta_create' %}" class="sb-item sb-item-sub">+ Nova consulta</a>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Financeiro — accordion -->
+      <div x-data="{ open: {% if 'financeiro' in request.path %}true{% else %}false{% endif %} }">
+        <a href="{% url 'financeiro:home' %}"
+           @click="if (panelOpen) { $event.preventDefault(); open = !open; }"
+           class="sb-item {% if 'financeiro' in request.path %}active{% endif %}"
+           :class="!panelOpen && 'justify-center'"
+           title="Financeiro">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span x-show="panelOpen" x-cloak class="flex-1">Financeiro</span>
+          <svg x-show="panelOpen" x-cloak :class="open ? 'rotate-90' : ''" class="w-3 h-3 ml-auto flex-shrink-0 transition-transform duration-150" style="opacity:.4;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+        </a>
+        <div x-show="open && panelOpen" x-cloak class="space-y-0.5 mt-0.5">
+          <a href="{% url 'financeiro:home' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'home' and 'financeiro' in request.path %}active{% endif %}">Visão geral</a>
+          <a href="{% url 'financeiro:reembolso_create' %}" class="sb-item sb-item-sub">+ Solicitar reembolso</a>
+          <a href="{% url 'financeiro:reembolso_list' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'reembolso_list' %}active{% endif %}">Meus reembolsos</a>
+          {% if user.role == 'DIRETOR' or user.is_admin_ti %}
+          <a href="{% url 'financeiro:atividade_create' %}" class="sb-item sb-item-sub">Lançar atividade</a>
+          <a href="{% url 'financeiro:atividade_list' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'atividade_list' %}active{% endif %}">Minhas atividades</a>
+          {% endif %}
+          {% if user.is_aprovador_diretoria or user.is_financeiro or user.is_admin_ti %}
+          <a href="{% url 'financeiro:atividade_list' %}?aba=aprovar" class="sb-item sb-item-sub">Aprovar atividades</a>
+          <a href="{% url 'financeiro:a_pagar' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'a_pagar' %}active{% endif %}">A pagar</a>
+          <a href="{% url 'financeiro:diretor_config' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'diretor_config' %}active{% endif %}">Configurar diretores</a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Kanban — accordion -->
+      <div x-data="{ open: {% if 'kanban' in request.path %}true{% else %}false{% endif %} }">
+        <a href="{% url 'kanban:board_list' %}"
+           @click="if (panelOpen) { $event.preventDefault(); open = !open; }"
+           class="sb-item {% if 'kanban' in request.path %}active{% endif %}"
+           :class="!panelOpen && 'justify-center'"
+           title="Kanban">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+          <span x-show="panelOpen" x-cloak class="flex-1">Kanban</span>
+          <svg x-show="panelOpen" x-cloak :class="open ? 'rotate-90' : ''" class="w-3 h-3 ml-auto flex-shrink-0 transition-transform duration-150" style="opacity:.4;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+        </a>
+        <div x-show="open && panelOpen" x-cloak class="space-y-0.5 mt-0.5">
+          <a href="{% url 'kanban:board_list' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'board_list' %}active{% endif %}">Todos os boards</a>
+          <a href="{% url 'kanban:meu_kanban' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'meu_kanban' %}active{% endif %}">Meu Kanban</a>
+          <a href="{% url 'kanban:minhas_solicitacoes' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'minhas_solicitacoes' %}active{% endif %}">Minhas solicitações</a>
+          <a href="{% url 'kanban:solicitar_rapida' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'solicitar_rapida' %}active{% endif %}">+ Nova solicitação</a>
+        </div>
+      </div>
+
+      <!-- Equipes — link direto -->
+      <a href="{% url 'core:team_list' %}"
+         class="sb-item {% if 'equipes' in request.path %}active{% endif %}"
+         title="Equipes">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span x-show="panelOpen" x-cloak>Equipes</span>
+      </a>
+
+      <!-- Administração — accordion (condicional) -->
+      {% if user.can_manage_users or user.can_see_all %}
+      <div x-data="{ open: {% if 'departamentos' in request.path or 'usuarios' in request.path or 'logs' in request.path or 'visao-executiva' in request.path %}true{% else %}false{% endif %} }">
+        <button @click="if (panelOpen) { open = !open; }"
+                class="sb-item {% if 'departamentos' in request.path or 'usuarios' in request.path or 'logs' in request.path or 'visao-executiva' in request.path %}active{% endif %}"
+                :class="!panelOpen && 'justify-center cursor-default'"
+                title="Administração">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span x-show="panelOpen" x-cloak class="flex-1 text-left">Administração</span>
+          <svg x-show="panelOpen" x-cloak :class="open ? 'rotate-90' : ''" class="w-3 h-3 ml-auto flex-shrink-0 transition-transform duration-150" style="opacity:.4;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+        </button>
+        <div x-show="open && panelOpen" x-cloak class="space-y-0.5 mt-0.5">
+          {% if user.can_manage_users %}
+          <a href="{% url 'core:department_list' %}" class="sb-item sb-item-sub {% if 'departamentos' in request.path %}active{% endif %}">Departamentos</a>
+          <a href="{% url 'core:user_list' %}" class="sb-item sb-item-sub {% if 'usuarios' in request.path %}active{% endif %}">
+            Usuários{% if pending_count %} <span class="text-[10px] font-bold px-1 py-0.5 rounded-full ml-1" style="background:rgba(245,158,11,.85);color:#fff;">{{ pending_count }}</span>{% endif %}
+          </a>
+          <a href="{% url 'core:audit_log_list' %}" class="sb-item sb-item-sub {% if 'logs' in request.path %}active{% endif %}">Logs de auditoria</a>
+          {% endif %}
+          {% if user.can_see_all %}
+          <a href="{% url 'core:visao_executiva' %}" class="sb-item sb-item-sub {% if 'visao-executiva' in request.path %}active{% endif %}">Visão executiva</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- Footer: LGPD + dark + profile + logout -->
+    <div class="flex-shrink-0 py-1.5 px-1.5 space-y-0.5" style="border-top:1px solid rgba(255,255,255,.07);">
+
+      <a href="{% url 'core:lgpd_policy' %}" x-show="panelOpen" x-cloak
+         class="sb-item" style="font-size:.7rem; color:rgba(255,255,255,.25);">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:13px;height:13px;opacity:.5;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        Política LGPD
+      </a>
+
+      <button @click="toggleDark()" class="sb-item" title="Alternar tema claro/escuro">
+        <svg x-show="!darkMode" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+        <svg x-show="darkMode" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        <span x-show="panelOpen" x-cloak x-text="darkMode ? 'Modo claro' : 'Modo escuro'"></span>
+      </button>
+
+      <a href="{% url 'core:profile' %}" class="sb-item" title="{{ user.get_full_name|default:user.username }}">
+        {% if user.avatar %}
+          <img src="{{ user.avatar.url }}" class="avatar flex-shrink-0" style="width:18px;height:18px;">
+        {% else %}
+          <div class="avatar flex-shrink-0 text-[8px]" style="width:18px;height:18px;">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
+        {% endif %}
+        <span x-show="panelOpen" x-cloak>Meu perfil</span>
+      </a>
+
+      <a href="{% url 'core:logout' %}" class="sb-item" style="color:rgba(255,255,255,.35);"
+         onmouseenter="this.style.color='#f87171';this.style.background='rgba(239,68,68,.08)'"
+         onmouseleave="this.style.color='rgba(255,255,255,.35)';this.style.background='transparent'"
+         title="Sair">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        <span x-show="panelOpen" x-cloak>Sair</span>
+      </a>
+    </div>
+  </nav>
 
   <!-- ── MAIN AREA ── -->
   <div class="flex-1 flex flex-col overflow-hidden">
@@ -529,31 +530,66 @@
               class="p-1.5 rounded-md transition-colors flex-shrink-0"
               style="color:var(--ink-3);"
               onmouseenter="this.style.background='rgba(0,0,0,.05)';this.style.color='var(--ink-1)'"
-              onmouseleave="this.style.background='transparent';this.style.color='var(--ink-3)'">
+              onmouseleave="this.style.background='transparent';this.style.color='var(--ink-3)'"
+              :title="panelOpen ? 'Recolher menu' : 'Expandir menu'">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
 
-      <!-- Title -->
       <div class="flex items-center gap-1.5 text-sm flex-1 min-w-0">
         <span class="hidden sm:block text-xs font-medium" style="color:var(--ink-4);">SINSAÚDE-SP</span>
         <span class="hidden sm:block" style="color:var(--ink-4);">/</span>
         <span class="font-semibold truncate" style="color:var(--ink-1); font-size:.875rem;">{% block page_title %}{% endblock %}</span>
       </div>
 
-      <!-- Actions -->
       <div class="flex items-center gap-2 flex-shrink-0">
         {% block topbar_actions %}{% endblock %}
 
-        <!-- Live badges -->
-        <div id="topbar-live"
-             class="flex items-center gap-1"
+        <!-- Carrier invisível: poll de 30s atualiza badges e dispara alertas -->
+        <div id="topbar-live" class="hidden"
              hx-get="{% url 'core:topbar_counts' %}"
              hx-trigger="every 30s"
              hx-swap="innerHTML">
           {% include "partials/topbar_counts.html" %}
         </div>
 
-        <!-- User pill -->
+        <!-- Sino com prévia (estático: estado do dropdown persiste entre os polls) -->
+        <div x-data="notifBell()" class="relative" @keydown.escape.window="open=false">
+          <button type="button" @click="toggleOpen()"
+                  class="relative p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                  title="Notificações">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            <span x-show="count > 0" x-text="count > 99 ? '99+' : count" x-cloak
+                  class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none border border-white"></span>
+          </button>
+
+          <div x-show="open" x-cloak @click.outside="open=false" x-transition
+               class="absolute right-0 mt-2 w-80 rounded-xl overflow-hidden z-50"
+               style="background:var(--surf-card); border:1px solid var(--border-std); box-shadow:var(--shadow-up);">
+            <div class="flex items-center justify-between px-4 py-2.5 border-b" style="border-color:var(--border-soft);">
+              <span class="text-sm font-semibold" style="color:var(--ink-1);">Notificações</span>
+              <button type="button" @click="markAll()" class="text-xs text-blue-600 hover:text-blue-800">Marcar todas como lidas</button>
+            </div>
+            <div id="notif-dropdown-body" class="max-h-96 overflow-y-auto">
+              <p class="text-sm text-gray-400 text-center py-8">Carregando…</p>
+            </div>
+            <div class="flex items-center justify-between px-4 py-2 border-t" style="border-color:var(--border-soft);">
+              <a href="{% url 'core:notification_list' %}" class="text-xs text-blue-600 hover:text-blue-800">Ver todas</a>
+              <button type="button" x-show="!alertsOn" @click="enableAlerts()" class="text-xs text-gray-500 hover:text-gray-700">🔔 Ativar alertas</button>
+              <span x-show="alertsOn" x-cloak class="text-xs text-emerald-600">🔔 Alertas ativos</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mensagens (estático) -->
+        <a href="{% url 'mensagens:inbox' %}"
+           class="relative p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+           title="Mensagens">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+          <span id="topbar-msg-dot" class="hidden absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+        </a>
+
         <a href="{% url 'core:profile' %}"
            class="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full transition-colors"
            style="color:var(--ink-2);"
@@ -592,6 +628,9 @@
     </div>
     {% endif %}
 
+    <!-- Toasts de notificações novas (in-app) -->
+    <div id="notif-toasts" class="fixed top-[64px] right-4 z-[60] space-y-2 w-80"></div>
+
     <!-- Page content -->
     <main class="flex-1 overflow-y-auto" style="background:var(--surf-canvas);">
       <div class="p-5">
@@ -609,7 +648,6 @@
 {% block extra_scripts %}{% endblock %}
 
 <script>
-// Inject CSRF token into every HTMX request (required because CSRF_COOKIE_HTTPONLY=True)
 document.addEventListener('htmx:configRequest', function (e) {
   var m = document.querySelector('meta[name="csrf-token"]');
   if (m) e.detail.headers['X-CSRFToken'] = m.content;
@@ -629,6 +667,114 @@ function appShell() {
     },
     toggleDark() { this.darkMode = !this.darkMode; }
   }
+}
+
+// ── Sino de notificações: badge + dropdown + alerta (pop-up/som/toast) ──
+function notifBell() {
+  return {
+    open: false,
+    count: (window.__notif ? window.__notif.notif : 0),
+    alertsOn: localStorage.getItem('notifAlertsOn') === '1',
+    lastAlertedId: 0,
+    audioCtx: null,
+    init() {
+      var d = window.__notif || { notif: 0, latestId: 0 };
+      this.count = d.notif;
+      this.lastAlertedId = d.latestId || 0;   // baseline: não alerta para notificações já existentes
+      window.addEventListener('notif-update', (e) => this.onUpdate(e.detail));
+      // Mantém o flag coerente com a permissão real do navegador
+      if (this.alertsOn && !(window.Notification && Notification.permission === 'granted')) {
+        this.alertsOn = false; localStorage.setItem('notifAlertsOn', '0');
+      }
+    },
+    onUpdate(d) {
+      this.count = d.notif;
+      if (d.latestId && d.latestId > this.lastAlertedId) {
+        this.fireAlert(d);
+        this.lastAlertedId = d.latestId;
+      }
+    },
+    toggleOpen() {
+      this.open = !this.open;
+      if (this.open && window.htmx) {
+        htmx.ajax('GET', '{% url "core:notification_dropdown" %}', { target: '#notif-dropdown-body', swap: 'innerHTML' });
+      }
+    },
+    markAll() {
+      var m = document.querySelector('meta[name="csrf-token"]');
+      fetch('{% url "core:notification_mark_all_read" %}', {
+        method: 'POST',
+        headers: m ? { 'X-CSRFToken': m.content } : {},
+        credentials: 'same-origin'
+      }).then(() => {
+        this.count = 0;
+        if (window.htmx) htmx.ajax('GET', '{% url "core:notification_dropdown" %}', { target: '#notif-dropdown-body', swap: 'innerHTML' });
+      }).catch(() => {});
+    },
+    enableAlerts() {
+      try {
+        this.audioCtx = this.audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+      } catch (e) {}
+      if (window.Notification && Notification.permission === 'default') {
+        Notification.requestPermission().then((p) => {
+          this.alertsOn = (p === 'granted');
+          localStorage.setItem('notifAlertsOn', this.alertsOn ? '1' : '0');
+        });
+      } else if (window.Notification && Notification.permission === 'granted') {
+        this.alertsOn = true; localStorage.setItem('notifAlertsOn', '1');
+      } else {
+        // negada ou sem suporte: mantém toast + som apenas
+        this.alertsOn = false; localStorage.setItem('notifAlertsOn', '0');
+      }
+      this.beep();
+    },
+    fireAlert(d) {
+      this.beep();
+      showNotifToast(d.title || 'Nova notificação', d.body || '', d.link || '');
+      try {
+        if (this.alertsOn && window.Notification && Notification.permission === 'granted') {
+          var n = new Notification(d.title || 'Intranet', { body: d.body || '' });
+          n.onclick = function () { window.focus(); if (d.link) window.location.href = d.link; n.close(); };
+          setTimeout(function () { try { n.close(); } catch (e) {} }, 8000);
+        }
+      } catch (e) {}
+    },
+    beep() {
+      try {
+        this.audioCtx = this.audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        var ctx = this.audioCtx;
+        if (ctx.state === 'suspended') ctx.resume();
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = 880;
+        g.gain.value = 0.05;
+        o.connect(g); g.connect(ctx.destination);
+        o.start();
+        o.frequency.setValueAtTime(660, ctx.currentTime + 0.12);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
+        o.stop(ctx.currentTime + 0.26);
+      } catch (e) {}
+    }
+  }
+}
+
+function showNotifToast(title, body, link) {
+  var box = document.getElementById('notif-toasts');
+  if (!box) return;
+  var el = document.createElement('div');
+  el.className = 'flex items-start gap-3 px-4 py-3 rounded-xl text-sm cursor-pointer';
+  el.style.cssText = 'box-shadow:0 4px 16px rgba(0,0,0,.14); border:1px solid #bfdbfe; background:#eff6ff; color:#1e40af;';
+  var safeT = document.createElement('div'); safeT.textContent = title || '';
+  var safeB = document.createElement('div'); safeB.textContent = body || '';
+  el.innerHTML = '<span class="text-base leading-none">🔔</span>' +
+    '<span class="flex-1 leading-snug"><strong>' + safeT.innerHTML + '</strong>' +
+    (body ? ('<br><span style="opacity:.85">' + safeB.innerHTML + '</span>') : '') + '</span>';
+  if (link) el.addEventListener('click', function () { window.location.href = link; });
+  box.appendChild(el);
+  setTimeout(function () {
+    el.style.transition = 'opacity .3s'; el.style.opacity = '0';
+    setTimeout(function () { el.remove(); }, 300);
+  }, 6000);
 }
 </script>
 </body>

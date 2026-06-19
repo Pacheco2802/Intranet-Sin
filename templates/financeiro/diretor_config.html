@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Configurações Financeiras{% endblock %}
+{% block page_title %}Configurações Financeiras{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'financeiro:home' %}" class="btn-secondary text-xs">← Financeiro</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+  <form method="post">
+    {% csrf_token %}
+
+    <!-- Parâmetros globais -->
+    <div class="card space-y-5">
+      <div>
+        <h2 class="font-semibold text-gray-900">Parâmetros globais</h2>
+        <p class="text-sm text-gray-500 mt-0.5">Aplicados a todos os diretores sem valor individual configurado.</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Valor/hora padrão (R$)</label>
+          <input type="number" name="valor_hora_padrao" step="0.01" min="0"
+                 value="{{ params.valor_hora_diretoria_padrao }}"
+                 class="form-input" placeholder="0,00">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Teto de horas por mês</label>
+          <input type="number" name="teto_horas_mensal" step="0.5" min="0"
+                 value="{{ params.teto_horas_mensal }}"
+                 class="form-input" placeholder="32">
+        </div>
+      </div>
+    </div>
+
+    <!-- Valor/hora individual por diretor -->
+    <div class="card space-y-4 mt-4">
+      <div>
+        <h2 class="font-semibold text-gray-900">Valor/hora por diretor</h2>
+        <p class="text-sm text-gray-500 mt-0.5">Deixe em branco para usar o valor padrão global.</p>
+      </div>
+
+      {% if diretores %}
+      <div class="divide-y divide-gray-100">
+        {% for d in diretores %}
+        <div class="flex items-center gap-4 py-3">
+          <div class="flex items-center gap-2.5 flex-1 min-w-0">
+            {% if d.avatar %}
+              <img src="{{ d.avatar.url }}" class="avatar w-8 h-8 text-xs flex-shrink-0">
+            {% else %}
+              <div class="avatar w-8 h-8 text-xs flex-shrink-0">{{ d.first_name|first|upper }}{{ d.last_name|first|upper }}</div>
+            {% endif %}
+            <div class="min-w-0">
+              <p class="text-sm font-medium text-gray-900 truncate">{{ d.get_full_name|default:d.email }}</p>
+              <p class="text-xs text-gray-400">
+                {% if d.valor_hora_diretoria %}
+                  Valor atual: R$ {{ d.valor_hora_diretoria }}
+                {% else %}
+                  Usando padrão global (R$ {{ params.valor_hora_diretoria_padrao }})
+                {% endif %}
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <span class="text-sm text-gray-400">R$</span>
+            <input type="number" name="vh_{{ d.pk }}" step="0.01" min="0"
+                   value="{{ d.valor_hora_diretoria|default:'' }}"
+                   class="form-input w-32" placeholder="padrão">
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-400 py-2">Nenhum diretor cadastrado no sistema.</p>
+      {% endif %}
+    </div>
+
+    <div class="flex gap-3 mt-2">
+      <button type="submit" class="btn-primary">Salvar configurações</button>
+      <a href="{% url 'financeiro:home' %}" class="btn-secondary">Cancelar</a>
+    </div>
+  </form>
+
+</div>
+{% endblock %}

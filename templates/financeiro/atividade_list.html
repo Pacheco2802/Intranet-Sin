@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Atividades de diretoria{% endblock %}
+{% block page_title %}Atividades de diretoria{% endblock %}
+{% block topbar_actions %}
+{% if pode_lancar %}<a href="{% url 'financeiro:atividade_create' %}" class="btn-primary text-xs">+ Nova atividade</a>{% endif %}
+{% if is_financeiro %}<a href="{% url 'financeiro:a_pagar' %}" class="btn-secondary text-xs">💸 A pagar</a>{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-4"
+     x-data="{ confirmModal: false, confirmMsg: '', pendingForm: null }">
+
+  <!-- Modal de confirmação de aprovação -->
+  <template x-if="confirmModal">
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+        <p class="text-lg font-bold text-gray-900 mb-1">Confirmar aprovação?</p>
+        <p class="text-sm text-gray-600 mb-5" x-text="confirmMsg"></p>
+        <div class="flex gap-3">
+          <button @click="pendingForm.submit(); confirmModal=false"
+                  class="flex-1 py-2 px-4 rounded-lg bg-accent text-white text-sm font-semibold hover:opacity-90 transition-opacity">
+            ✓ Aprovar
+          </button>
+          <button @click="confirmModal=false; pendingForm=null" class="btn-secondary flex-1 text-sm">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  {% if is_aprovador and pode_lancar %}
+  <div class="flex gap-2">
+    <a href="?aba=minhas" class="px-4 py-2 rounded-lg text-sm font-medium {% if aba == 'minhas' %}bg-accent text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">Minhas atividades</a>
+    <a href="?aba=aprovar" class="px-4 py-2 rounded-lg text-sm font-medium {% if aba == 'aprovar' %}bg-accent text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+      Para aprovar
+      {% if aba != 'aprovar' and atividades %}<span class="ml-1 text-xs bg-amber-500 text-white font-bold px-1.5 py-0.5 rounded-full">{{ atividades|length }}</span>{% endif %}
+    </a>
+  </div>
+  {% endif %}
+
+  {% if atividades %}
+  <div class="card p-0 overflow-hidden">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-100 bg-gray-50">
+          {% if aba == 'aprovar' %}<th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Diretor</th>{% endif %}
+          <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Atividade</th>
+          <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 hidden sm:table-cell">Mês</th>
+          <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Horas</th>
+          {% if aba == 'aprovar' or is_financeiro %}<th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 hidden md:table-cell">Valor est.</th>{% endif %}
+          <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Status</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for a in atividades %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          {% if aba == 'aprovar' %}<td class="px-4 py-3 text-gray-700 font-medium">{{ a.diretor.get_full_name|default:a.diretor.email }}</td>{% endif %}
+          <td class="px-4 py-3">
+            <p class="font-medium text-gray-900">{{ a.titulo }}</p>
+            <p class="text-xs text-gray-400">{{ a.data_atividade|date:"d/m/Y" }}</p>
+          </td>
+          <td class="px-4 py-3 text-gray-500 text-xs hidden sm:table-cell">{{ a.competencia|date:"m/Y" }}</td>
+          <td class="px-4 py-3 text-gray-700 font-medium">{{ a.horas }}h</td>
+          {% if aba == 'aprovar' or is_financeiro %}
+          <td class="px-4 py-3 text-gray-600 text-xs hidden md:table-cell">
+            {% if a.valor_estimado %}R$ {{ a.valor_estimado|floatformat:2 }}{% else %}<span class="text-gray-300">—</span>{% endif %}
+          </td>
+          {% endif %}
+          <td class="px-4 py-3">{% include "financeiro/partials/status_badge.html" with label=a.get_status_display color=a.status_color %}</td>
+          <td class="px-4 py-3 text-right whitespace-nowrap">
+            {% if aba == 'aprovar' %}
+            <form method="post" action="{% url 'financeiro:atividade_aprovar' a.pk %}" class="inline">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="button"
+                      @click="confirmMsg='{{ a.titulo|escapejs }} — {{ a.horas }}h de {{ a.diretor.get_full_name|escapejs }}'; pendingForm=$el.closest('form'); confirmModal=true"
+                      class="text-xs text-green-600 hover:text-green-800 font-medium mr-3">✓ Aprovar</button>
+            </form>
+            {% endif %}
+            <a href="{% url 'financeiro:atividade_detail' a.pk %}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Ver →</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card text-center py-14">
+    <div class="text-4xl mb-3">📋</div>
+    <p class="text-gray-500 font-medium">{% if aba == 'aprovar' %}Nenhuma atividade pendente de aprovação.{% else %}Nenhuma atividade lançada.{% endif %}</p>
+    {% if pode_lancar and aba != 'aprovar' %}<a href="{% url 'financeiro:atividade_create' %}" class="btn-primary text-sm inline-block mt-4">+ Nova atividade</a>{% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

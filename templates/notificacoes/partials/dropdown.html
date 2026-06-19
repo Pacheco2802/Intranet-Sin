@@ -1,0 +1,14 @@
+{% for n in notifs %}
+<a href="{% url 'core:notification_go' n.pk %}"
+   class="flex gap-3 px-4 py-2.5 border-b transition-colors hover:bg-gray-50 {% if not n.is_read %}bg-blue-50/50{% endif %}"
+   style="border-color:var(--border-soft);">
+  <div class="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 {% if not n.is_read %}bg-blue-500{% else %}bg-transparent{% endif %}"></div>
+  <div class="min-w-0 flex-1">
+    <p class="text-sm font-medium truncate" style="color:var(--ink-1);">{{ n.title }}</p>
+    {% if n.body %}<p class="text-xs truncate" style="color:var(--ink-3);">{{ n.body }}</p>{% endif %}
+    <p class="text-[11px] mt-0.5" style="color:var(--ink-4);">{{ n.created_at|date:"d/m H:i" }}</p>
+  </div>
+</a>
+{% empty %}
+<p class="text-sm text-gray-400 text-center py-8">Sem notificações.</p>
+{% endfor %}

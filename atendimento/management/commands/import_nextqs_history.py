@@ -11,14 +11,13 @@ from atendimento.models import Atendimento, AtendimentoEtapa, _cpf_hash
 from core.models import Department
 
 _FILA_PARA_DEPT = {
-    'J': 'Jurídico',
     'P': 'Jurídico',
     'T': 'Jurídico',
     'A': 'Jurídico',
     'M': 'Saúde do Trabalhador',
 }
 
-_VALID_FILAS = {'J', 'P', 'T', 'A', 'M'}
+_VALID_FILAS = {'P', 'T', 'A', 'M'}
 
 
 def _parse_dt(s):

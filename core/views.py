@@ -730,19 +730,45 @@ def topbar_counts(request):
             ).exclude(reads__user=request.user).exclude(sender=request.user).count()
     except Exception:
         pass
-    notif_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    notif_qs = Notification.objects.filter(user=request.user, is_read=False)
+    notif_count = notif_qs.count()
+    latest = notif_qs.order_by('-created_at').first()
     return render(request, 'partials/topbar_counts.html', {
         'notification_count': notif_count,
         'unread_messages_count': unread,
+        'latest_id': latest.pk if latest else 0,
+        'latest_title': latest.title if latest else '',
+        'latest_body': latest.body if latest else '',
+        'latest_link': latest.link if latest else '',
     })
 
 
 @login_required
 def notification_list(request):
+    # Não marca tudo como lido ao abrir: marca-se ao clicar (notification_go)
+    # ou no botão "Marcar todas como lidas".
     notifs = request.user.notifications.select_related('actor').order_by('-created_at')[:50]
-    # Mark all as read
-    request.user.notifications.filter(is_read=False).update(is_read=True)
     return render(request, 'notificacoes/list.html', {'notifs': notifs})
+
+
+@login_required
+def notification_dropdown(request):
+    """Últimas notificações (lidas + não lidas) para o dropdown do sino."""
+    notifs = request.user.notifications.select_related('actor').order_by('-created_at')[:10]
+    return render(request, 'notificacoes/partials/dropdown.html', {'notifs': notifs})
+
+
+@login_required
+def notification_go(request, pk):
+    """Marca uma notificação como lida e redireciona para o seu link."""
+    notif = get_object_or_404(Notification, pk=pk, user=request.user)
+    if not notif.is_read:
+        notif.is_read = True
+        notif.save(update_fields=['is_read'])
+    dest = notif.link or '/'
+    if not url_has_allowed_host_and_scheme(dest, allowed_hosts={request.get_host()}):
+        dest = '/'
+    return redirect(dest)
 
 
 @login_required

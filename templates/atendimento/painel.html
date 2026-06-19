@@ -87,9 +87,14 @@
         <div class="card border border-gray-100 p-3 hover:border-blue-200 transition-all">
           <div class="flex items-start justify-between gap-2 mb-2">
             <div class="flex-1 min-w-0">
-              {% if at.nextqs_fila and at.numero_senha %}
-              <span class="text-base font-bold font-mono text-blue-700">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
-              {% endif %}
+              <div class="flex items-center gap-2 flex-wrap">
+                {% if at.nextqs_fila and at.numero_senha %}
+                <span class="text-base font-bold font-mono text-blue-700">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
+                {% endif %}
+                {% if at.is_preferencial %}
+                <span class="text-xs bg-amber-400 text-white font-bold px-1.5 py-0.5 rounded">★ PREF</span>
+                {% endif %}
+              </div>
               <p class="font-semibold text-gray-800 text-sm truncate mt-0.5">{{ at.nome_filiado|default:"Aguardando identificação" }}</p>
               <p class="text-xs text-gray-400">{{ at.created_at|date:"H:i" }}
                 {% if at.is_retorno %}<span class="ml-1 text-amber-500 font-medium">↩ retorno</span>{% endif %}
@@ -146,9 +151,14 @@
           <!-- Cabeçalho do paciente em atendimento -->
           <div class="flex items-start justify-between gap-2 mb-3">
             <div class="flex-1 min-w-0">
-              {% if at.nextqs_fila and at.numero_senha %}
-              <span class="inline-block text-lg font-bold font-mono text-blue-700 mb-0.5">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
-              {% endif %}
+              <div class="flex items-center gap-2 flex-wrap mb-0.5">
+                {% if at.nextqs_fila and at.numero_senha %}
+                <span class="text-lg font-bold font-mono text-blue-700">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
+                {% endif %}
+                {% if at.is_preferencial %}
+                <span class="text-xs bg-amber-400 text-white font-bold px-1.5 py-0.5 rounded">★ PREF</span>
+                {% endif %}
+              </div>
               <p class="font-bold text-gray-900 text-base">{{ at.nome_filiado }}</p>
               {% if at.espera_min is not None %}
               <p class="text-xs text-amber-600 font-medium mt-0.5">

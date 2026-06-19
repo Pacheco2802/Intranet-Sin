@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Reembolsos{% endblock %}
+{% block page_title %}Reembolsos{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'financeiro:reembolso_create' %}" class="btn-primary text-xs">+ Solicitar reembolso</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-4">
+
+  {% if is_financeiro %}
+  <form method="get" class="card">
+    <div class="flex flex-wrap items-end gap-3">
+      <div class="flex-1 min-w-48">
+        <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
+        <select name="status" class="form-input">
+          <option value="">Todos</option>
+          {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if status_atual == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn-primary text-xs py-1.5">Filtrar</button>
+      <a href="{% url 'financeiro:reembolso_list' %}" class="btn-secondary text-xs py-1.5">Limpar</a>
+    </div>
+  </form>
+  {% endif %}
+
+  {% if reembolsos %}
+  <div class="card p-0 overflow-hidden">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-100 bg-gray-50">
+          <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Título</th>
+          {% if is_financeiro %}<th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 hidden sm:table-cell">Solicitante</th>{% endif %}
+          <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Valor</th>
+          <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Status</th>
+          <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 hidden md:table-cell">Data</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for r in reembolsos %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3"><p class="font-medium text-gray-900">{{ r.titulo }}</p></td>
+          {% if is_financeiro %}<td class="px-4 py-3 hidden sm:table-cell text-gray-600">{{ r.solicitante.get_full_name|default:r.solicitante.email }}</td>{% endif %}
+          <td class="px-4 py-3 text-gray-700 font-medium">R$ {{ r.valor }}</td>
+          <td class="px-4 py-3">{% include "financeiro/partials/status_badge.html" with label=r.get_status_display color=r.status_color %}</td>
+          <td class="px-4 py-3 hidden md:table-cell text-gray-400 text-xs">{{ r.created_at|date:"d/m/Y" }}</td>
+          <td class="px-4 py-3 text-right"><a href="{% url 'financeiro:reembolso_detail' r.pk %}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Ver →</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if is_financeiro and reembolsos %}
+      <tfoot class="border-t-2 border-gray-200 bg-gray-50">
+        <tr>
+          <td class="px-4 py-2.5 text-xs font-bold text-gray-600 uppercase tracking-wide" colspan="2">Total</td>
+          <td class="px-4 py-2.5 font-bold text-gray-900">R$ {{ total_valor|floatformat:2 }}</td>
+          <td colspan="3"></td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+  {% else %}
+  <div class="card text-center py-14">
+    <div class="text-4xl mb-3">🧾</div>
+    <p class="text-gray-500 font-medium">Nenhum reembolso encontrado.</p>
+    <a href="{% url 'financeiro:reembolso_create' %}" class="btn-primary text-sm inline-block mt-4">+ Solicitar reembolso</a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

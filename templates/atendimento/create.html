@@ -37,6 +37,18 @@
 
       </div>
       <p class="text-xs text-gray-400 mt-3">Selecionar a fila emite a senha automaticamente e aciona a impressão do ticket.</p>
+
+      <!-- Preferencial -->
+      <label class="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100 cursor-pointer group">
+        {{ form.is_preferencial }}
+        <div class="flex-1">
+          <span class="text-sm font-semibold text-amber-700 group-has-[:checked]:text-amber-800">
+            ★ Atendimento preferencial
+          </span>
+          <p class="text-xs text-gray-400 leading-tight mt-0.5">Idoso, pessoa com deficiência, gestante ou outro caso de prioridade legal.</p>
+        </div>
+        <span class="text-xs bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full flex-shrink-0">PREF</span>
+      </label>
     </div>
 
     <!-- 2. Dados do filiado -->

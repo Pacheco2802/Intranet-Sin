@@ -28,6 +28,12 @@ class Event(models.Model):
     def is_past(self):
         return self.start_datetime < timezone.now()
 
+    @property
+    def is_multiday(self):
+        if not self.end_datetime:
+            return False
+        return self.end_datetime.date() != self.start_datetime.date()
+
 
 class EventParticipant(models.Model):
     class Status(models.TextChoices):

@@ -16,11 +16,15 @@ def emitir_senha(at):
     queue_info = settings.NEXTQS_QUEUES.get(at.nextqs_fila)
     if not queue_info:
         return False, 'Fila não reconhecida.'
+    nome_display = at.nome_filiado[:50]
+    if at.is_preferencial:
+        nome_display = f'PREFERENCIAL - {nome_display}'[:50]
     payload = {
         'queue_id': queue_info['id'],
         'service_desk_id': settings.NEXTQS_SERVICE_DESK,
         'kiosk_id': settings.NEXTQS_KIOSK_ID,
-        'customer_name': at.nome_filiado[:30],
+        'customer_name': nome_display,
+        'priority': at.is_preferencial,
         'support_fields': [{
             'label': 'CPF',
             'value': at.cpf,
@@ -60,12 +64,16 @@ def chamar_senha(at, agent_id):
     queue_info = settings.NEXTQS_QUEUES.get(at.nextqs_fila)
     if not queue_info:
         return False, 'Fila não reconhecida.'
+    nome_display = at.nome_filiado[:50]
+    if at.is_preferencial:
+        nome_display = f'PREFERENCIAL - {nome_display}'[:50]
     payload = {
         'queue_id': queue_info['id'],
         'service_desk_id': _service_desk(queue_info),
         'ticket': at.numero_senha,
         'alpha': at.nextqs_fila,
-        'customer_name': at.nome_filiado[:30],
+        'customer_name': nome_display,
+        'priority': at.is_preferencial,
         'agent_id': agent_id,
     }
     try:

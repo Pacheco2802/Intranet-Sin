@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}{{ r.titulo }} — Reembolso{% endblock %}
+{% block page_title %}{{ r.titulo }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'financeiro:reembolso_list' %}" class="btn-secondary text-xs">← Reembolsos</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-5">
+
+  <!-- Progresso -->
+  <div class="card py-4">
+    <div class="flex items-center">
+      <!-- Enviado -->
+      <div class="flex flex-col items-center flex-1">
+        <div class="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center text-sm font-bold">✓</div>
+        <p class="text-xs font-semibold text-accent mt-1.5">Enviado</p>
+        <p class="text-xs text-gray-400">{{ r.created_at|date:"d/m/Y" }}</p>
+      </div>
+      <div class="flex-1 h-0.5 {% if r.status != 'PENDENTE' %}bg-accent{% else %}bg-gray-200{% endif %}"></div>
+      <!-- Em análise -->
+      <div class="flex flex-col items-center flex-1">
+        <div class="w-8 h-8 rounded-full {% if r.status != 'PENDENTE' %}bg-accent text-white{% else %}bg-gray-200 text-gray-500{% endif %} flex items-center justify-center text-sm font-bold">
+          {% if r.status != 'PENDENTE' %}✓{% else %}2{% endif %}
+        </div>
+        <p class="text-xs font-semibold {% if r.status != 'PENDENTE' %}text-accent{% else %}text-gray-400{% endif %} mt-1.5">Em análise</p>
+      </div>
+      <div class="flex-1 h-0.5 {% if r.status == 'PAGO' %}bg-accent{% elif r.status == 'REJEITADO' %}bg-red-400{% else %}bg-gray-200{% endif %}"></div>
+      <!-- Resultado -->
+      <div class="flex flex-col items-center flex-1">
+        <div class="w-8 h-8 rounded-full {% if r.status == 'PAGO' %}bg-emerald-500 text-white{% elif r.status == 'REJEITADO' %}bg-red-500 text-white{% else %}bg-gray-200 text-gray-500{% endif %} flex items-center justify-center text-sm font-bold">
+          {% if r.status == 'PAGO' %}✓{% elif r.status == 'REJEITADO' %}✕{% else %}3{% endif %}
+        </div>
+        <p class="text-xs font-semibold {% if r.status == 'PAGO' %}text-emerald-600{% elif r.status == 'REJEITADO' %}text-red-500{% else %}text-gray-400{% endif %} mt-1.5">
+          {% if r.status == 'PAGO' %}Pago{% elif r.status == 'REJEITADO' %}Rejeitado{% else %}Pagamento{% endif %}
+        </p>
+        {% if r.pago_em %}<p class="text-xs text-gray-400">{{ r.pago_em|date:"d/m/Y" }}</p>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+    <div class="lg:col-span-2 space-y-4">
+      <div class="card">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-2xl font-bold text-gray-900">R$ {{ r.valor }}</p>
+            <p class="text-sm text-gray-500 mt-1">Solicitado por {{ r.solicitante.get_full_name|default:r.solicitante.email }} · {{ r.created_at|date:"d/m/Y" }}</p>
+          </div>
+          {% include "financeiro/partials/status_badge.html" with label=r.get_status_display color=r.status_color %}
+        </div>
+        {% if r.descricao %}
+        <div class="mt-3 pt-3 border-t border-gray-100">
+          <p class="text-xs text-gray-400 font-medium mb-1">Descrição</p>
+          <p class="text-sm text-gray-600 whitespace-pre-wrap">{{ r.descricao }}</p>
+        </div>
+        {% endif %}
+        {% if r.status == 'REJEITADO' and r.motivo_rejeicao %}
+        <div class="mt-3 pt-3 border-t border-gray-100 bg-red-50 -mx-4 -mb-4 px-4 pb-4 rounded-b-xl">
+          <p class="text-xs text-red-500 font-semibold uppercase tracking-wide">Motivo da rejeição</p>
+          <p class="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{{ r.motivo_rejeicao }}</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-3">Documentos anexados</h3>
+        <div class="space-y-2">
+          <a href="{{ r.papel_assinado.url }}" target="_blank" class="flex items-center gap-3 text-sm text-blue-700 hover:bg-blue-50 px-3 py-2.5 rounded-lg border border-gray-100 transition-colors">
+            <span class="text-lg">📄</span>
+            <div>
+              <p class="font-medium">Papel assinado</p>
+              <p class="text-xs text-gray-400">Clique para abrir</p>
+            </div>
+          </a>
+          <a href="{{ r.comprovante.url }}" target="_blank" class="flex items-center gap-3 text-sm text-blue-700 hover:bg-blue-50 px-3 py-2.5 rounded-lg border border-gray-100 transition-colors">
+            <span class="text-lg">🧾</span>
+            <div>
+              <p class="font-medium">Comprovante de pagamento</p>
+              <p class="text-xs text-gray-400">Clique para abrir</p>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-4" x-data="{ panel: '' }">
+      <div class="card">
+        <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-3">Detalhes</h3>
+        <div class="space-y-2.5 text-sm">
+          <div><p class="text-xs text-gray-400">Solicitante</p><p class="text-gray-800 font-medium mt-0.5">{{ r.solicitante.get_full_name|default:r.solicitante.email }}</p></div>
+          <div><p class="text-xs text-gray-400">Valor</p><p class="text-gray-800 font-bold mt-0.5">R$ {{ r.valor }}</p></div>
+          <div><p class="text-xs text-gray-400">Enviado em</p><p class="text-gray-800 mt-0.5">{{ r.created_at|date:"d/m/Y H:i" }}</p></div>
+          {% if r.pago_em %}<div><p class="text-xs text-gray-400">Pago por</p><p class="text-gray-800 mt-0.5">{{ r.pago_por.get_full_name }} · {{ r.pago_em|date:"d/m/Y H:i" }}</p></div>{% endif %}
+        </div>
+      </div>
+
+      {% if is_financeiro %}
+      <div class="card space-y-2">
+        <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-3">Ações do financeiro</h3>
+        {% if r.status == 'PENDENTE' %}
+        <form method="post" action="{% url 'financeiro:reembolso_pagar' r.pk %}"
+              onsubmit="return confirm('Confirmar pagamento de R$ {{ r.valor }} para {{ r.solicitante.get_full_name|default:r.solicitante.email }}?');">
+          {% csrf_token %}
+          <button type="submit" class="w-full text-sm py-2 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-colors">💸 Confirmar pagamento</button>
+        </form>
+        <button type="button" @click="panel = panel === 'rej' ? '' : 'rej'" class="btn-danger w-full text-sm">✕ Rejeitar</button>
+        <div x-show="panel === 'rej'" x-cloak class="pt-2 border-t border-gray-100">
+          <form method="post" action="{% url 'financeiro:reembolso_rejeitar' r.pk %}">
+            {% csrf_token %}
+            <label class="block text-xs font-medium text-gray-500 mb-1">Motivo da rejeição</label>
+            <textarea name="motivo" rows="2" class="form-input" placeholder="Descreva o motivo..."></textarea>
+            <button type="submit" class="btn-danger w-full text-sm mt-2">Confirmar rejeição</button>
+          </form>
+        </div>
+        {% elif r.status == 'PAGO' %}
+        <p class="text-xs text-center text-emerald-600 font-medium py-2">✓ Reembolso pago</p>
+        {% elif r.status == 'REJEITADO' %}
+        <p class="text-xs text-center text-red-500 font-medium py-2">✕ Reembolso rejeitado</p>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}
