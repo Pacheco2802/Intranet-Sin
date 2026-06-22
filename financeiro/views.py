@@ -253,7 +253,7 @@ def atividade_list(request):
     atividades_list = list(atividades)
     for a in atividades_list:
         vh = a.diretor.valor_hora_diretoria or params.valor_hora_diretoria_padrao
-        a.valor_estimado = a.horas * vh
+        a.valor_estimado = a.horas_efetivas * vh
 
     return render(request, 'financeiro/atividade_list.html', {
         'atividades': atividades_list,
@@ -332,16 +332,43 @@ def atividade_aprovar(request, pk):
     if a.status != AtividadeDiretoria.Status.PENDENTE:
         messages.error(request, 'Esta atividade não está pendente.')
         return redirect('financeiro:atividade_detail', pk=pk)
+
+    # Horas aprovadas: por padrão = horas lançadas; aprovação parcial usa um valor menor.
+    raw = (request.POST.get('horas_aprovadas') or '').strip().replace(',', '.')
+    horas_aprovadas = a.horas
+    if raw:
+        try:
+            horas_aprovadas = Decimal(raw)
+        except InvalidOperation:
+            messages.error(request, 'Horas a aprovar inválidas.')
+            return redirect('financeiro:atividade_detail', pk=pk)
+        if horas_aprovadas <= 0 or horas_aprovadas > a.horas:
+            messages.error(request, f'As horas aprovadas devem ser maiores que 0 e no máximo {a.horas}h (lançadas).')
+            return redirect('financeiro:atividade_detail', pk=pk)
+
     a.status = AtividadeDiretoria.Status.APROVADA
+    a.horas_aprovadas = horas_aprovadas
     a.aprovado_por = request.user
     a.aprovado_em = timezone.now()
     a.save()
-    AuditLog.log(request.user, AuditLog.Action.DIRAT_APPROVE, 'AtividadeDiretoria', a.pk, ip=_ip(request))
+    AuditLog.log(
+        request.user, AuditLog.Action.DIRAT_APPROVE, 'AtividadeDiretoria', a.pk, ip=_ip(request),
+        horas_lancadas=str(a.horas), horas_aprovadas=str(horas_aprovadas),
+    )
+    parcial = horas_aprovadas < a.horas
+    if parcial:
+        titulo_notif = 'Atividade aprovada parcialmente'
+        corpo_notif = f'{a.titulo} — {horas_aprovadas}h aprovadas de {a.horas}h lançadas'
+        msg = f'Atividade aprovada parcialmente: {horas_aprovadas}h de {a.horas}h.'
+    else:
+        titulo_notif = 'Atividade aprovada'
+        corpo_notif = a.titulo
+        msg = 'Atividade aprovada.'
     Notification.send(
         a.diretor, request.user, Notification.Type.DIRETORIA_STATUS,
-        'Atividade aprovada', a.titulo, f'/financeiro/diretoria/{a.pk}/',
+        titulo_notif, corpo_notif, f'/financeiro/diretoria/{a.pk}/',
     )
-    messages.success(request, 'Atividade aprovada.')
+    messages.success(request, msg)
     return redirect(request.POST.get('next') or f'/financeiro/diretoria/{a.pk}/')
 
 
@@ -398,7 +425,7 @@ def pagamentos(request):
     grupos = []
     for (diretor_id, competencia), itens in grupos_map.items():
         diretor = itens[0].diretor
-        horas_totais = sum((i.horas for i in itens), Decimal('0'))
+        horas_totais = sum((i.horas_efetivas for i in itens), Decimal('0'))
         horas_pagas = min(horas_totais, teto)
         vh = valor_hora_efetivo(diretor)
         grupos.append({
@@ -474,7 +501,7 @@ def diretoria_pagar(request):
         return redirect('financeiro:pagamentos')
 
     teto = ParametroFinanceiro.get().teto_horas_mensal
-    horas_totais = sum((i.horas for i in itens), Decimal('0'))
+    horas_totais = sum((i.horas_efetivas for i in itens), Decimal('0'))
     horas_pagas = min(horas_totais, teto)
     vh = valor_hora_efetivo(diretor)
 

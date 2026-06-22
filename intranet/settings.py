@@ -39,6 +39,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.LGPDConsentMiddleware',
+    'core.middleware.DiretorScopeMiddleware',
     'core.middleware.AuditMiddleware',
 ]
 

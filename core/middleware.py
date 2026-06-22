@@ -31,6 +31,39 @@ class LGPDConsentMiddleware:
         return self.get_response(request)
 
 
+# Prefixos que o diretor "restrito" pode acessar. Tudo o mais é bloqueado.
+DIRETOR_ALLOWED_URLS = [
+    '/financeiro/diretoria/',    # lançar atividade, minhas atividades, detalhe, aprovar/rejeitar
+    '/financeiro/reembolsos/',   # reembolsos (mantido)
+    '/perfil/',                  # perfil + alterar senha
+    '/notificacoes/',            # sino/badge (poll do base.html) + avisos de aprovação/pagamento
+    '/lgpd/',                    # consentimento/política/exportar
+    '/login/',
+    '/logout/',
+    '/static/',
+    '/media/',
+]
+
+
+class DiretorScopeMiddleware:
+    """Restringe o diretor 'puro' às abas de atividade/reembolso. Bloqueio real por URL
+    (não só esconder o menu): qualquer rota fora da allowlist redireciona para
+    'Minhas atividades'."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = request.user
+        if (
+            user.is_authenticated
+            and user.is_diretor_restrito
+            and not any(request.path.startswith(url) for url in DIRETOR_ALLOWED_URLS)
+        ):
+            return redirect('financeiro:atividade_list')
+        return self.get_response(request)
+
+
 class AuditMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response

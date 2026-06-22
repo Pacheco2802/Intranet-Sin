@@ -62,7 +62,11 @@
             <p class="text-xs text-gray-400">{{ a.data_atividade|date:"d/m/Y" }}</p>
           </td>
           <td class="px-4 py-3 text-gray-500 text-xs hidden sm:table-cell">{{ a.competencia|date:"m/Y" }}</td>
-          <td class="px-4 py-3 text-gray-700 font-medium">{{ a.horas }}h</td>
+          <td class="px-4 py-3 text-gray-700 font-medium">
+            {% if a.aprovacao_parcial %}
+            <span class="text-amber-700">{{ a.horas_aprovadas }}h</span> <span class="text-xs text-gray-400 font-normal">/ {{ a.horas }}h</span>
+            {% else %}{{ a.horas }}h{% endif %}
+          </td>
           {% if aba == 'aprovar' or is_financeiro %}
           <td class="px-4 py-3 text-gray-600 text-xs hidden md:table-cell">
             {% if a.valor_estimado %}R$ {{ a.valor_estimado|floatformat:2 }}{% else %}<span class="text-gray-300">—</span>{% endif %}

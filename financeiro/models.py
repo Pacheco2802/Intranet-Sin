@@ -141,6 +141,10 @@ class AtividadeDiretoria(models.Model):
         related_name='atividades_aprovadas', verbose_name='Aprovado por',
     )
     aprovado_em = models.DateTimeField('Aprovado em', null=True, blank=True)
+    horas_aprovadas = models.DecimalField(
+        'Horas aprovadas', max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text='Definido na aprovação. Pode ser menor que as horas lançadas (aprovação parcial).',
+    )
     motivo_rejeicao = models.TextField('Motivo da rejeição', blank=True)
     pagamento = models.ForeignKey(
         PagamentoDiretoria, on_delete=models.SET_NULL, null=True, blank=True,
@@ -170,3 +174,19 @@ class AtividadeDiretoria(models.Model):
             self.Status.REJEITADA: '#ef4444',
             self.Status.PAGA: '#16a34a',
         }.get(self.status, '#6b7280')
+
+    @property
+    def horas_efetivas(self):
+        """Horas que valem para pagamento: as aprovadas (se já aprovada/paga), senão as lançadas."""
+        if self.status in (self.Status.APROVADA, self.Status.PAGA) and self.horas_aprovadas is not None:
+            return self.horas_aprovadas
+        return self.horas
+
+    @property
+    def aprovacao_parcial(self):
+        """True se foi aprovada por menos horas do que as lançadas."""
+        return (
+            self.status in (self.Status.APROVADA, self.Status.PAGA)
+            and self.horas_aprovadas is not None
+            and self.horas_aprovadas < self.horas
+        )

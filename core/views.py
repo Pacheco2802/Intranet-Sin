@@ -29,9 +29,16 @@ from .middleware import AuditMiddleware
 
 # ── Auth ──────────────────────────────────────
 
+def _post_login_dest(user):
+    """Diretor restrito cai direto em 'Minhas atividades'; os demais, no dashboard."""
+    if user.is_diretor_restrito:
+        return resolve_url('financeiro:atividade_list')
+    return resolve_url('core:dashboard')
+
+
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('core:dashboard')
+        return redirect(_post_login_dest(request.user))
     form = LoginForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         user = authenticate(
@@ -44,7 +51,7 @@ def login_view(request):
             AuditLog.log(user, AuditLog.Action.LOGIN, ip=AuditMiddleware.get_client_ip(request))
             next_url = request.GET.get('next', '')
             if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
-                next_url = resolve_url('/')
+                next_url = _post_login_dest(user)
             return redirect(next_url)
         try:
             pending = CustomUser.objects.get(email__iexact=form.cleaned_data['email'])

@@ -14,6 +14,9 @@
         <div>
           <p class="text-sm text-gray-500">{{ a.data_atividade|date:"d/m/Y" }} · {{ a.horas }}h</p>
           <p class="text-xs text-gray-400 mt-1">Mês de referência: {{ a.competencia|date:"m/Y" }}</p>
+          {% if a.aprovacao_parcial %}
+          <p class="text-xs text-amber-600 font-medium mt-1">✓ Aprovada parcialmente: {{ a.horas_aprovadas }}h de {{ a.horas }}h</p>
+          {% endif %}
         </div>
         {% include "financeiro/partials/status_badge.html" with label=a.get_status_display color=a.status_color %}
       </div>
@@ -63,13 +66,18 @@
     {% endif %}
   </div>
 
-  <div class="space-y-4" x-data="{ panel: '' }">
+  <div class="space-y-4" x-data="{ panel: '', horas: {{ a.horas }} }">
     <div class="card">
       <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-3">Detalhes</h3>
       <div class="space-y-2.5 text-sm">
         <div><p class="text-xs text-gray-400">Diretor</p><p class="text-gray-800 font-medium mt-0.5">{{ a.diretor.get_full_name|default:a.diretor.email }}</p></div>
         <div><p class="text-xs text-gray-400">Mês de referência</p><p class="text-gray-800 mt-0.5">{{ a.competencia|date:"m/Y" }}</p></div>
-        <div><p class="text-xs text-gray-400">Horas</p><p class="text-gray-800 font-bold mt-0.5">{{ a.horas }}h</p></div>
+        <div><p class="text-xs text-gray-400">Horas lançadas</p><p class="text-gray-800 font-bold mt-0.5">{{ a.horas }}h</p></div>
+        {% if a.aprovacao_parcial %}
+        <div><p class="text-xs text-gray-400">Horas aprovadas</p><p class="text-amber-700 font-bold mt-0.5">{{ a.horas_aprovadas }}h <span class="text-xs font-normal text-gray-400">(parcial)</span></p></div>
+        {% elif a.status == 'APROVADA' or a.status == 'PAGA' %}
+        <div><p class="text-xs text-gray-400">Horas aprovadas</p><p class="text-emerald-700 font-bold mt-0.5">{{ a.horas_efetivas }}h</p></div>
+        {% endif %}
         <div><p class="text-xs text-gray-400">Lançado em</p><p class="text-gray-800 mt-0.5">{{ a.created_at|date:"d/m/Y H:i" }}</p></div>
         {% if a.aprovado_em %}<div><p class="text-xs text-gray-400">Aprovado por</p><p class="text-gray-800 mt-0.5">{{ a.aprovado_por.get_full_name }} · {{ a.aprovado_em|date:"d/m/Y H:i" }}</p></div>{% endif %}
         {% if a.pagamento %}<div><p class="text-xs text-gray-400">Pagamento</p><p class="text-gray-800 mt-0.5">{{ a.pagamento.competencia|date:"m/Y" }} · <span class="font-semibold text-emerald-700">R$ {{ a.pagamento.valor_total }}</span></p></div>{% endif %}
@@ -80,9 +88,18 @@
     <div class="card space-y-2">
       <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-3">Aprovação</h3>
       <form method="post" action="{% url 'financeiro:atividade_aprovar' a.pk %}"
-            onsubmit="return confirm('Aprovar {{ a.horas }}h para {{ a.diretor.get_full_name }}?');">
+            onsubmit="return confirm('Aprovar ' + horas + 'h para {{ a.diretor.get_full_name|escapejs }}?');">
         {% csrf_token %}
-        <button type="submit" class="btn-primary w-full text-sm">✓ Aprovar atividade</button>
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <label class="block text-xs font-medium text-gray-500 mb-1">Horas a aprovar <span class="text-gray-400">(lançadas: {{ a.horas }}h)</span></label>
+        <input type="number" name="horas_aprovadas" x-model.number="horas"
+               min="0.5" max="{{ a.horas }}" step="0.5" required
+               class="form-input mb-1">
+        <p x-show="horas < {{ a.horas }}" x-cloak class="text-xs text-amber-600 mb-2">
+          ⚠ Aprovação parcial: <span x-text="horas"></span>h de {{ a.horas }}h lançadas.
+        </p>
+        <button type="submit" class="btn-primary w-full text-sm"
+                x-text="horas < {{ a.horas }} ? '✓ Aprovar parcialmente' : '✓ Aprovar atividade'">✓ Aprovar atividade</button>
       </form>
       <button type="button" @click="panel = panel === 'rej' ? '' : 'rej'" class="btn-danger w-full text-sm">✕ Rejeitar</button>
       <div x-show="panel === 'rej'" x-cloak class="pt-2 border-t border-gray-100">

@@ -115,6 +115,17 @@ class CustomUser(AbstractUser):
     def is_financeiro(self):
         return self.is_admin_ti or self.departments.filter(slug='financeiro').exists()
 
+    @property
+    def is_diretor_restrito(self):
+        """Diretor 'puro': só acessa as abas de atividade/reembolso. Não pega ADMIN_TI,
+        aprovador de diretoria (Thabata) nem dept Financeiro, que precisam de acesso amplo."""
+        return (
+            self.role == self.Role.DIRETOR
+            and not self.is_admin_ti
+            and not self.is_aprovador_diretoria
+            and not self.is_financeiro
+        )
+
     def anonymize(self):
         uid = hashlib.sha256(str(self.pk).encode()).hexdigest()[:8]
         self.first_name = 'Usuário'
