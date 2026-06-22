@@ -2,11 +2,36 @@ import requests
 from django.conf import settings
 
 
+# NextQS limita ticket_customer_name a 30 caracteres (HTTP 400 acima disso).
+NOME_MAX = 30
+
+
 def _headers():
     return {
         'Authorization': f'Bearer {settings.NEXTQS_API_KEY}',
         'Content-Type': 'application/json',
     }
+
+
+def _nome_display(at):
+    """Nome do filiado dentro do limite do NextQS (30 chars), com prefixo de preferencial."""
+    nome = at.nome_filiado or ''
+    if at.is_preferencial:
+        return f'PREFERENCIAL - {nome}'[:NOME_MAX]
+    return nome[:NOME_MAX]
+
+
+def _erro_request(exc):
+    """Extrai a mensagem real do NextQS (corpo da resposta) quando houver, em vez do genérico."""
+    resp = getattr(exc, 'response', None)
+    if resp is not None:
+        try:
+            data = resp.json()
+            msg = data.get('error') or data.get('message') or resp.text
+        except ValueError:
+            msg = resp.text[:300]
+        return f'{resp.status_code}: {msg}'
+    return str(exc)
 
 
 def emitir_senha(at):
@@ -16,9 +41,7 @@ def emitir_senha(at):
     queue_info = settings.NEXTQS_QUEUES.get(at.nextqs_fila)
     if not queue_info:
         return False, 'Fila não reconhecida.'
-    nome_display = at.nome_filiado[:50]
-    if at.is_preferencial:
-        nome_display = f'PREFERENCIAL - {nome_display}'[:50]
+    nome_display = _nome_display(at)
     payload = {
         'queue_id': queue_info['id'],
         'service_desk_id': settings.NEXTQS_SERVICE_DESK,
@@ -49,7 +72,7 @@ def emitir_senha(at):
         at.save(update_fields=['numero_senha'])
         return True, item.get('ticket', at.numero_senha)
     except requests.RequestException as exc:
-        return False, str(exc)
+        return False, _erro_request(exc)
 
 
 def _service_desk(queue_info):
@@ -64,9 +87,7 @@ def chamar_senha(at, agent_id):
     queue_info = settings.NEXTQS_QUEUES.get(at.nextqs_fila)
     if not queue_info:
         return False, 'Fila não reconhecida.'
-    nome_display = at.nome_filiado[:50]
-    if at.is_preferencial:
-        nome_display = f'PREFERENCIAL - {nome_display}'[:50]
+    nome_display = _nome_display(at)
     payload = {
         'queue_id': queue_info['id'],
         'service_desk_id': _service_desk(queue_info),
@@ -86,7 +107,7 @@ def chamar_senha(at, agent_id):
         r.raise_for_status()
         return True, 'OK'
     except requests.RequestException as exc:
-        return False, str(exc)
+        return False, _erro_request(exc)
 
 
 def cancelar_senha(at, agent_id):
@@ -104,7 +125,7 @@ def cancelar_senha(at, agent_id):
                 'service_desk_id': _service_desk(queue_info),
                 'ticket': at.numero_senha,
                 'alpha': at.nextqs_fila,
-                'customer_name': at.nome_filiado[:30],
+                'customer_name': _nome_display(at),
                 'agent_id': agent_id,
             },
             headers=_headers(),
@@ -127,4 +148,4 @@ def cancelar_senha(at, agent_id):
         r2.raise_for_status()
         return True, 'OK'
     except requests.RequestException as exc:
-        return False, str(exc)
+        return False, _erro_request(exc)
