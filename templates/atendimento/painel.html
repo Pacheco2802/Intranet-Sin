@@ -124,6 +124,13 @@
             </button>
           </form>
           {% endif %}
+          {% if at.nextqs_fila and at.numero_senha %}
+          <a href="{% url 'atendimento:imprimir_senha' at.pk %}" target="_blank"
+             onclick="window.open(this.href,'_blank','width=340,height=480,toolbar=no,menubar=no'); return false;"
+             class="mt-1.5 w-full py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-medium transition-colors flex items-center justify-center gap-1.5">
+            🖨️ Imprimir senha
+          </a>
+          {% endif %}
         </div>
         {% endfor %}
       </div>
@@ -185,6 +192,11 @@
               🔁 Rechamar {{ at.nextqs_fila }}{{ at.numero_senha }}
             </button>
           </form>
+          <a href="{% url 'atendimento:imprimir_senha' at.pk %}" target="_blank"
+             onclick="window.open(this.href,'_blank','width=340,height=480,toolbar=no,menubar=no'); return false;"
+             class="mb-2 w-full py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-medium transition-colors flex items-center justify-center gap-1.5">
+            🖨️ Imprimir senha
+          </a>
           {% endif %}
 
           <!-- Formulário de conclusão inline -->
@@ -290,20 +302,28 @@
       </div>
       <div class="space-y-2">
         {% for at in triagem %}
-        <a href="{% url 'atendimento:detail' at.pk %}"
-           class="card block hover:border-slate-300 border {% if at.is_auto_nextqs %}border-amber-200 bg-amber-50/30{% else %}border-transparent{% endif %} transition-all p-3 hover:shadow-sm">
-          <div class="flex items-center gap-1.5 mb-1">
-            {% if at.nextqs_fila and at.numero_senha %}
-            <span class="text-base font-bold font-mono text-blue-700">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
-            {% endif %}
-            {% if at.is_auto_nextqs %}
-            <span class="text-xs bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded font-medium ml-auto">Auto</span>
-            {% endif %}
-          </div>
-          <p class="font-medium text-gray-800 text-sm truncate">{{ at.nome_filiado|default:"Aguardando identificação" }}</p>
-          <p class="text-xs text-gray-400 truncate">{{ at.assunto }}</p>
-          <p class="text-xs text-gray-300 mt-1">{{ at.created_at|date:"H:i" }}</p>
-        </a>
+        <div class="card border {% if at.is_auto_nextqs %}border-amber-200 bg-amber-50/30{% else %}border-transparent{% endif %} transition-all p-3 hover:shadow-sm">
+          <a href="{% url 'atendimento:detail' at.pk %}" class="block hover:opacity-80 transition-opacity">
+            <div class="flex items-center gap-1.5 mb-1">
+              {% if at.nextqs_fila and at.numero_senha %}
+              <span class="text-base font-bold font-mono text-blue-700">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
+              {% endif %}
+              {% if at.is_auto_nextqs %}
+              <span class="text-xs bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded font-medium ml-auto">Auto</span>
+              {% endif %}
+            </div>
+            <p class="font-medium text-gray-800 text-sm truncate">{{ at.nome_filiado|default:"Aguardando identificação" }}</p>
+            <p class="text-xs text-gray-400 truncate">{{ at.assunto }}</p>
+            <p class="text-xs text-gray-300 mt-1">{{ at.created_at|date:"H:i" }}</p>
+          </a>
+          {% if at.nextqs_fila and at.numero_senha %}
+          <a href="{% url 'atendimento:imprimir_senha' at.pk %}" target="_blank"
+             onclick="window.open(this.href,'_blank','width=340,height=480,toolbar=no,menubar=no'); return false;"
+             class="mt-2 w-full py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-medium transition-colors flex items-center justify-center gap-1.5">
+            🖨️ Imprimir senha
+          </a>
+          {% endif %}
+        </div>
         {% empty %}
         <div class="card text-center py-8 text-gray-300 text-sm">Nenhum</div>
         {% endfor %}
@@ -344,6 +364,11 @@
               📢 Chamar {{ at.nextqs_fila }}{{ at.numero_senha }}
             </button>
           </form>
+          <a href="{% url 'atendimento:imprimir_senha' at.pk %}" target="_blank"
+             onclick="window.open(this.href,'_blank','width=340,height=480,toolbar=no,menubar=no'); return false;"
+             class="mt-1 w-full py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-medium transition-colors flex items-center justify-center gap-1.5">
+            🖨️ Imprimir senha
+          </a>
           {% endif %}
         </div>
         {% empty %}
