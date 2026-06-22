@@ -277,7 +277,16 @@
         </button>
       </form>
       {% elif at.status == 'EM_ANDAMENTO' %}
-      <p class="text-xs text-center text-emerald-600 font-medium">✓ Em atendimento</p>
+      {% if pode_agir and ativo %}
+      <form method="post" action="{% url 'atendimento:nextqs_rechamar' at.pk %}">
+        {% csrf_token %}
+        <button type="submit"
+                class="w-full py-2.5 px-4 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+          🔁 Rechamar no display
+        </button>
+      </form>
+      {% endif %}
+      <p class="text-xs text-center text-emerald-600 font-medium mt-2">✓ Em atendimento</p>
       {% endif %}
     </div>
     {% endif %}

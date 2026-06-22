@@ -466,6 +466,55 @@ def nextqs_chamar(request, pk):
     return _redir()
 
 
+@login_required
+def nextqs_rechamar(request, pk):
+    """Chama a mesma senha novamente no display (quando o cliente não viu/ouviu)."""
+    if request.method != 'POST':
+        return redirect('atendimento:detail', pk=pk)
+
+    next_url = request.POST.get('next', 'detail')
+
+    def _redir():
+        return redirect('atendimento:painel') if next_url == 'painel' else redirect('atendimento:detail', pk=pk)
+
+    at = get_object_or_404(_qs_visivel(request.user), pk=pk)
+
+    # Não rechama senha que está sendo atendida por outra pessoa
+    if (
+        at.responsavel_id
+        and at.responsavel_id != request.user.pk
+        and not request.user.can_see_all
+    ):
+        nome = at.responsavel.get_full_name() or at.responsavel.email
+        messages.warning(request, f'Esta senha está sendo atendida por {nome}.')
+        return _redir()
+
+    if not (at.numero_senha and at.nextqs_fila):
+        messages.error(request, 'Este atendimento não tem número de senha NextQS.')
+        return _redir()
+
+    agent_id = request.user.nextqs_agent_id or getattr(settings, 'NEXTQS_SYSTEM_AGENT_ID', '')
+    if not agent_id:
+        messages.error(request, 'Agent ID não configurado. Contate o administrador do sistema.')
+        return _redir()
+
+    from .nextqs import chamar_senha
+    ok, msg = chamar_senha(at, agent_id)
+    if ok:
+        AtendimentoEtapa.objects.create(
+            atendimento=at,
+            tipo=AtendimentoEtapa.Tipo.NOTA,
+            autor=request.user,
+            departamento=request.user.department,
+            descricao=f'Senha {at.nextqs_fila}{at.numero_senha} rechamada no display por {request.user.get_full_name() or request.user.email}.',
+        )
+        messages.success(request, f'Senha {at.nextqs_fila}{at.numero_senha} rechamada no display!')
+    else:
+        messages.error(request, f'Erro NextQS: {msg}')
+
+    return _redir()
+
+
 def _sync_nextqs_fila():
     """
     Cria atendimentos stub para senhas da fila NextQS que ainda não existem no sistema.

@@ -175,6 +175,18 @@
                title="Ver detalhes completos">↗ detalhes</a>
           </div>
 
+          {% if at.nextqs_fila and at.numero_senha %}
+          <!-- Rechamar senha no display -->
+          <form method="post" action="{% url 'atendimento:nextqs_rechamar' at.pk %}" class="mb-2">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="painel">
+            <button type="submit"
+                    class="w-full py-2 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50 text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+              🔁 Rechamar {{ at.nextqs_fila }}{{ at.numero_senha }}
+            </button>
+          </form>
+          {% endif %}
+
           <!-- Formulário de conclusão inline -->
           <form method="post" action="{% url 'atendimento:concluir_rapido' at.pk %}">
             {% csrf_token %}

@@ -12,6 +12,7 @@ urlpatterns = [
     path('filiado/<str:cpf_hash>/', views.atendimento_filiado, name='filiado'),
     path('<int:pk>/', views.atendimento_detail, name='detail'),
     path('<int:pk>/chamar/', views.nextqs_chamar, name='nextqs_chamar'),
+    path('<int:pk>/rechamar/', views.nextqs_rechamar, name='nextqs_rechamar'),
     path('<int:pk>/concluir-rapido/', views.atendimento_concluir_rapido, name='concluir_rapido'),
     path('<int:pk>/imprimir/', views.atendimento_imprimir_senha, name='imprimir_senha'),
 ]

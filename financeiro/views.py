@@ -33,8 +33,13 @@ def _is_aprovador_diretoria(user):
 
 
 def _is_gestor_financeiro(user):
-    """Dept Financeiro OU aprovador de diretoria (Thabata) — acesso completo ao módulo."""
+    """Dept Financeiro OU aprovador de diretoria (Thabata) — opera o módulo (paga, rejeita)."""
     return _is_financeiro(user) or _is_aprovador_diretoria(user)
+
+
+def _pode_ver_tudo(user):
+    """Quem tem visão completa (leitura) do módulo financeiro: gestores + presidente/coord geral."""
+    return _is_gestor_financeiro(user) or user.is_presidente
 
 
 def _pode_lancar_diretoria(user):
@@ -119,17 +124,17 @@ def home(request):
 @login_required
 def reembolso_list(request):
     user = request.user
-    gestor = _is_gestor_financeiro(user)
+    visualiza_tudo = _pode_ver_tudo(user)
     qs = Reembolso.objects.select_related('solicitante')
-    if not gestor:
+    if not visualiza_tudo:
         qs = qs.filter(solicitante=user)
     status = request.GET.get('status', '')
     if status:
         qs = qs.filter(status=status)
-    total_valor = qs.aggregate(t=Sum('valor'))['t'] or Decimal('0') if gestor else None
+    total_valor = qs.aggregate(t=Sum('valor'))['t'] or Decimal('0') if visualiza_tudo else None
     return render(request, 'financeiro/reembolso_list.html', {
         'reembolsos': qs,
-        'is_financeiro': gestor,
+        'is_financeiro': visualiza_tudo,
         'status_atual': status,
         'status_choices': Reembolso.Status.choices,
         'total_valor': total_valor,
@@ -170,10 +175,14 @@ def reembolso_detail(request, pk):
         Reembolso.objects.select_related('solicitante', 'pago_por'), pk=pk
     )
     user = request.user
-    gestor = _is_gestor_financeiro(user)
-    if r.solicitante_id != user.pk and not gestor:
+    visualiza_tudo = _pode_ver_tudo(user)
+    if r.solicitante_id != user.pk and not visualiza_tudo:
         return HttpResponseForbidden()
-    return render(request, 'financeiro/reembolso_detail.html', {'r': r, 'is_financeiro': gestor})
+    return render(request, 'financeiro/reembolso_detail.html', {
+        'r': r,
+        'is_financeiro': visualiza_tudo,
+        'pode_acionar': _is_gestor_financeiro(user),
+    })
 
 
 @login_required
@@ -227,11 +236,12 @@ def atividade_list(request):
     user = request.user
     pode_lancar = _pode_lancar_diretoria(user)
     is_aprovador = _is_aprovador_diretoria(user)
+    visualiza_tudo = _pode_ver_tudo(user)
 
     aba = request.GET.get('aba')
     if aba is None:
-        aba = 'aprovar' if (is_aprovador and not pode_lancar) else 'minhas'
-    if aba == 'aprovar' and is_aprovador:
+        aba = 'aprovar' if (visualiza_tudo and not pode_lancar) else 'minhas'
+    if aba == 'aprovar' and visualiza_tudo:
         atividades = AtividadeDiretoria.objects.select_related('diretor').filter(
             status=AtividadeDiretoria.Status.PENDENTE
         )
@@ -249,7 +259,8 @@ def atividade_list(request):
         'atividades': atividades_list,
         'pode_lancar': pode_lancar,
         'is_aprovador': is_aprovador,
-        'is_financeiro': _is_gestor_financeiro(user),
+        'is_financeiro': visualiza_tudo,
+        'visualiza_tudo': visualiza_tudo,
         'aba': aba,
     })
 
@@ -296,7 +307,7 @@ def atividade_detail(request, pk):
         AtividadeDiretoria.objects.select_related('diretor', 'aprovado_por', 'pagamento'), pk=pk
     )
     user = request.user
-    if a.diretor_id != user.pk and not _is_gestor_financeiro(user):
+    if a.diretor_id != user.pk and not _pode_ver_tudo(user):
         return HttpResponseForbidden()
     horas_mes_diretor = AtividadeDiretoria.objects.filter(
         diretor=a.diretor, competencia=a.competencia,
@@ -356,13 +367,14 @@ def atividade_rejeitar(request, pk):
     return redirect(request.POST.get('next') or f'/financeiro/diretoria/{a.pk}/')
 
 
-# ───────────────────────── A pagar ─────────────────────────
+# ───────────────────────── Pagamentos (a pagar + realizados) ─────────────────────────
 
 @login_required
-def a_pagar(request):
+def pagamentos(request):
     user = request.user
-    if not _is_gestor_financeiro(user):
+    if not _pode_ver_tudo(user):
         return HttpResponseForbidden()
+    pode_acionar = _is_gestor_financeiro(user)
 
     teto = ParametroFinanceiro.get().teto_horas_mensal
     comp_str = request.GET.get('competencia', '')
@@ -420,7 +432,8 @@ def a_pagar(request):
     total_reemb_pago = reembolsos_pagos.aggregate(t=Sum('valor'))['t'] or Decimal('0')
     total_dir_pago = pagamentos_dir.aggregate(t=Sum('valor_total'))['t'] or Decimal('0')
 
-    return render(request, 'financeiro/a_pagar.html', {
+    return render(request, 'financeiro/pagamentos.html', {
+        'pode_acionar': pode_acionar,
         # a pagar
         'reembolsos': reembolsos,
         'grupos': grupos,
@@ -450,7 +463,7 @@ def diretoria_pagar(request):
     competencia = _parse_competencia(request.POST.get('competencia'))
     if not diretor_id or not competencia:
         messages.error(request, 'Dados inválidos para o pagamento.')
-        return redirect('financeiro:a_pagar')
+        return redirect('financeiro:pagamentos')
 
     diretor = get_object_or_404(CustomUser, pk=diretor_id)
     itens = list(AtividadeDiretoria.objects.filter(
@@ -458,7 +471,7 @@ def diretoria_pagar(request):
     ))
     if not itens:
         messages.error(request, 'Não há atividades aprovadas para pagar nesta competência.')
-        return redirect('financeiro:a_pagar')
+        return redirect('financeiro:pagamentos')
 
     teto = ParametroFinanceiro.get().teto_horas_mensal
     horas_totais = sum((i.horas for i in itens), Decimal('0'))
@@ -478,7 +491,7 @@ def diretoria_pagar(request):
     )
     if not created:
         messages.info(request, 'Esta competência já foi paga para este diretor.')
-        return redirect('financeiro:a_pagar')
+        return redirect('financeiro:pagamentos')
 
     for i in itens:
         i.status = AtividadeDiretoria.Status.PAGA
@@ -496,7 +509,7 @@ def diretoria_pagar(request):
         request,
         f'Pagamento de {diretor.get_full_name() or diretor} ({competencia:%m/%Y}) confirmado.',
     )
-    return redirect('financeiro:a_pagar')
+    return redirect('financeiro:pagamentos')
 
 
 # ───────────────────────── Configuração de diretores ─────────────────────────

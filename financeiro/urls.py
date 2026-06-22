@@ -7,8 +7,8 @@ app_name = 'financeiro'
 urlpatterns = [
     path('', views.home, name='home'),
 
-    # Tela única do financeiro
-    path('a-pagar/', views.a_pagar, name='a_pagar'),
+    # Painel de pagamentos
+    path('pagamentos/', views.pagamentos, name='pagamentos'),
     path('diretoria/pagar/', views.diretoria_pagar, name='diretoria_pagar'),
 
     # Reembolsos
