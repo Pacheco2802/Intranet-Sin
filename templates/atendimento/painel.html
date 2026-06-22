@@ -130,6 +130,16 @@
              class="mt-1.5 w-full py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-medium transition-colors flex items-center justify-center gap-1.5">
             🖨️ Imprimir senha
           </a>
+          {% elif at.nextqs_fila %}
+          <form method="post" action="{% url 'atendimento:nextqs_reemitir' at.pk %}" class="mt-1.5">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="painel">
+            <button type="submit"
+                    class="w-full py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                    title="A emissão da senha falhou. Clique para reemitir e imprimir.">
+              ⚠️ Reemitir senha {{ at.nextqs_fila }}
+            </button>
+          </form>
           {% endif %}
         </div>
         {% endfor %}
@@ -197,6 +207,16 @@
              class="mb-2 w-full py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-medium transition-colors flex items-center justify-center gap-1.5">
             🖨️ Imprimir senha
           </a>
+          {% elif at.nextqs_fila %}
+          <form method="post" action="{% url 'atendimento:nextqs_reemitir' at.pk %}" class="mb-2">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="painel">
+            <button type="submit"
+                    class="w-full py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                    title="A emissão da senha falhou. Clique para reemitir e imprimir.">
+              ⚠️ Reemitir senha {{ at.nextqs_fila }}
+            </button>
+          </form>
           {% endif %}
 
           <!-- Formulário de conclusão inline -->
@@ -322,6 +342,16 @@
              class="mt-2 w-full py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-medium transition-colors flex items-center justify-center gap-1.5">
             🖨️ Imprimir senha
           </a>
+          {% elif at.nextqs_fila %}
+          <form method="post" action="{% url 'atendimento:nextqs_reemitir' at.pk %}" class="mt-2">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="painel">
+            <button type="submit"
+                    class="w-full py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                    title="A emissão da senha falhou. Clique para reemitir e imprimir.">
+              ⚠️ Reemitir senha {{ at.nextqs_fila }}
+            </button>
+          </form>
           {% endif %}
         </div>
         {% empty %}
@@ -369,6 +399,16 @@
              class="mt-1 w-full py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-medium transition-colors flex items-center justify-center gap-1.5">
             🖨️ Imprimir senha
           </a>
+          {% elif at.nextqs_fila %}
+          <form method="post" action="{% url 'atendimento:nextqs_reemitir' at.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="painel">
+            <button type="submit"
+                    class="w-full py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                    title="A emissão da senha falhou. Clique para reemitir e imprimir.">
+              ⚠️ Reemitir senha {{ at.nextqs_fila }}
+            </button>
+          </form>
           {% endif %}
         </div>
         {% empty %}

@@ -13,6 +13,7 @@ urlpatterns = [
     path('<int:pk>/', views.atendimento_detail, name='detail'),
     path('<int:pk>/chamar/', views.nextqs_chamar, name='nextqs_chamar'),
     path('<int:pk>/rechamar/', views.nextqs_rechamar, name='nextqs_rechamar'),
+    path('<int:pk>/reemitir/', views.nextqs_reemitir, name='nextqs_reemitir'),
     path('<int:pk>/concluir-rapido/', views.atendimento_concluir_rapido, name='concluir_rapido'),
     path('<int:pk>/imprimir/', views.atendimento_imprimir_senha, name='imprimir_senha'),
 ]

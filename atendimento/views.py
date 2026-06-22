@@ -257,7 +257,13 @@ def atendimento_create(request):
             if ok:
                 messages.success(request, f'Atendimento aberto. Senha {ticket} enviada para impressão.')
             else:
-                messages.warning(request, f'Atendimento criado, mas erro na emissão NextQS: {ticket}')
+                messages.warning(request, f'Atendimento criado, mas erro na emissão NextQS: {ticket}. Use "Reemitir senha" no painel para tentar novamente.')
+                AuditLog.log(
+                    request.user, AuditLog.Action.ATENDIMENTO_UPDATE,
+                    resource_type='Atendimento', resource_id=at.pk,
+                    ip=AuditMiddleware.get_client_ip(request),
+                    evento='nextqs_emissao_falhou', fila=at.nextqs_fila, erro=str(ticket)[:300],
+                )
         else:
             messages.success(request, 'Atendimento aberto com sucesso.')
 
@@ -462,6 +468,59 @@ def nextqs_chamar(request, pk):
         messages.success(request, f'Senha {at.nextqs_fila}{at.numero_senha} chamada no display!')
     else:
         messages.error(request, f'Erro NextQS: {msg}')
+
+    return _redir()
+
+
+@login_required
+def nextqs_reemitir(request, pk):
+    """Reemite a senha no NextQS quando a emissão original falhou (numero_senha vazio)."""
+    if request.method != 'POST':
+        return redirect('atendimento:detail', pk=pk)
+
+    next_url = request.POST.get('next', 'detail')
+
+    def _redir():
+        return redirect('atendimento:painel') if next_url == 'painel' else redirect('atendimento:detail', pk=pk)
+
+    at = get_object_or_404(_qs_visivel(request.user), pk=pk)
+
+    if not _pode_agir(at, request.user):
+        return HttpResponseForbidden()
+
+    if not at.nextqs_fila:
+        messages.error(request, 'Este atendimento não tem fila NextQS para emitir senha.')
+        return _redir()
+
+    if at.numero_senha:
+        messages.warning(request, f'Este atendimento já tem a senha {at.nextqs_fila}{at.numero_senha}.')
+        return _redir()
+
+    from .nextqs import emitir_senha
+    ok, ticket = emitir_senha(at)
+    if ok:
+        AtendimentoEtapa.objects.create(
+            atendimento=at,
+            tipo=AtendimentoEtapa.Tipo.NOTA,
+            autor=request.user,
+            departamento=request.user.department,
+            descricao=f'Senha {ticket} reemitida e enviada para impressão por {request.user.get_full_name() or request.user.email}.',
+        )
+        AuditLog.log(
+            request.user, AuditLog.Action.ATENDIMENTO_UPDATE,
+            resource_type='Atendimento', resource_id=at.pk,
+            ip=AuditMiddleware.get_client_ip(request),
+            evento='nextqs_reemissao_ok', fila=at.nextqs_fila, senha=at.numero_senha,
+        )
+        messages.success(request, f'Senha {ticket} reemitida e enviada para impressão.')
+    else:
+        AuditLog.log(
+            request.user, AuditLog.Action.ATENDIMENTO_UPDATE,
+            resource_type='Atendimento', resource_id=at.pk,
+            ip=AuditMiddleware.get_client_ip(request),
+            evento='nextqs_reemissao_falhou', fila=at.nextqs_fila, erro=str(ticket)[:300],
+        )
+        messages.error(request, f'Erro ao reemitir no NextQS: {ticket}')
 
     return _redir()
 

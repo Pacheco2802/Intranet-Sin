@@ -289,6 +289,21 @@
       <p class="text-xs text-center text-emerald-600 font-medium mt-2">✓ Em atendimento</p>
       {% endif %}
     </div>
+    {% elif at.nextqs_fila %}
+    <!-- Emissão da senha falhou: oferecer reemissão -->
+    <div class="card border-l-4 border-amber-400">
+      <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-2">NextQS — Fila</h3>
+      <p class="text-sm text-amber-700 mb-3">A emissão da senha ({{ at.get_nextqs_fila_display }}) falhou — nenhuma senha foi gerada/impressa.</p>
+      {% if pode_agir and ativo %}
+      <form method="post" action="{% url 'atendimento:nextqs_reemitir' at.pk %}">
+        {% csrf_token %}
+        <button type="submit"
+                class="w-full py-2.5 px-4 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+          ⚠️ Reemitir senha {{ at.nextqs_fila }}
+        </button>
+      </form>
+      {% endif %}
+    </div>
     {% endif %}
 
     <!-- Histórico do filiado -->
