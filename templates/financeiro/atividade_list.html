@@ -3,7 +3,7 @@
 {% block page_title %}Atividades de diretoria{% endblock %}
 {% block topbar_actions %}
 {% if pode_lancar %}<a href="{% url 'financeiro:atividade_create' %}" class="btn-primary text-xs">+ Nova atividade</a>{% endif %}
-{% if is_financeiro %}<a href="{% url 'financeiro:a_pagar' %}" class="btn-secondary text-xs">💸 A pagar</a>{% endif %}
+{% if is_financeiro %}<a href="{% url 'financeiro:pagamentos' %}" class="btn-secondary text-xs">💸 A pagar</a>{% endif %}
 {% endblock %}
 
 {% block content %}

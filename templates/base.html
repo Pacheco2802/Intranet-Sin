@@ -424,7 +424,7 @@
           {% endif %}
           {% if user.is_aprovador_diretoria or user.is_financeiro or user.is_admin_ti %}
           <a href="{% url 'financeiro:atividade_list' %}?aba=aprovar" class="sb-item sb-item-sub">Aprovar atividades</a>
-          <a href="{% url 'financeiro:a_pagar' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'a_pagar' %}active{% endif %}">A pagar</a>
+          <a href="{% url 'financeiro:pagamentos' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'pagamentos' %}active{% endif %}">A pagar</a>
           <a href="{% url 'financeiro:diretor_config' %}" class="sb-item sb-item-sub {% if request.resolver_match.url_name == 'diretor_config' %}active{% endif %}">Configurar diretores</a>
           {% endif %}
         </div>

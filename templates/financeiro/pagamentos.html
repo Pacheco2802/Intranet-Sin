@@ -48,7 +48,7 @@
     </select>
     <button type="submit" class="btn-secondary text-xs py-1.5">Aplicar</button>
     {% if competencia_filtro %}
-    <a href="{% url 'financeiro:a_pagar' %}" class="btn-secondary text-xs py-1.5">Limpar</a>
+    <a href="{% url 'financeiro:pagamentos' %}" class="btn-secondary text-xs py-1.5">Limpar</a>
     {% endif %}
     <span class="text-xs text-gray-400 ml-1">Teto diretoria: {{ teto }}h/mês</span>
   </form>
@@ -131,7 +131,7 @@
                 <a href="{% url 'financeiro:reembolso_detail' r.pk %}" class="text-xs text-gray-400 hover:text-gray-600 font-medium mr-3">Ver</a>
                 <form method="post" action="{% url 'financeiro:reembolso_pagar' r.pk %}" class="inline">
                   {% csrf_token %}
-                  <input type="hidden" name="next" value="{% url 'financeiro:a_pagar' %}">
+                  <input type="hidden" name="next" value="{% url 'financeiro:pagamentos' %}">
                   <button type="button"
                           @click="confirmTitulo='Confirmar pagamento?'; confirmMsg='R$ {{ r.valor }} para {{ r.solicitante.get_full_name|default:r.solicitante.email|escapejs }}'; pendingForm=$el.closest('form'); confirmModal=true"
                           class="text-xs py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-colors">
