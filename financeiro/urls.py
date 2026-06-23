@@ -10,6 +10,7 @@ urlpatterns = [
     # Painel de pagamentos
     path('pagamentos/', views.pagamentos, name='pagamentos'),
     path('diretoria/pagar/', views.diretoria_pagar, name='diretoria_pagar'),
+    path('diretoria/pagar-lote/', views.diretoria_pagar_lote, name='diretoria_pagar_lote'),
 
     # Reembolsos
     path('reembolsos/', views.reembolso_list, name='reembolso_list'),

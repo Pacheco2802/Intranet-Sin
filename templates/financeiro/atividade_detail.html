@@ -30,6 +30,12 @@
         <p class="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{{ a.motivo_rejeicao }}</p>
       </div>
       {% endif %}
+      {% if a.aprovacao_parcial and a.motivo_ajuste %}
+      <div class="mt-3 pt-3 border-t border-gray-100 bg-amber-50 -mx-4 -mb-4 px-4 pb-4 rounded-b-xl">
+        <p class="text-xs text-amber-600 font-semibold uppercase tracking-wide">Justificativa do ajuste de horas</p>
+        <p class="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{{ a.motivo_ajuste }}</p>
+      </div>
+      {% endif %}
     </div>
 
     <div class="card">
@@ -88,20 +94,24 @@
     <div class="card space-y-2">
       <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-3">Aprovação</h3>
       <form method="post" action="{% url 'financeiro:atividade_aprovar' a.pk %}"
-            onsubmit="return confirm('Aprovar ' + horas + 'h para {{ a.diretor.get_full_name|escapejs }}?');">
+            onsubmit="if (horas > {{ a.horas }}) { alert('Não é possível aprovar mais que as {{ a.horas }}h lançadas.'); return false; } return confirm('Aprovar ' + horas + 'h para {{ a.diretor.get_full_name|escapejs }}?');">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ request.get_full_path }}">
         <label class="block text-xs font-medium text-gray-500 mb-1">Horas a aprovar <span class="text-gray-400">(lançadas: {{ a.horas }}h)</span></label>
         <input type="number" name="horas_aprovadas" x-model.number="horas"
                min="0.5" max="{{ a.horas }}" step="0.5" required
-               class="form-input mb-1">
-        <p x-show="horas < {{ a.horas }}" x-cloak class="text-xs text-amber-600 mb-2">
-          ⚠ Aprovação parcial: <span x-text="horas"></span>h de {{ a.horas }}h lançadas.
-        </p>
-        <button type="submit" class="btn-primary w-full text-sm"
+               class="form-input mb-2">
+        <div x-show="horas < {{ a.horas }}" x-cloak class="mb-2">
+          <p class="text-xs text-amber-600 mb-1">⚠ Aprovação parcial: <span x-text="horas"></span>h de {{ a.horas }}h lançadas.</p>
+          <label class="block text-xs font-medium text-gray-500 mb-1">Justificativa do ajuste <span class="text-red-400">*</span></label>
+          <textarea name="motivo_ajuste" rows="2" :required="horas < {{ a.horas }}"
+                    class="form-input" placeholder="Explique por que está aprovando menos horas..."></textarea>
+        </div>
+        <button type="submit"
+                class="btn-primary w-full justify-center py-2.5 text-sm font-semibold"
                 x-text="horas < {{ a.horas }} ? '✓ Aprovar parcialmente' : '✓ Aprovar atividade'">✓ Aprovar atividade</button>
       </form>
-      <button type="button" @click="panel = panel === 'rej' ? '' : 'rej'" class="btn-danger w-full text-sm">✕ Rejeitar</button>
+      <button type="button" @click="panel = panel === 'rej' ? '' : 'rej'" class="btn-danger w-full justify-center py-2.5 text-sm font-semibold">✕ Rejeitar</button>
       <div x-show="panel === 'rej'" x-cloak class="pt-2 border-t border-gray-100">
         <form method="post" action="{% url 'financeiro:atividade_rejeitar' a.pk %}">
           {% csrf_token %}

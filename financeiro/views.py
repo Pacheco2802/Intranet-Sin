@@ -342,20 +342,29 @@ def atividade_aprovar(request, pk):
         except InvalidOperation:
             messages.error(request, 'Horas a aprovar inválidas.')
             return redirect('financeiro:atividade_detail', pk=pk)
-        if horas_aprovadas <= 0 or horas_aprovadas > a.horas:
-            messages.error(request, f'As horas aprovadas devem ser maiores que 0 e no máximo {a.horas}h (lançadas).')
+        if horas_aprovadas <= 0:
+            messages.error(request, 'As horas aprovadas devem ser maiores que 0.')
             return redirect('financeiro:atividade_detail', pk=pk)
+        if horas_aprovadas > a.horas:
+            messages.error(request, f'Não é possível aprovar mais que as {a.horas}h lançadas. Para aprovar tudo, use o valor lançado.')
+            return redirect('financeiro:atividade_detail', pk=pk)
+
+    parcial = horas_aprovadas < a.horas
+    motivo_ajuste = (request.POST.get('motivo_ajuste') or '').strip()
+    if parcial and not motivo_ajuste:
+        messages.error(request, 'Para aprovar menos horas que as lançadas, informe a justificativa do ajuste.')
+        return redirect('financeiro:atividade_detail', pk=pk)
 
     a.status = AtividadeDiretoria.Status.APROVADA
     a.horas_aprovadas = horas_aprovadas
+    a.motivo_ajuste = motivo_ajuste if parcial else ''
     a.aprovado_por = request.user
     a.aprovado_em = timezone.now()
     a.save()
     AuditLog.log(
         request.user, AuditLog.Action.DIRAT_APPROVE, 'AtividadeDiretoria', a.pk, ip=_ip(request),
-        horas_lancadas=str(a.horas), horas_aprovadas=str(horas_aprovadas),
+        horas_lancadas=str(a.horas), horas_aprovadas=str(horas_aprovadas), motivo_ajuste=motivo_ajuste,
     )
-    parcial = horas_aprovadas < a.horas
     if parcial:
         titulo_notif = 'Atividade aprovada parcialmente'
         corpo_notif = f'{a.titulo} — {horas_aprovadas}h aprovadas de {a.horas}h lançadas'
@@ -441,6 +450,46 @@ def pagamentos(request):
         })
     grupos.sort(key=lambda g: (g['competencia'], g['diretor'].get_full_name() or ''), reverse=True)
 
+    # ── Resumo por diretor/mês: tudo o que foi lançado (exceto rejeitadas) ──
+    lancadas = AtividadeDiretoria.objects.select_related('diretor').exclude(
+        status=AtividadeDiretoria.Status.REJEITADA
+    )
+    if comp_filter:
+        lancadas = lancadas.filter(competencia=comp_filter)
+
+    resumo_map = {}
+    for ativ in lancadas:
+        key = (ativ.diretor_id, ativ.competencia)
+        d = resumo_map.get(key)
+        if d is None:
+            d = resumo_map[key] = {
+                'diretor': ativ.diretor,
+                'competencia': ativ.competencia,
+                'competencia_str': ativ.competencia.strftime('%Y-%m'),
+                'n_total': 0, 'n_pendentes': 0, 'n_aprovadas': 0, 'n_pagas': 0,
+                'horas_lancadas': Decimal('0'), 'horas_aprovadas': Decimal('0'),
+            }
+        d['n_total'] += 1
+        d['horas_lancadas'] += ativ.horas
+        if ativ.status == AtividadeDiretoria.Status.PENDENTE:
+            d['n_pendentes'] += 1
+        elif ativ.status == AtividadeDiretoria.Status.APROVADA:
+            d['n_aprovadas'] += 1
+            d['horas_aprovadas'] += ativ.horas_efetivas
+        elif ativ.status == AtividadeDiretoria.Status.PAGA:
+            d['n_pagas'] += 1
+
+    resumo_diretores = []
+    for d in resumo_map.values():
+        vh = valor_hora_efetivo(d['diretor'])
+        d['horas_a_pagar'] = min(d['horas_aprovadas'], teto)
+        d['valor_a_pagar'] = d['horas_a_pagar'] * vh
+        d['tem_a_pagar'] = d['horas_aprovadas'] > 0
+        resumo_diretores.append(d)
+    resumo_diretores.sort(
+        key=lambda x: (x['competencia'], x['diretor'].get_full_name() or ''), reverse=True
+    )
+
     # ── Pagamentos realizados ──
     pagamentos_dir = PagamentoDiretoria.objects.select_related('diretor', 'pago_por')
     reembolsos_pagos = Reembolso.objects.select_related('solicitante', 'pago_por').filter(
@@ -464,6 +513,7 @@ def pagamentos(request):
         # a pagar
         'reembolsos': reembolsos,
         'grupos': grupos,
+        'resumo_diretores': resumo_diretores,
         'teto': teto,
         # realizados
         'pagamentos_dir': pagamentos_dir,
@@ -477,6 +527,67 @@ def pagamentos(request):
         'competencia_filtro': comp_str,
         'meses_disponiveis': _ultimos_meses(),
     })
+
+
+@login_required
+@require_POST
+def diretoria_pagar_lote(request):
+    """Paga de uma vez todas as atividades aprovadas (agrupadas por diretor/mês).
+    Respeita o filtro de competência, se enviado. Pula grupos já pagos."""
+    user = request.user
+    if not _is_gestor_financeiro(user):
+        return HttpResponseForbidden()
+
+    comp_filter = _parse_competencia(request.POST.get('competencia'))
+    aprovadas = AtividadeDiretoria.objects.select_related('diretor').filter(
+        status=AtividadeDiretoria.Status.APROVADA
+    )
+    if comp_filter:
+        aprovadas = aprovadas.filter(competencia=comp_filter)
+
+    grupos_map = {}
+    for ativ in aprovadas:
+        grupos_map.setdefault((ativ.diretor_id, ativ.competencia), []).append(ativ)
+
+    if not grupos_map:
+        messages.info(request, 'Não há atividades aprovadas para pagar.')
+        return redirect('financeiro:pagamentos')
+
+    teto = ParametroFinanceiro.get().teto_horas_mensal
+    n_pagos = 0
+    total_geral = Decimal('0')
+    for (diretor_id, competencia), itens in grupos_map.items():
+        diretor = itens[0].diretor
+        if PagamentoDiretoria.objects.filter(diretor=diretor, competencia=competencia).exists():
+            continue  # já pago
+        horas_totais = sum((i.horas_efetivas for i in itens), Decimal('0'))
+        horas_pagas = min(horas_totais, teto)
+        vh = valor_hora_efetivo(diretor)
+        pagamento = PagamentoDiretoria.objects.create(
+            diretor=diretor, competencia=competencia,
+            horas_totais=horas_totais, horas_pagas=horas_pagas,
+            valor_hora=vh, valor_total=horas_pagas * vh,
+            pago_por=user, pago_em=timezone.now(),
+        )
+        for i in itens:
+            i.status = AtividadeDiretoria.Status.PAGA
+            i.pagamento = pagamento
+            i.save()
+        AuditLog.log(user, AuditLog.Action.DIRAT_PAY, 'PagamentoDiretoria', pagamento.pk, ip=_ip(request))
+        Notification.send(
+            diretor, user, Notification.Type.DIRETORIA_PAGO,
+            'Pagamento de diretoria realizado',
+            f'Competência {competencia:%m/%Y}: {pagamento.horas_pagas}h — R$ {pagamento.valor_total}',
+            '/financeiro/diretoria/',
+        )
+        n_pagos += 1
+        total_geral += pagamento.valor_total
+
+    if n_pagos:
+        messages.success(request, f'{n_pagos} diretor(es) pagos — total R$ {total_geral}.')
+    else:
+        messages.info(request, 'Nenhum novo pagamento: as competências selecionadas já estavam pagas.')
+    return redirect('financeiro:pagamentos')
 
 
 @login_required

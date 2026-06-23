@@ -145,6 +145,10 @@ class AtividadeDiretoria(models.Model):
         'Horas aprovadas', max_digits=5, decimal_places=2, null=True, blank=True,
         help_text='Definido na aprovação. Pode ser menor que as horas lançadas (aprovação parcial).',
     )
+    motivo_ajuste = models.TextField(
+        'Motivo do ajuste de horas', blank=True,
+        help_text='Justificativa obrigatória quando aprova menos horas do que as lançadas.',
+    )
     motivo_rejeicao = models.TextField('Motivo da rejeição', blank=True)
     pagamento = models.ForeignKey(
         PagamentoDiretoria, on_delete=models.SET_NULL, null=True, blank=True,
