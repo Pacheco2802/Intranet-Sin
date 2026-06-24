@@ -52,14 +52,6 @@ class Reembolso(models.Model):
     titulo = models.CharField('Título', max_length=200)
     descricao = models.TextField('Descrição', blank=True)
     valor = models.DecimalField('Valor (R$)', max_digits=10, decimal_places=2)
-    papel_assinado = models.FileField(
-        'Papel assinado', upload_to='financeiro/reembolsos/%Y/%m/',
-        validators=[validate_file_extension, validate_file_size],
-    )
-    comprovante = models.FileField(
-        'Comprovante de pagamento', upload_to='financeiro/reembolsos/%Y/%m/',
-        validators=[validate_file_extension, validate_file_size],
-    )
     status = models.CharField('Status', max_length=10, choices=Status.choices, default=Status.PENDENTE)
     pago_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
@@ -85,6 +77,33 @@ class Reembolso(models.Model):
             self.Status.PAGO: '#16a34a',
             self.Status.REJEITADO: '#ef4444',
         }.get(self.status, '#6b7280')
+
+
+class ReembolsoAnexo(models.Model):
+    """Anexo genérico de um reembolso (comprovante, nota fiscal, etc.).
+    A pessoa pode anexar quantos arquivos precisar."""
+    reembolso = models.ForeignKey(
+        Reembolso, on_delete=models.CASCADE,
+        related_name='anexos', verbose_name='Reembolso',
+    )
+    arquivo = models.FileField(
+        'Arquivo', upload_to='financeiro/reembolsos/%Y/%m/',
+        validators=[validate_file_extension, validate_file_size],
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Anexo de Reembolso'
+        verbose_name_plural = 'Anexos de Reembolso'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return self.nome
+
+    @property
+    def nome(self):
+        """Nome do arquivo, sem o caminho de upload."""
+        return self.arquivo.name.rsplit('/', 1)[-1] if self.arquivo else ''
 
 
 class PagamentoDiretoria(models.Model):

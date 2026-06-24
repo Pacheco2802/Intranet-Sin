@@ -67,20 +67,17 @@
       <div class="card">
         <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-3">Documentos anexados</h3>
         <div class="space-y-2">
-          <a href="{{ r.papel_assinado.url }}" target="_blank" class="flex items-center gap-3 text-sm text-blue-700 hover:bg-blue-50 px-3 py-2.5 rounded-lg border border-gray-100 transition-colors">
-            <span class="text-lg">📄</span>
-            <div>
-              <p class="font-medium">Papel assinado</p>
-              <p class="text-xs text-gray-400">Clique para abrir</p>
-            </div>
-          </a>
-          <a href="{{ r.comprovante.url }}" target="_blank" class="flex items-center gap-3 text-sm text-blue-700 hover:bg-blue-50 px-3 py-2.5 rounded-lg border border-gray-100 transition-colors">
+          {% for anexo in r.anexos.all %}
+          <a href="{{ anexo.arquivo.url }}" target="_blank" class="flex items-center gap-3 text-sm text-blue-700 hover:bg-blue-50 px-3 py-2.5 rounded-lg border border-gray-100 transition-colors">
             <span class="text-lg">🧾</span>
-            <div>
-              <p class="font-medium">Comprovante de pagamento</p>
+            <div class="min-w-0">
+              <p class="font-medium truncate">{{ anexo.nome }}</p>
               <p class="text-xs text-gray-400">Clique para abrir</p>
             </div>
           </a>
+          {% empty %}
+          <p class="text-sm text-gray-400">Nenhum anexo.</p>
+          {% endfor %}
         </div>
       </div>
     </div>

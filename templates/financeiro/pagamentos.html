@@ -129,8 +129,11 @@
               <td class="px-4 py-3 text-gray-700">{{ r.titulo }}</td>
               <td class="px-4 py-3 font-bold text-gray-900">R$ {{ r.valor }}</td>
               <td class="px-4 py-3 hidden md:table-cell">
-                <a href="{{ r.papel_assinado.url }}" target="_blank" class="text-xs text-blue-600 hover:underline mr-2">papel</a>
-                <a href="{{ r.comprovante.url }}" target="_blank" class="text-xs text-blue-600 hover:underline">comprovante</a>
+                {% for anexo in r.anexos.all %}
+                <a href="{{ anexo.arquivo.url }}" target="_blank" class="text-xs text-blue-600 hover:underline mr-2">{{ anexo.nome|truncatechars:18 }}</a>
+                {% empty %}
+                <span class="text-xs text-gray-400">—</span>
+                {% endfor %}
               </td>
               <td class="px-4 py-3 text-right whitespace-nowrap">
                 <a href="{% url 'financeiro:reembolso_detail' r.pk %}" class="text-xs text-gray-400 hover:text-gray-600 font-medium mr-3">Ver</a>

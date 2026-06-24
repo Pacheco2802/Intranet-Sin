@@ -18,6 +18,7 @@ from .models import (
     PagamentoDiretoria,
     ParametroFinanceiro,
     Reembolso,
+    ReembolsoAnexo,
     valor_hora_efetivo,
 )
 
@@ -149,6 +150,8 @@ def reembolso_create(request):
             r = form.save(commit=False)
             r.solicitante = request.user
             r.save()
+            for arquivo in form.cleaned_data['anexos']:
+                ReembolsoAnexo.objects.create(reembolso=r, arquivo=arquivo)
             AuditLog.log(request.user, AuditLog.Action.REEMB_CREATE, 'Reembolso', r.pk, ip=_ip(request))
             link = f'/financeiro/reembolsos/{r.pk}/'
             for fin in _financeiro_users():

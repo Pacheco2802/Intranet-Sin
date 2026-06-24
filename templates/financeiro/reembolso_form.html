@@ -38,41 +38,33 @@
       {% if form.descricao.errors %}<p class="text-red-500 text-xs mt-1">{{ form.descricao.errors|join:" " }}</p>{% endif %}
     </div>
 
-    <!-- Papel assinado -->
-    <div x-data="{ nome1: '' }" @change="nome1 = $event.target.files?.[0]?.name || ''">
-      <label class="block text-xs font-medium text-gray-500 mb-1">Papel assinado <span class="text-red-500">*</span></label>
-      <label for="id_papel_assinado"
+    <!-- Anexos (múltiplos) -->
+    <div x-data="{ arquivos: [] }"
+         @change="arquivos = Array.from($event.target.files || []).map(f => f.name)">
+      <label class="block text-xs font-medium text-gray-500 mb-1">Anexos <span class="text-red-500">*</span></label>
+      <label for="id_anexos"
              class="flex items-center gap-3 border-2 border-dashed rounded-xl px-4 py-3 cursor-pointer transition-colors"
-             :class="nome1 ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:border-accent'">
-        <span class="text-xl flex-shrink-0" x-text="nome1 ? '✅' : '📄'"></span>
+             :class="arquivos.length ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:border-accent'">
+        <span class="text-xl flex-shrink-0" x-text="arquivos.length ? '✅' : '📎'"></span>
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium truncate" :class="nome1 ? 'text-green-700' : 'text-gray-400'" x-text="nome1 || 'Selecionar arquivo...'"></p>
-          <p class="text-xs text-gray-400">Formulário de reembolso com assinatura do responsável</p>
+          <p class="text-sm font-medium" :class="arquivos.length ? 'text-green-700' : 'text-gray-400'"
+             x-text="arquivos.length ? (arquivos.length + (arquivos.length === 1 ? ' arquivo selecionado' : ' arquivos selecionados')) : 'Selecionar arquivos...'"></p>
+          <p class="text-xs text-gray-400">Comprovante, nota fiscal, recibo, extrato — anexe quantos precisar</p>
         </div>
         <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-lg font-medium flex-shrink-0">Escolher</span>
       </label>
-      <div class="hidden">{{ form.papel_assinado }}</div>
-      {% if form.papel_assinado.errors %}<p class="text-red-500 text-xs mt-1">{{ form.papel_assinado.errors|join:" " }}</p>{% endif %}
+      {{ form.anexos }}
+      <ul x-show="arquivos.length" x-cloak class="mt-2 space-y-1">
+        <template x-for="(nome, i) in arquivos" :key="i">
+          <li class="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-1.5">
+            <span>🧾</span><span class="truncate" x-text="nome"></span>
+          </li>
+        </template>
+      </ul>
+      {% if form.anexos.errors %}<p class="text-red-500 text-xs mt-1">{{ form.anexos.errors|join:" " }}</p>{% endif %}
     </div>
 
-    <!-- Comprovante -->
-    <div x-data="{ nome2: '' }" @change="nome2 = $event.target.files?.[0]?.name || ''">
-      <label class="block text-xs font-medium text-gray-500 mb-1">Comprovante de pagamento <span class="text-red-500">*</span></label>
-      <label for="id_comprovante"
-             class="flex items-center gap-3 border-2 border-dashed rounded-xl px-4 py-3 cursor-pointer transition-colors"
-             :class="nome2 ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:border-accent'">
-        <span class="text-xl flex-shrink-0" x-text="nome2 ? '✅' : '🧾'"></span>
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium truncate" :class="nome2 ? 'text-green-700' : 'text-gray-400'" x-text="nome2 || 'Selecionar arquivo...'"></p>
-          <p class="text-xs text-gray-400">Nota fiscal, recibo ou extrato da despesa realizada</p>
-        </div>
-        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-lg font-medium flex-shrink-0">Escolher</span>
-      </label>
-      <div class="hidden">{{ form.comprovante }}</div>
-      {% if form.comprovante.errors %}<p class="text-red-500 text-xs mt-1">{{ form.comprovante.errors|join:" " }}</p>{% endif %}
-    </div>
-
-    <p class="text-xs text-gray-400">Formatos aceitos: PDF, DOC, XLS, JPG, PNG. Máx. 5 MB por arquivo.</p>
+    <p class="text-xs text-gray-400">Formatos aceitos: PDF, DOC, XLS, JPG, PNG. Máx. 5 MB por arquivo. Para selecionar vários de uma vez, segure Ctrl (ou Cmd) ao escolher.</p>
 
     <div class="flex gap-3 pt-2">
       <button type="submit" class="btn-primary flex-1">Enviar reembolso</button>

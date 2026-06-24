@@ -3,6 +3,7 @@ from django.contrib import admin
 from .models import (
     ParametroFinanceiro,
     Reembolso,
+    ReembolsoAnexo,
     AtividadeDiretoria,
     PagamentoDiretoria,
 )
@@ -20,6 +21,12 @@ class ParametroFinanceiroAdmin(admin.ModelAdmin):
         return False
 
 
+class ReembolsoAnexoInline(admin.TabularInline):
+    model = ReembolsoAnexo
+    extra = 0
+    readonly_fields = ('created_at',)
+
+
 @admin.register(Reembolso)
 class ReembolsoAdmin(admin.ModelAdmin):
     list_display = ('titulo', 'solicitante', 'valor', 'status', 'created_at')
@@ -27,6 +34,7 @@ class ReembolsoAdmin(admin.ModelAdmin):
     search_fields = ('titulo', 'descricao', 'solicitante__first_name', 'solicitante__last_name', 'solicitante__email')
     readonly_fields = ('created_at', 'updated_at', 'pago_em')
     date_hierarchy = 'created_at'
+    inlines = [ReembolsoAnexoInline]
 
 
 @admin.register(AtividadeDiretoria)
