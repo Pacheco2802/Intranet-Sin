@@ -167,6 +167,11 @@ def reembolso_create(request):
                     )
             messages.success(request, 'Reembolso enviado para análise.')
             return redirect('financeiro:reembolso_detail', pk=r.pk)
+        messages.error(
+            request,
+            'Não foi possível enviar o reembolso. Confira os campos destacados — '
+            'a causa mais comum é o arquivo (formato não aceito ou maior que 5 MB).'
+        )
     else:
         form = ReembolsoForm()
     return render(request, 'financeiro/reembolso_form.html', {'form': form})
@@ -287,6 +292,11 @@ def atividade_create(request):
                 )
             messages.success(request, 'Atividade registrada e enviada para aprovação.')
             return redirect('financeiro:atividade_detail', pk=a.pk)
+        messages.error(
+            request,
+            'Não foi possível registrar a atividade. Confira os campos destacados — '
+            'a causa mais comum é o comprovante (formato não aceito ou maior que 5 MB).'
+        )
     else:
         form = AtividadeDiretoriaForm()
 

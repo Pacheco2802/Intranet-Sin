@@ -1,187 +1,355 @@
-
 {% extends "base.html" %}
 {% block title %}Dashboard{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 
-{% block content %}
-<div class="space-y-5 max-w-7xl mx-auto">
+{% block extra_head %}
+<style>
+  @keyframes dash-gradient-shift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .dash-hero {
+    background: linear-gradient(135deg,
+      #0f172a 0%,
+      #1e3a5f 25%,
+      #1e6b8a 50%,
+      #1a6b45 75%,
+      #0f4d35 100%);
+    background-size: 300% 300%;
+    animation: dash-gradient-shift 22s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+  }
+  .dash-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(255,255,255,.10), transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(255,255,255,.08), transparent 45%);
+    pointer-events: none;
+  }
+  .dash-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: .35;
+    pointer-events: none;
+  }
+  .glass {
+    background: rgba(255,255,255,.10);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    border: 1px solid rgba(255,255,255,.18);
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  }
+  .glass-hover {
+    transition: all .25s ease;
+  }
+  .glass-hover:hover {
+    background: rgba(255,255,255,.18);
+    border-color: rgba(255,255,255,.35);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 36px rgba(0,0,0,.25);
+  }
+  .quick-icon {
+    width: 44px; height: 44px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.18);
+    border: 1px solid rgba(255,255,255,.22);
+  }
+</style>
+{% endblock %}
 
-  <!-- Welcome -->
-  <div class="rounded-xl overflow-hidden" style="background:linear-gradient(135deg,#1b2c4a 0%,#22375e 55%,#1a6b45 100%);">
-    <div class="px-6 py-5 flex items-center justify-between">
+{% block content %}
+<div class="space-y-6 max-w-7xl mx-auto -mt-1">
+
+  <!-- Hero gradient com saudação + atalhos rápidos -->
+  <section class="dash-hero rounded-2xl px-6 sm:px-8 pt-7 pb-8 sm:pt-9 sm:pb-10">
+    <div class="dash-blob" style="width:320px;height:320px;background:#60a5fa;top:-80px;right:-60px;"></div>
+    <div class="dash-blob" style="width:260px;height:260px;background:#34d399;bottom:-100px;left:10%;"></div>
+
+    <div class="relative flex items-center justify-between flex-wrap gap-4">
       <div>
-        <p class="text-white/50 text-xs font-medium uppercase tracking-wider">Bem-vindo de volta</p>
-        <h2 class="text-xl font-bold text-white mt-0.5">{{ user.first_name|default:user.username }} {{ user.last_name }}</h2>
-        <p class="text-white/60 text-sm mt-1">{{ user.get_role_display }}{% for d in user.departments.all %} · {{ d }}{% endfor %}</p>
+        <p class="text-white/55 text-[11px] font-semibold uppercase tracking-[.18em]">{{ today|date:"l, d \d\e F" }}</p>
+        <h1 class="text-2xl sm:text-3xl font-bold text-white mt-1">
+          {{ greeting }}, <span class="text-white/90">{{ user.first_name|default:user.username }}</span> 👋
+        </h1>
+        <p class="text-white/65 text-sm mt-1.5">{{ user.get_role_display }}{% for d in user.departments.all %} · {{ d }}{% endfor %}</p>
       </div>
       <div class="hidden sm:flex items-center gap-3">
         {% if user.avatar %}
-          <img src="{{ user.avatar.url }}" class="w-14 h-14 rounded-2xl object-cover border-2 border-white/20">
+          <img src="{{ user.avatar.url }}" class="w-16 h-16 rounded-2xl object-cover border-2 border-white/25 shadow-lg">
         {% else %}
-          <div class="w-14 h-14 rounded-2xl bg-white/10 border-2 border-white/20 flex items-center justify-center text-white text-xl font-bold">
+          <div class="w-16 h-16 rounded-2xl glass flex items-center justify-center text-white text-2xl font-bold">
             {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
           </div>
         {% endif %}
       </div>
     </div>
-  </div>
 
-  <!-- Visão Executiva (só para can_see_all) -->
-  {% if user.can_see_all %}
-  <a href="{% url 'core:visao_executiva' %}"
-     class="flex items-center gap-4 px-5 py-4 rounded-xl border border-violet-200 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 transition-all group">
-    <div class="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center flex-shrink-0">
-      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-    </div>
-    <div class="flex-1">
-      <p class="font-semibold text-violet-900 text-sm group-hover:text-violet-700 transition-colors">Visão Executiva</p>
-      <p class="text-xs text-violet-500 mt-0.5">Atendimentos, saúde dos departamentos e atividade das últimas 24h</p>
-    </div>
-    <svg class="w-4 h-4 text-violet-400 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-  </a>
-  {% endif %}
+    <!-- Atalhos rápidos (glass cards sobre o gradiente) -->
+    <div class="relative grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-7">
 
-  <!-- Stats -->
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-    <a href="{% url 'mensagens:inbox' %}" class="card card-hover group">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-          <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+      <a href="{% url 'kanban:solicitar_rapida' %}" class="glass glass-hover rounded-2xl p-4 flex flex-col items-start gap-3">
+        <div class="quick-icon">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </div>
         <div>
-          <p class="text-2xl font-bold text-gray-900">{{ unread_messages_count }}</p>
-          <p class="text-xs text-gray-500 leading-tight">Mensagens<br>não lidas</p>
+          <p class="text-white font-semibold text-sm leading-tight">Nova solicitação</p>
+          <p class="text-white/55 text-[11px] mt-0.5">Kanban rápido</p>
         </div>
-      </div>
-    </a>
-    <a href="{% url 'kanban:board_list' %}" class="card card-hover group">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
-          <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      </a>
+
+      <a href="{% url 'mensagens:new_conversation' %}" class="glass glass-hover rounded-2xl p-4 flex flex-col items-start gap-3">
+        <div class="quick-icon">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
         </div>
         <div>
-          <p class="text-2xl font-bold text-gray-900">{{ my_cards|length }}</p>
-          <p class="text-xs text-gray-500 leading-tight">Cards<br>atribuídos</p>
+          <p class="text-white font-semibold text-sm leading-tight">Mensagem</p>
+          <p class="text-white/55 text-[11px] mt-0.5">{% if unread_messages_count %}{{ unread_messages_count }} não lida{{ unread_messages_count|pluralize:"s" }}{% else %}Iniciar conversa{% endif %}</p>
         </div>
-      </div>
-    </a>
-    <a href="{% url 'comunicados:list' %}" class="card card-hover group">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
-          <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
-        </div>
-        <div>
-          <p class="text-2xl font-bold text-gray-900">{{ comunicados|length }}</p>
-          <p class="text-xs text-gray-500 leading-tight">Comunicados<br>ativos</p>
-        </div>
-      </div>
-    </a>
-    <a href="{% url 'kanban:board_list' %}" class="card card-hover group">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center group-hover:bg-violet-100 transition-colors">
-          <svg class="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+      </a>
+
+      <a href="{% url 'agenda:event_list' %}" class="glass glass-hover rounded-2xl p-4 flex flex-col items-start gap-3">
+        <div class="quick-icon">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
         </div>
         <div>
-          <p class="text-2xl font-bold text-gray-900">{{ my_convs|length }}</p>
-          <p class="text-xs text-gray-500 leading-tight">Conversas<br>ativas</p>
+          <p class="text-white font-semibold text-sm leading-tight">Agenda</p>
+          <p class="text-white/55 text-[11px] mt-0.5">{% if upcoming_events %}{{ upcoming_events|length }} evento{{ upcoming_events|length|pluralize:"s" }}{% else %}Sem eventos{% endif %}</p>
         </div>
-      </div>
-    </a>
-  </div>
+      </a>
 
-  <!-- Kanban alerts -->
-  {% if overdue_cards or upcoming_cards %}
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <a href="{% url 'financeiro:reembolso_create' %}" class="glass glass-hover rounded-2xl p-4 flex flex-col items-start gap-3">
+        <div class="quick-icon">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div>
+          <p class="text-white font-semibold text-sm leading-tight">Reembolso</p>
+          <p class="text-white/55 text-[11px] mt-0.5">Solicitar novo</p>
+        </div>
+      </a>
 
-    <!-- Overdue cards -->
-    {% if overdue_cards %}
-    <div class="card border-l-4 border-red-500">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="font-semibold text-red-700 text-sm flex items-center gap-1.5">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          Cards vencidos ({{ overdue_cards|length }})
-        </h3>
-        <a href="{% url 'kanban:board_list' %}" class="text-xs text-red-500 hover:text-red-700 font-medium">Ver kanban →</a>
-      </div>
-      <div class="space-y-1.5">
-        {% for card in overdue_cards|slice:":5" %}
-        <a href="{% url 'kanban:card_detail' card.column.board.pk card.pk %}"
-           class="flex items-center gap-2 p-2 rounded-lg bg-red-50 hover:bg-red-100 transition-colors group">
-          <div class="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"></div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-red-800 truncate group-hover:text-red-900">{{ card.title }}</p>
-            <p class="text-xs text-red-400 truncate">{{ card.column.board.name }} · venceu {{ card.due_date|date:"d/m/Y" }}</p>
-          </div>
-        </a>
-        {% endfor %}
-        {% if overdue_cards|length > 5 %}
-        <p class="text-xs text-red-400 text-center pt-1">+ {{ overdue_cards|length|add:"-5" }} mais vencidos</p>
-        {% endif %}
-      </div>
+      {% if pode_consultas %}
+      <a href="{% url 'consultas:agenda' %}" class="glass glass-hover rounded-2xl p-4 flex flex-col items-start gap-3">
+        <div class="quick-icon">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        </div>
+        <div>
+          <p class="text-white font-semibold text-sm leading-tight">Consultas</p>
+          <p class="text-white/55 text-[11px] mt-0.5">Agenda médica</p>
+        </div>
+      </a>
+      {% endif %}
+
+      {% if pode_atendimento %}
+      <a href="{% url 'atendimento:painel' %}" class="glass glass-hover rounded-2xl p-4 flex flex-col items-start gap-3">
+        <div class="quick-icon">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        </div>
+        <div>
+          <p class="text-white font-semibold text-sm leading-tight">Atendimento</p>
+          <p class="text-white/55 text-[11px] mt-0.5">Painel do dia</p>
+        </div>
+      </a>
+      {% endif %}
+
+      <a href="{% url 'kanban:meu_kanban' %}" class="glass glass-hover rounded-2xl p-4 flex flex-col items-start gap-3">
+        <div class="quick-icon">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        </div>
+        <div>
+          <p class="text-white font-semibold text-sm leading-tight">Meus cards</p>
+          <p class="text-white/55 text-[11px] mt-0.5">{% if my_cards %}{{ my_cards|length }} ativo{{ my_cards|length|pluralize:"s" }}{% else %}Nenhum atribuído{% endif %}</p>
+        </div>
+      </a>
+
+      <a href="{% url 'comunicados:list' %}" class="glass glass-hover rounded-2xl p-4 flex flex-col items-start gap-3">
+        <div class="quick-icon">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+        </div>
+        <div>
+          <p class="text-white font-semibold text-sm leading-tight">Comunicados</p>
+          <p class="text-white/55 text-[11px] mt-0.5">Ver todos</p>
+        </div>
+      </a>
     </div>
-    {% endif %}
+  </section>
 
-    <!-- Upcoming deadlines -->
-    {% if upcoming_cards %}
-    <div class="card border-l-4 border-amber-400">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="font-semibold text-amber-700 text-sm flex items-center gap-1.5">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          Próximos vencimentos ({{ upcoming_cards|length }})
-        </h3>
-        <a href="{% url 'kanban:board_list' %}" class="text-xs text-amber-500 hover:text-amber-700 font-medium">Ver kanban →</a>
-      </div>
-      <div class="space-y-1.5">
-        {% for card in upcoming_cards|slice:":5" %}
-        <a href="{% url 'kanban:card_detail' card.column.board.pk card.pk %}"
-           class="flex items-center gap-2 p-2 rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors group">
-          <div class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-amber-800 truncate group-hover:text-amber-900">{{ card.title }}</p>
-            <p class="text-xs text-amber-400 truncate">{{ card.column.board.name }} · vence {{ card.due_date|date:"d/m/Y" }}</p>
-          </div>
-        </a>
-        {% endfor %}
-        {% if upcoming_cards|length > 5 %}
-        <p class="text-xs text-amber-400 text-center pt-1">+ {{ upcoming_cards|length|add:"-5" }} mais</p>
-        {% endif %}
-      </div>
+  <!-- Carrossel de Comunicados -->
+  {% if comunicados_carrossel %}
+  <section x-data="{
+              active: 0,
+              total: {{ comunicados_carrossel|length }},
+              paused: false,
+              tick() { if (!this.paused) this.active = (this.active + 1) % this.total; }
+            }"
+           x-init="setInterval(() => tick(), 6000)"
+           @mouseenter="paused = true" @mouseleave="paused = false"
+           class="relative rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm">
+    <div class="absolute top-3 left-4 z-10 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-700/80">
+      <span class="relative flex h-2 w-2">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+      </span>
+      Comunicados
     </div>
-    {% endif %}
 
-  </div>
-  {% endif %}
-
-  {% if user.can_see_all and dept_stats %}
-  <!-- Tasks by department -->
-  <div class="card">
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="font-semibold text-gray-900 text-sm">📊 Tarefas por departamento</h3>
-      <a href="{% url 'kanban:board_list' %}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Ver quadros →</a>
-    </div>
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-      {% for stat in dept_stats %}
-      <div class="bg-gray-50 rounded-xl p-3 text-center hover:bg-emerald-50 transition-colors">
-        <p class="text-2xl font-bold text-gray-900">{{ stat.total }}</p>
-        <p class="text-xs font-medium text-gray-600 mt-0.5 truncate" title="{{ stat.name }}">{{ stat.name }}</p>
-        {% if stat.overdue %}
-        <p class="text-xs text-red-500 font-medium mt-1">{{ stat.overdue }} vencido{{ stat.overdue|pluralize:"s" }}</p>
-        {% else %}
-        <p class="text-xs text-gray-300 mt-1">Em dia</p>
-        {% endif %}
-      </div>
+    <div class="relative h-[140px] sm:h-[120px]">
+      {% for c in comunicados_carrossel %}
+      <a href="{% url 'comunicados:detail' c.pk %}"
+         x-show="active === {{ forloop.counter0 }}"
+         x-transition:enter="transition ease-out duration-500"
+         x-transition:enter-start="opacity-0 translate-x-4"
+         x-transition:enter-end="opacity-100 translate-x-0"
+         x-transition:leave="transition ease-in duration-300 absolute inset-0"
+         x-transition:leave-start="opacity-100 translate-x-0"
+         x-transition:leave-end="opacity-0 -translate-x-4"
+         class="absolute inset-0 flex items-center gap-5 px-6 sm:px-8 pt-8 pb-6
+                {% if c.is_pinned %}bg-gradient-to-r from-amber-50 via-yellow-50 to-white{% else %}bg-gradient-to-r from-blue-50/60 via-sky-50/40 to-white{% endif %}">
+        <div class="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 text-2xl shadow-sm
+                    {% if c.is_pinned %}bg-amber-300/80{% else %}bg-blue-100{% endif %}">
+          {% if c.is_pinned %}📌{% else %}📢{% endif %}
+        </div>
+        <div class="flex-1 min-w-0">
+          {% if c.is_pinned %}
+          <p class="text-[10px] font-bold uppercase tracking-wider text-amber-700">Fixado</p>
+          {% endif %}
+          <p class="font-semibold text-gray-900 text-base sm:text-lg leading-tight truncate">{{ c.title }}</p>
+          <p class="text-xs text-gray-500 mt-1">{{ c.author.first_name }} {{ c.author.last_name }} · {{ c.published_at|date:"d/m/Y" }}</p>
+        </div>
+        <svg class="hidden sm:block w-5 h-5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      </a>
       {% endfor %}
     </div>
-  </div>
+
+    {% if comunicados_carrossel|length > 1 %}
+    <div class="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-1.5">
+      {% for c in comunicados_carrossel %}
+      <button @click="active = {{ forloop.counter0 }}"
+              :class="active === {{ forloop.counter0 }} ? 'bg-blue-600 w-6' : 'bg-gray-300 w-1.5 hover:bg-gray-400'"
+              class="h-1.5 rounded-full transition-all"></button>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
   {% endif %}
 
-  <!-- Content grid -->
-  <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+  <!-- Minhas tarefas: visual temático A Fazer vs Em Andamento -->
+  <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+    <!-- A Fazer -->
+    <a href="{% url 'kanban:meu_kanban' %}"
+       class="relative overflow-hidden rounded-2xl p-6 border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 hover:shadow-xl transition-all group">
+      <!-- decorativo: stack de cards inclinados -->
+      <div class="absolute top-4 right-4 opacity-90">
+        <div class="relative w-20 h-24">
+          <div class="absolute top-0 left-2 w-16 h-20 rounded-lg bg-slate-300/60 rotate-6 shadow-sm"></div>
+          <div class="absolute top-1 left-0 w-16 h-20 rounded-lg bg-slate-400/70 -rotate-3 shadow"></div>
+          <div class="absolute top-2 left-1 w-16 h-20 rounded-lg bg-gradient-to-br from-slate-500 to-slate-700 shadow-lg flex flex-col p-2 gap-1">
+            <div class="h-1.5 rounded bg-white/40 w-3/4"></div>
+            <div class="h-1.5 rounded bg-white/25 w-1/2"></div>
+            <div class="h-1.5 rounded bg-white/25 w-2/3"></div>
+            <div class="mt-auto flex gap-1">
+              <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+              <div class="w-3 h-2 rounded-full bg-white/30"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">A fazer</p>
+        <div class="flex items-baseline gap-2 mt-2">
+          <span class="text-5xl font-bold text-slate-800 leading-none">{{ cards_a_fazer }}</span>
+          <span class="text-sm text-slate-500">{% if cards_a_fazer == 1 %}tarefa{% else %}tarefas{% endif %}</span>
+        </div>
+        <p class="text-xs text-slate-400 mt-3 max-w-[180px]">
+          {% if cards_a_fazer == 0 %}Caixa de entrada limpa, bom trabalho.
+          {% elif cards_vencidos %}{{ cards_vencidos }} vencido{{ cards_vencidos|pluralize:"s" }} — comece por essas
+          {% elif cards_vence_hoje %}{{ cards_vence_hoje }} vence{{ cards_vence_hoje|pluralize:"m" }} hoje
+          {% else %}aguardando sua atenção{% endif %}
+        </p>
+        <span class="inline-flex items-center gap-1 text-xs text-slate-600 font-medium mt-4 group-hover:gap-2 transition-all">
+          Ver meu kanban
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+        </span>
+      </div>
+    </a>
+
+    <!-- Em Andamento -->
+    <a href="{% url 'kanban:meu_kanban' %}"
+       class="relative overflow-hidden rounded-2xl p-6 border border-emerald-200 bg-gradient-to-br from-emerald-50 via-teal-50 to-white hover:shadow-xl transition-all group">
+      <!-- decorativo: card girando + pulse -->
+      <div class="absolute top-4 right-4">
+        <div class="relative w-20 h-20">
+          <div class="absolute inset-0 rounded-full bg-emerald-200/50 animate-ping"></div>
+          <div class="absolute inset-2 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 shadow-lg flex items-center justify-center">
+            <svg class="w-8 h-8 text-white" style="animation: spin 6s linear infinite;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative">
+        <p class="text-xs font-semibold uppercase tracking-wider text-emerald-700">Em andamento</p>
+        <div class="flex items-baseline gap-2 mt-2">
+          <span class="text-5xl font-bold text-emerald-800 leading-none">{{ cards_em_andamento }}</span>
+          <span class="text-sm text-emerald-600">{% if cards_em_andamento == 1 %}tarefa ativa{% else %}tarefas ativas{% endif %}</span>
+        </div>
+        <p class="text-xs text-emerald-600/80 mt-3 max-w-[180px]">
+          {% if cards_em_andamento == 0 %}Nada em andamento agora.
+          {% else %}Continue de onde parou{% endif %}
+        </p>
+        <span class="inline-flex items-center gap-1 text-xs text-emerald-700 font-medium mt-4 group-hover:gap-2 transition-all">
+          Continuar
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+        </span>
+      </div>
+    </a>
+  </section>
+
+  <!-- Grid de conteúdo: agenda + comunicados + conversas + cards -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
+
+    <!-- Próximos eventos -->
+    <div class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-gray-900 text-sm flex items-center gap-1.5">📅 Próximos 7 dias</h3>
+        <a href="{% url 'agenda:event_list' %}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Agenda →</a>
+      </div>
+      {% if upcoming_events %}
+      <div class="space-y-2">
+        {% for ev in upcoming_events %}
+        <a href="{% url 'agenda:event_detail' ev.pk %}"
+           class="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all group">
+          <div class="w-10 h-12 rounded-lg bg-gradient-to-b from-blue-500 to-blue-700 flex flex-col items-center justify-center text-white flex-shrink-0">
+            <span class="text-[9px] font-semibold uppercase">{{ ev.start_datetime|date:"M" }}</span>
+            <span class="text-base font-bold leading-none">{{ ev.start_datetime|date:"d" }}</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800 truncate group-hover:text-blue-700 transition-colors">{{ ev.title }}</p>
+            <p class="text-xs text-gray-400 truncate">{{ ev.start_datetime|date:"H:i" }}{% if ev.location %} · {{ ev.location }}{% endif %}</p>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-8">
+        <div class="text-3xl mb-2 opacity-50">📅</div>
+        <p class="text-sm text-gray-400">Sem eventos próximos</p>
+      </div>
+      {% endif %}
+    </div>
 
     <!-- Comunicados -->
-    <div class="card xl:col-span-1">
+    <div class="card">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="font-semibold text-gray-900 text-sm">📢 Comunicados recentes</h3>
+        <h3 class="font-semibold text-gray-900 text-sm flex items-center gap-1.5">📢 Comunicados</h3>
         <a href="{% url 'comunicados:list' %}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Ver todos →</a>
       </div>
       {% if comunicados %}
@@ -189,9 +357,7 @@
         {% for c in comunicados %}
         <a href="{% url 'comunicados:detail' c.pk %}"
            class="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all group">
-          <div class="w-8 h-8 rounded-lg {% if c.is_pinned %}bg-yellow-100{% else %}bg-blue-50{% endif %} flex items-center justify-center flex-shrink-0 text-sm">
-            {% if c.is_pinned %}📌{% else %}📄{% endif %}
-          </div>
+          <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 text-sm">📄</div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium text-gray-800 truncate group-hover:text-blue-700 transition-colors">{{ c.title }}</p>
             <p class="text-xs text-gray-400 mt-0.5">{{ c.author.first_name }} · {{ c.published_at|date:"d/m/Y" }}</p>
@@ -201,48 +367,16 @@
       </div>
       {% else %}
       <div class="text-center py-8">
-        <div class="text-3xl mb-2">📢</div>
+        <div class="text-3xl mb-2 opacity-50">📢</div>
         <p class="text-sm text-gray-400">Nenhum comunicado ativo</p>
       </div>
       {% endif %}
     </div>
 
-    <!-- My cards -->
-    <div class="card xl:col-span-1">
+    <!-- Conversas -->
+    <div class="card">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="font-semibold text-gray-900 text-sm">📋 Meus cards</h3>
-        <a href="{% url 'kanban:board_list' %}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Kanban →</a>
-      </div>
-      {% if my_cards %}
-      <div class="space-y-2">
-        {% for card in my_cards %}
-        <a href="{% url 'kanban:card_detail' card.column.board.pk card.pk %}"
-           class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all group">
-          <div class="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-0.5" style="background:{{ card.priority_color }}"></div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-gray-800 truncate group-hover:text-blue-700 transition-colors">{{ card.title }}</p>
-            <p class="text-xs text-gray-400 truncate">{{ card.column.board.name }} › {{ card.column.name }}</p>
-          </div>
-          {% if card.is_overdue %}
-          <span class="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-medium flex-shrink-0">Vencido</span>
-          {% elif card.due_date %}
-          <span class="text-[10px] text-gray-400 flex-shrink-0">{{ card.due_date|date:"d/m" }}</span>
-          {% endif %}
-        </a>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="text-center py-8">
-        <div class="text-3xl mb-2">✅</div>
-        <p class="text-sm text-gray-400">Nenhum card atribuído</p>
-      </div>
-      {% endif %}
-    </div>
-
-    <!-- Conversas recentes -->
-    <div class="card xl:col-span-1">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="font-semibold text-gray-900 text-sm">💬 Conversas recentes</h3>
+        <h3 class="font-semibold text-gray-900 text-sm flex items-center gap-1.5">💬 Conversas recentes</h3>
         <a href="{% url 'mensagens:inbox' %}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Ver todas →</a>
       </div>
       {% if my_convs %}
@@ -266,7 +400,7 @@
       </div>
       {% else %}
       <div class="text-center py-8">
-        <div class="text-3xl mb-2">💬</div>
+        <div class="text-3xl mb-2 opacity-50">💬</div>
         <p class="text-sm text-gray-400 mb-3">Nenhuma conversa ainda</p>
         <a href="{% url 'mensagens:new_conversation' %}" class="btn-primary text-xs">+ Iniciar</a>
       </div>

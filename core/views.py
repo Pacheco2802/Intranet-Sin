@@ -101,59 +101,83 @@ def logout_view(request):
 @login_required
 def dashboard(request):
     from comunicados.models import Comunicado
-    from kanban.models import Card, Board
+    from kanban.models import Card
     from mensagens.models import Conversation
-    from django.utils.timezone import now
+    from agenda.models import Event
+    from django.utils.timezone import now, localtime
     from datetime import timedelta
     from django.db.models import Q, Count
 
     user = request.user
-    today = now().date()
+    agora = localtime()
+    today = agora.date()
     in_3_days = today + timedelta(days=3)
+    in_7_days = today + timedelta(days=7)
 
-    comunicados = Comunicado.objects.filter(is_published=True).order_by('-is_pinned', '-published_at')[:5]
+    hora = agora.hour
+    if hora < 12:
+        greeting = 'Bom dia'
+    elif hora < 18:
+        greeting = 'Boa tarde'
+    else:
+        greeting = 'Boa noite'
+
+    pinned_comunicado = Comunicado.objects.filter(is_published=True, is_pinned=True).order_by('-published_at').first()
+    comunicados_qs = Comunicado.objects.filter(is_published=True).order_by('-is_pinned', '-published_at')
+    if pinned_comunicado:
+        comunicados_qs = comunicados_qs.exclude(pk=pinned_comunicado.pk)
+    comunicados = comunicados_qs[:4]
 
     my_cards_qs = Card.objects.filter(assignee=user, column__board__isnull=False).select_related('column__board', 'column')
-    my_cards = my_cards_qs[:10]
+    my_cards = my_cards_qs.filter(final_status='')[:6]
 
-    if user.can_see_all:
-        alert_qs = Card.objects.filter(column__board__isnull=False).select_related('column__board', 'column')
-    else:
-        alert_qs = my_cards_qs
-    overdue_cards = alert_qs.filter(due_date__lt=today, final_status='').order_by('due_date')[:10]
-    upcoming_cards = alert_qs.filter(due_date__gte=today, due_date__lte=in_3_days).order_by('due_date')[:10]
+    cards_a_fazer = my_cards_qs.filter(final_status='', column__column_type='a_fazer').count()
+    cards_em_andamento = my_cards_qs.filter(final_status='', column__column_type='em_andamento').count()
+    cards_vencidos = my_cards_qs.filter(final_status='', due_date__lt=today).count()
+    cards_vence_hoje = my_cards_qs.filter(final_status='', due_date=today).count()
 
-    # Tarefas por departamento (só para admin/presidente)
-    dept_stats = []
-    if user.can_see_all:
-        rows = (
-            Card.objects.filter(column__board__department__isnull=False)
-            .values('column__board__department__pk', 'column__board__department__name')
-            .annotate(
-                total=Count('id'),
-                overdue=Count('id', filter=Q(due_date__lt=today, final_status='')),
-            )
-            .order_by('-total')[:12]
-        )
-        dept_stats = [
-            {'name': r['column__board__department__name'], 'total': r['total'], 'overdue': r['overdue']}
-            for r in rows
-        ]
+    # Eventos da agenda — próximos 7 dias em que o usuário participa ou criou
+    today_start = agora.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_end = today_start + timedelta(days=7)
+    upcoming_events = (
+        Event.objects
+        .filter(start_datetime__gte=today_start, start_datetime__lte=week_end)
+        .filter(Q(participants__user=user) | Q(created_by=user))
+        .distinct()
+        .order_by('start_datetime')[:4]
+    )
 
-    raw_convs = Conversation.objects.filter(participants=user).order_by('-updated_at')[:5]
+    raw_convs = Conversation.objects.filter(participants=user).order_by('-updated_at')[:4]
     my_convs = [
         {'conv': c, 'display_name': c.get_display_name(user), 'last_message': c.get_last_message()}
         for c in raw_convs
     ]
 
+    user_dept_slugs = set(user.departments.values_list('slug', flat=True))
+    pode_atendimento = user.can_see_all or 'recepcao' in user_dept_slugs
+    pode_consultas = user.can_access_consultas or user.can_see_all
+
+    # Carrossel: comunicados em destaque (fixados + recentes)
+    comunicados_carrossel = list(
+        Comunicado.objects.filter(is_published=True)
+        .order_by('-is_pinned', '-published_at')[:6]
+    )
+
     context = {
+        'greeting': greeting,
+        'pinned_comunicado': pinned_comunicado,
         'comunicados': comunicados,
+        'comunicados_carrossel': comunicados_carrossel,
         'my_cards': my_cards,
-        'overdue_cards': overdue_cards,
-        'upcoming_cards': upcoming_cards,
-        'dept_stats': dept_stats,
+        'cards_a_fazer': cards_a_fazer,
+        'cards_em_andamento': cards_em_andamento,
+        'cards_vencidos': cards_vencidos,
+        'cards_vence_hoje': cards_vence_hoje,
+        'upcoming_events': upcoming_events,
         'my_convs': my_convs,
         'today': today,
+        'pode_atendimento': pode_atendimento,
+        'pode_consultas': pode_consultas,
     }
     return render(request, 'dashboard/index.html', context)
 

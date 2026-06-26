@@ -32,9 +32,24 @@
     </div>
   </div>
 
+  {% if form.errors %}
+  <div id="form-error-banner" class="rounded-xl border border-red-200 bg-red-50 p-4 flex items-start gap-3" x-data x-init="$el.scrollIntoView({behavior:'smooth', block:'start'})">
+    <div class="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+      <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+    </div>
+    <div class="flex-1 min-w-0">
+      <p class="font-semibold text-red-800 text-sm">Atividade não foi registrada</p>
+      <p class="text-xs text-red-700 mt-0.5">Corrija os itens abaixo e envie novamente:</p>
+      <ul class="text-xs text-red-700 mt-2 space-y-1 list-disc pl-4">
+        {% for field in form %}{% for err in field.errors %}<li><strong>{{ field.label }}:</strong> {{ err }}</li>{% endfor %}{% endfor %}
+        {% for err in form.non_field_errors %}<li>{{ err }}</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
   <form method="post" enctype="multipart/form-data" class="card space-y-5" novalidate>
     {% csrf_token %}
-    {% if form.non_field_errors %}<div class="text-red-500 text-sm">{{ form.non_field_errors }}</div>{% endif %}
 
     <div>
       <label class="block text-xs font-medium text-gray-500 mb-1">Data da atividade <span class="text-red-500">*</span></label>
@@ -64,21 +79,25 @@
     </div>
 
     <!-- Comprovante -->
-    <div x-data="{ nomeArq: '' }" @change="nomeArq = $event.target.files?.[0]?.name || ''">
+    {% with has_err=form.comprovante.errors %}
+    <div x-data="{ nomeArq: '', erro: {% if has_err %}true{% else %}false{% endif %} }"
+         @change="nomeArq = $event.target.files?.[0]?.name || ''; erro = false">
       <label class="block text-xs font-medium text-gray-500 mb-1">Comprovação de presença <span class="text-red-500">*</span></label>
       <label for="id_comprovante"
              class="flex items-center gap-3 border-2 border-dashed rounded-xl px-4 py-3 cursor-pointer transition-colors"
-             :class="nomeArq ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:border-accent'">
-        <span class="text-xl flex-shrink-0" x-text="nomeArq ? '✅' : '📋'"></span>
+             :class="erro ? 'border-red-400 bg-red-50' : (nomeArq ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:border-accent')">
+        <span class="text-xl flex-shrink-0" x-text="erro ? '⚠️' : (nomeArq ? '✅' : '📋')"></span>
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium truncate" :class="nomeArq ? 'text-green-700' : 'text-gray-400'" x-text="nomeArq || 'Selecionar arquivo...'"></p>
+          <p class="text-sm font-medium truncate" :class="erro ? 'text-red-700' : (nomeArq ? 'text-green-700' : 'text-gray-400')"
+             x-text="erro ? 'Arquivo rejeitado — escolha outro' : (nomeArq || 'Selecionar arquivo...')"></p>
           <p class="text-xs text-gray-400">Ata, lista de presença, convocação ou foto — PDF, JPG, PNG</p>
         </div>
         <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-lg font-medium flex-shrink-0">Escolher</span>
       </label>
       <div class="hidden">{{ form.comprovante }}</div>
-      {% if form.comprovante.errors %}<p class="text-red-500 text-xs mt-1">{{ form.comprovante.errors|join:" " }}</p>{% endif %}
+      {% if has_err %}<p class="text-red-600 text-xs mt-1.5 font-medium">{{ form.comprovante.errors|join:" " }}</p>{% endif %}
     </div>
+    {% endwith %}
 
     <p class="text-xs text-gray-400">Formatos aceitos: PDF, JPG, PNG, DOC. Máx. 5 MB.</p>
 
