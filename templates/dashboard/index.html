@@ -185,12 +185,14 @@
               active: 0,
               total: {{ comunicados_carrossel|length }},
               paused: false,
-              tick() { if (!this.paused) this.active = (this.active + 1) % this.total; }
+              next() { this.active = (this.active + 1) % this.total; },
+              prev() { this.active = (this.active - 1 + this.total) % this.total; },
+              tick() { if (!this.paused) this.next(); }
             }"
            x-init="setInterval(() => tick(), 6000)"
            @mouseenter="paused = true" @mouseleave="paused = false"
            class="relative rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm">
-    <div class="absolute top-3 left-4 z-10 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-700/80">
+    <div class="absolute top-3 left-4 z-20 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-700/80">
       <span class="relative flex h-2 w-2">
         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
         <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
@@ -198,7 +200,7 @@
       Comunicados
     </div>
 
-    <div class="relative h-[140px] sm:h-[120px]">
+    <div class="relative h-[200px] sm:h-[180px]">
       {% for c in comunicados_carrossel %}
       <a href="{% url 'comunicados:detail' c.pk %}"
          x-show="active === {{ forloop.counter0 }}"
@@ -208,9 +210,9 @@
          x-transition:leave="transition ease-in duration-300 absolute inset-0"
          x-transition:leave-start="opacity-100 translate-x-0"
          x-transition:leave-end="opacity-0 -translate-x-4"
-         class="absolute inset-0 flex items-center gap-5 px-6 sm:px-8 pt-8 pb-6
+         class="absolute inset-0 flex items-center gap-5 px-12 sm:px-16 pt-10 pb-8
                 {% if c.is_pinned %}bg-gradient-to-r from-amber-50 via-yellow-50 to-white{% else %}bg-gradient-to-r from-blue-50/60 via-sky-50/40 to-white{% endif %}">
-        <div class="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 text-2xl shadow-sm
+        <div class="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 text-3xl shadow-sm
                     {% if c.is_pinned %}bg-amber-300/80{% else %}bg-blue-100{% endif %}">
           {% if c.is_pinned %}📌{% else %}📢{% endif %}
         </div>
@@ -218,18 +220,28 @@
           {% if c.is_pinned %}
           <p class="text-[10px] font-bold uppercase tracking-wider text-amber-700">Fixado</p>
           {% endif %}
-          <p class="font-semibold text-gray-900 text-base sm:text-lg leading-tight truncate">{{ c.title }}</p>
-          <p class="text-xs text-gray-500 mt-1">{{ c.author.first_name }} {{ c.author.last_name }} · {{ c.published_at|date:"d/m/Y" }}</p>
+          <p class="font-semibold text-gray-900 text-lg sm:text-xl leading-tight truncate">{{ c.title }}</p>
+          <p class="text-xs text-gray-500 mt-1.5">{{ c.author.first_name }} {{ c.author.last_name }} · {{ c.published_at|date:"d/m/Y" }}</p>
         </div>
-        <svg class="hidden sm:block w-5 h-5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
       </a>
       {% endfor %}
     </div>
 
     {% if comunicados_carrossel|length > 1 %}
-    <div class="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-1.5">
+    <!-- Setas de navegação -->
+    <button type="button" @click.stop.prevent="prev()" aria-label="Anterior"
+            class="absolute top-1/2 -translate-y-1/2 left-3 z-20 w-9 h-9 rounded-full bg-white/90 border border-gray-200 shadow-sm hover:bg-white hover:shadow flex items-center justify-center text-gray-600 hover:text-blue-700 transition-all">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+    </button>
+    <button type="button" @click.stop.prevent="next()" aria-label="Próximo"
+            class="absolute top-1/2 -translate-y-1/2 right-3 z-20 w-9 h-9 rounded-full bg-white/90 border border-gray-200 shadow-sm hover:bg-white hover:shadow flex items-center justify-center text-gray-600 hover:text-blue-700 transition-all">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+    </button>
+
+    <!-- Pontinhos -->
+    <div class="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-1.5 z-20">
       {% for c in comunicados_carrossel %}
-      <button @click="active = {{ forloop.counter0 }}"
+      <button type="button" @click.stop.prevent="active = {{ forloop.counter0 }}"
               :class="active === {{ forloop.counter0 }} ? 'bg-blue-600 w-6' : 'bg-gray-300 w-1.5 hover:bg-gray-400'"
               class="h-1.5 rounded-full transition-all"></button>
       {% endfor %}
@@ -269,7 +281,7 @@
         </div>
         <p class="text-xs text-slate-400 mt-3 max-w-[180px]">
           {% if cards_a_fazer == 0 %}Caixa de entrada limpa, bom trabalho.
-          {% elif cards_vencidos %}{{ cards_vencidos }} vencido{{ cards_vencidos|pluralize:"s" }} — comece por essas
+          {% elif cards_vencidos %}{{ cards_vencidos }} vencido{{ cards_vencidos|pluralize:"s" }}, comece por {% if cards_vencidos == 1 %}essa{% else %}essas{% endif %}
           {% elif cards_vence_hoje %}{{ cards_vence_hoje }} vence{{ cards_vence_hoje|pluralize:"m" }} hoje
           {% else %}aguardando sua atenção{% endif %}
         </p>
