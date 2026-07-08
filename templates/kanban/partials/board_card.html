@@ -1,8 +1,8 @@
 {% if is_final %}
 {# ───────── Card condensado (colunas finais) ───────── #}
-<div class="kanban-card group bg-white/70 rounded-lg shadow-sm px-3 py-2 border border-gray-100 hover:shadow transition-all" data-card-id="{{ card.pk }}">
+<div class="kanban-card group bg-white/70 rounded-lg shadow-sm px-3 py-2 border border-gray-100 hover:shadow transition-all{% if card.assignee_id == user.pk %} is-mine{% endif %}" data-card-id="{{ card.pk }}">
   <a href="{% url 'kanban:card_detail' board.pk card.pk %}" class="block">
-    <p class="text-xs font-medium text-gray-500 line-through truncate">{{ card.title }}</p>
+    <p class="text-xs font-medium text-gray-500 line-through truncate">{% if card.is_private %}<span title="Card privado" class="no-underline">🔒 </span>{% endif %}{{ card.title }}</p>
   </a>
   <div class="flex items-center justify-between mt-1">
     {% if card.final_status %}
@@ -36,21 +36,24 @@
 
 {% else %}
 {# ───────── Card completo ───────── #}
-<div class="kanban-card kc-stripe group bg-white rounded-lg shadow-sm pl-3.5 pr-3 py-2.5 border border-gray-100 hover:border-blue-200 hover:shadow transition-all"
+<div class="kanban-card kc-stripe group bg-white rounded-lg shadow-sm pl-3.5 pr-3 py-2.5 border border-gray-100 hover:border-blue-200 hover:shadow transition-all{% if card.assignee_id == user.pk %} is-mine{% endif %}"
      data-card-id="{{ card.pk }}"
      style="--prio:{{ card.priority_color }}">
 
-  <!-- Título + origem -->
-  <div class="flex items-start justify-between gap-2">
-    <a href="{% url 'kanban:card_detail' board.pk card.pk %}" class="block flex-1 min-w-0">
-      <p class="text-sm font-medium text-gray-800 group-hover:text-blue-600 leading-snug">{{ card.title }}</p>
-    </a>
-    {% if card.source_atendimento_id %}
-    <span class="flex-shrink-0 text-orange-400" title="Origem: Atendimento">🩺</span>
-    {% elif card.source_subtask_id %}
-    <span class="flex-shrink-0 text-purple-400" title="Origem: Sub-tarefa">↳</span>
-    {% endif %}
+  <!-- Pílulas de estado -->
+  {% if card.is_private or card.source_atendimento_id or card.source_subtask_id or 'solicitacao' in card.tags %}
+  <div class="flex items-center gap-1 flex-wrap mb-1.5">
+    {% if card.is_private %}<span class="kc-pill bg-slate-500" title="Card privado">🔒 Privado</span>{% endif %}
+    {% if card.source_atendimento_id %}<span class="kc-pill bg-blue-500" title="Origem: Atendimento">🩺 Atendimento</span>
+    {% elif card.source_subtask_id %}<span class="kc-pill bg-purple-500" title="Origem: Sub-tarefa">↳ Subtarefa</span>
+    {% elif 'solicitacao' in card.tags %}<span class="kc-pill bg-amber-500" title="Solicitação">⚡ Solicitação</span>{% endif %}
   </div>
+  {% endif %}
+
+  <!-- Título -->
+  <a href="{% url 'kanban:card_detail' board.pk card.pk %}" class="block">
+    <p class="text-sm font-medium text-gray-800 group-hover:text-blue-600 leading-snug">{{ card.title }}</p>
+  </a>
 
   {% if card.description %}
   <p class="kc-extra text-xs text-gray-400 mt-1 line-clamp-2">{{ card.description }}</p>
@@ -84,11 +87,17 @@
   <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-gray-50">
     <div class="flex items-center gap-1.5 min-w-0">
       {% if card.assignee %}
-      <div class="w-6 h-6 rounded-full bg-accent flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">
+      <div class="w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0{% if card.assignee_id == user.pk %} kc-mine-avatar{% endif %}"
+           style="background: linear-gradient(135deg, hsl({{ card.assignee_id|add:120 }},55%,45%), hsl({{ card.assignee_id|add:160 }},65%,35%));"
+           title="{{ card.assignee.get_full_name|default:card.assignee.first_name }}">
         {{ card.assignee.first_name|first|upper }}
       </div>
+      {% if card.assignee_id == user.pk %}<span class="text-[10px] font-semibold text-accent whitespace-nowrap">Você</span>{% endif %}
       {% else %}
-      <span class="text-[11px] text-gray-300">Sem resp.</span>
+      <span class="inline-flex items-center gap-1 text-[11px] text-gray-400" title="Sem responsável">
+        <span class="w-5 h-5 rounded-full border border-dashed border-gray-300 flex items-center justify-center text-gray-300 text-[10px] flex-shrink-0">👤</span>
+        Sem resp.
+      </span>
       {% endif %}
       {% if card.due_date %}
         {% if card.is_overdue %}

@@ -337,6 +337,11 @@ def documento_delete(request, doc_pk):
         return HttpResponseForbidden()
 
     doc = get_object_or_404(ConsultaDocumento, pk=doc_pk)
+    # Exclusão é destrutiva: além do acesso ao módulo, exige ser quem enviou o
+    # documento ou quem pode editar a consulta (criador/admin) — mesma régua do
+    # consulta_delete, para não permitir apagar documento clínico de terceiros.
+    if not (doc.enviado_por_id == request.user.pk or _can_edit(request.user, doc.consulta)):
+        return HttpResponseForbidden()
     consulta_pk = doc.consulta_id
     doc.arquivo.delete(save=False)
     doc.delete()

@@ -9,3 +9,4 @@ Pillow==12.2.0
 dj-database-url==3.1.2
 cryptography==48.0.0
 requests==2.34.2
+redis==5.2.1  # opcional: usado só se REDIS_URL estiver definido (throttle global)

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Todas as tarefas{% endblock %}
+{% block page_title %}Todas as tarefas{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'kanban:todas_tarefas' %}" class="btn-secondary text-xs">📋 Ver tudo em lista</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8">
+
+  <p class="text-sm text-gray-500 -mt-1">
+    Escolha um quadro para ver suas tarefas — ou veja
+    <a href="{% url 'kanban:todas_tarefas' %}" class="text-accent font-medium hover:underline">todas de uma vez</a>.
+  </p>
+
+  <!-- Quadros de departamento -->
+  <section>
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-lg">🗂️</span>
+      <h2 class="text-sm font-bold text-gray-600 uppercase tracking-wider">Quadros de departamento</h2>
+      <span class="text-xs text-gray-400">{{ dept_boards|length }}</span>
+    </div>
+    {% if dept_boards %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {% for board in dept_boards %}
+      <a href="{% url 'kanban:todas_tarefas' %}?board={{ board.pk }}"
+         class="card group cursor-pointer border border-gray-100 hover:border-blue-300 hover:shadow-md transition-all">
+        <div class="flex items-start justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+               style="background:{{ board.department.color|default:'#1e3a5f' }}22; border: 2px solid {{ board.department.color|default:'#1e3a5f' }}44;">
+            {{ board.department.icon|default:"📋" }}
+          </div>
+          <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Interno</span>
+        </div>
+        <h3 class="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors text-sm">{{ board.name }}</h3>
+        {% if board.department %}<p class="text-xs text-gray-400 mt-1">{{ board.department }}</p>{% endif %}
+        <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+          {% if board.task_count %}
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-accent/10 text-accent">{{ board.task_count }} ativa{{ board.task_count|pluralize }}</span>
+          {% else %}
+          <span class="text-xs text-gray-300">Sem tarefas ativas</span>
+          {% endif %}
+          <span class="text-xs text-gray-300 group-hover:text-blue-500 transition-colors">Ver →</span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card text-center py-10 text-gray-400 text-sm">Você ainda não tem acesso a quadros de departamento.</div>
+    {% endif %}
+  </section>
+
+  <!-- Projetos -->
+  <section>
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-lg">🤝</span>
+      <h2 class="text-sm font-bold text-gray-600 uppercase tracking-wider">Projetos entre áreas</h2>
+      <span class="text-xs text-gray-400">{{ projetos|length }}</span>
+    </div>
+    {% if projetos %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {% for board in projetos %}
+      <a href="{% url 'kanban:todas_tarefas' %}?board={{ board.pk }}"
+         class="card group cursor-pointer border border-violet-100 hover:border-violet-300 hover:shadow-md transition-all bg-violet-50/40">
+        <div class="flex items-start justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600 text-xl flex-shrink-0">🤝</div>
+          {% if board.is_locked %}
+          <span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Finalizado</span>
+          {% else %}
+          <span class="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">Projeto</span>
+          {% endif %}
+        </div>
+        <h3 class="font-semibold text-gray-900 group-hover:text-violet-600 transition-colors text-sm">{{ board.name }}</h3>
+        <p class="text-xs text-gray-400 mt-1">
+          {% with areas=board.member_departments.all %}
+          {% if areas %}{% for d in areas %}{{ d.name }}{% if not forloop.last %} · {% endif %}{% endfor %}{% else %}Participantes avulsos{% endif %}
+          {% endwith %}
+        </p>
+        <div class="flex items-center justify-between mt-3 pt-3 border-t border-violet-100">
+          {% if board.task_count %}
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">{{ board.task_count }} ativa{{ board.task_count|pluralize }}</span>
+          {% else %}
+          <span class="text-xs text-gray-300">Sem tarefas ativas</span>
+          {% endif %}
+          <span class="text-xs text-gray-300 group-hover:text-violet-500 transition-colors">Ver →</span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card text-center py-10 text-gray-400 text-sm">Você não participa de nenhum projeto entre áreas.</div>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}

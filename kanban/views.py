@@ -6,13 +6,15 @@ from django.db.models import Count, Q
 from django.db.models import Prefetch
 from django.http import JsonResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from core.models import AuditLog, Notification, CustomUser, Department
 from core.middleware import AuditMiddleware
 from core.validators import validate_file_extension, validate_file_size
-from .models import Board, Column, Card, CardComment, CardActivity, SubTask, SubTaskAnexo, CardAnexo, RecurringTask
-from .forms import BoardForm, ColumnForm, CardForm, CardCommentForm, SubTaskForm, RecurringTaskForm
+from .models import Board, BoardFolder, Column, Card, CardComment, CardActivity, SubTask, SubTaskAnexo, CardAnexo, RecurringTask, PastaDocumento, PastaPost
+from .forms import BoardForm, BoardFolderForm, ProjectForm, ColumnForm, CardForm, CardCommentForm, SubTaskForm, RecurringTaskForm
 from .utils import criar_card_automatico, mover_card_para_ultima_coluna, mover_card_para_primeira_coluna, build_grouped_columns
 
 
@@ -42,9 +44,376 @@ def board_list(request):
     })
 
 
-def _annotated_cards_qs():
-    """Queryset base de cards com contagens + relações para o board."""
-    return Card.objects.annotate(
+# ───────────────────────── Pastas por departamento ─────────────────────────
+
+def pode_gerenciar_pastas(user, dept):
+    """Quem pode criar/editar pastas e quadros dentro de um departamento:
+    admin TI, presidente/coord geral e líderes do próprio departamento."""
+    return user.is_admin_ti or user.is_presidente or dept.leaders.filter(pk=user.pk).exists()
+
+
+def _pode_ver_departamento(user, dept):
+    return user.can_see_all or user.departments.filter(pk=dept.pk).exists()
+
+
+@login_required
+def departamentos(request):
+    """Home do Kanban: departamentos que o usuário acessa, como 'pastas'."""
+    user = request.user
+    if user.can_see_all:
+        depts = Department.objects.all()
+    else:
+        depts = user.departments.all()
+    depts = depts.prefetch_related('boards', 'board_folders').order_by('name')
+    data = []
+    for dept in depts:
+        boards_acessiveis = [b for b in dept.boards.all() if b.can_access(user)]
+        data.append({
+            'dept': dept,
+            'n_boards': len(boards_acessiveis),
+            'n_folders': dept.board_folders.count(),
+            'pode_gerenciar': pode_gerenciar_pastas(user, dept),
+        })
+    return render(request, 'kanban/pastas_home.html', {'departamentos': data})
+
+
+@login_required
+def departamento(request, dept_pk):
+    """Pastas de um departamento + grupo 'Geral' (quadros sem pasta)."""
+    user = request.user
+    dept = get_object_or_404(Department, pk=dept_pk)
+    if not _pode_ver_departamento(user, dept):
+        return HttpResponseForbidden()
+    pode = pode_gerenciar_pastas(user, dept)
+    folders = []
+    for f in dept.board_folders.prefetch_related('boards').all():
+        boards = [b for b in f.boards.all() if b.can_access(user)]
+        if boards or pode:
+            folders.append({'folder': f, 'boards': boards, 'n': len(boards)})
+    geral = [b for b in dept.boards.filter(folder__isnull=True) if b.can_access(user)]
+    return render(request, 'kanban/departamento.html', {
+        'dept': dept, 'folders': folders, 'geral_boards': geral, 'pode_gerenciar': pode,
+    })
+
+
+@login_required
+def pasta(request, dept_pk, folder_pk):
+    """Quadros dentro de uma pasta."""
+    user = request.user
+    folder = get_object_or_404(
+        BoardFolder.objects.select_related('department'), pk=folder_pk, department_id=dept_pk
+    )
+    dept = folder.department
+    if not _pode_ver_departamento(user, dept):
+        return HttpResponseForbidden()
+    boards = [b for b in folder.boards.select_related('department').all() if b.can_access(user)]
+    pode = pode_gerenciar_pastas(user, dept)
+    posts, posts_restantes = _mural_posts(folder.posts, request)
+    return render(request, 'kanban/pasta.html', {
+        'dept': dept, 'folder': folder, 'boards': boards,
+        'pode_gerenciar': pode,
+        # Documentos + Mural (escopo pasta)
+        'scope': 'pasta', 'owner_pk': folder.pk,
+        'documentos': _paginar_documentos(folder.documentos, request),
+        'posts': posts, 'posts_restantes': posts_restantes,
+        'pode_escrever': True,        # pasta sempre editável
+        'pode_gerenciar_conteudo': pode,
+        'tab_inicial': request.GET.get('tab', 'quadros'),
+    })
+
+
+@login_required
+def folder_create(request, dept_pk):
+    dept = get_object_or_404(Department, pk=dept_pk)
+    if not pode_gerenciar_pastas(request.user, dept):
+        return HttpResponseForbidden()
+    form = BoardFolderForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        folder = form.save(commit=False)
+        folder.department = dept
+        folder.created_by = request.user
+        folder.save()
+        messages.success(request, f'Pasta "{folder.name}" criada.')
+        return redirect('kanban:departamento', dept_pk=dept.pk)
+    return render(request, 'kanban/folder_form.html', {
+        'form': form, 'dept': dept, 'title': 'Nova Pasta',
+    })
+
+
+@login_required
+def folder_edit(request, pk):
+    folder = get_object_or_404(BoardFolder.objects.select_related('department'), pk=pk)
+    if not pode_gerenciar_pastas(request.user, folder.department):
+        return HttpResponseForbidden()
+    form = BoardFolderForm(request.POST or None, instance=folder)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, f'Pasta "{folder.name}" atualizada.')
+        return redirect('kanban:departamento', dept_pk=folder.department_id)
+    return render(request, 'kanban/folder_form.html', {
+        'form': form, 'dept': folder.department, 'folder': folder,
+        'title': f'Editar pasta: {folder.name}',
+    })
+
+
+@login_required
+@require_POST
+def folder_delete(request, pk):
+    folder = get_object_or_404(BoardFolder.objects.select_related('department'), pk=pk)
+    if not pode_gerenciar_pastas(request.user, folder.department):
+        return HttpResponseForbidden()
+    dept_pk = folder.department_id
+    name = folder.name
+    folder.delete()  # on_delete=SET_NULL nos quadros: eles voltam para "Geral"
+    messages.success(request, f'Pasta "{name}" excluída. Os quadros foram movidos para "Geral".')
+    return redirect('kanban:departamento', dept_pk=dept_pk)
+
+
+# ───────────────────────── Projetos (entre áreas, com ciclo de vida) ─────────────────────────
+
+def _board_writable(request, board):
+    """False (com aviso) se o quadro está finalizado/somente-leitura."""
+    if board.is_locked:
+        messages.error(request, 'Projeto finalizado: somente leitura.')
+        return False
+    return True
+
+
+def _pode_finalizar_projeto(user, board):
+    return user.is_admin_ti or board.created_by_id == user.pk
+
+
+@login_required
+def projetos(request):
+    """Lista de projetos (quadros entre áreas), com abas Ativos / Finalizados."""
+    user = request.user
+    aba = request.GET.get('aba', 'ativos')
+    status = Board.Status.FINALIZADO if aba == 'finalizados' else Board.Status.ATIVO
+    qs = Board.objects.filter(is_cross_department=True, status=status).select_related(
+        'created_by'
+    ).prefetch_related('member_departments', 'members')
+    projetos = [b for b in qs if b.can_access(user)]
+    return render(request, 'kanban/projetos.html', {
+        'projetos': projetos,
+        'aba': aba,
+        'pode_criar': user.can_see_all or Department.objects.filter(leaders=user).exists(),
+    })
+
+
+@login_required
+def projeto_create(request):
+    user = request.user
+    if not (user.can_see_all or Department.objects.filter(leaders=user).exists()):
+        return HttpResponseForbidden()
+    form = ProjectForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        board = form.save(commit=False)
+        board.is_cross_department = True
+        board.created_by = user
+        board.status = Board.Status.ATIVO
+        board.save()
+        form.save_m2m()
+        Column.objects.bulk_create([
+            Column(board=board, name='A Fazer',      order=0, color='#64748b', column_type=Column.ColumnType.A_FAZER),
+            Column(board=board, name='Em Andamento', order=1, color='#3b82f6', column_type=Column.ColumnType.EM_ANDAMENTO),
+            Column(board=board, name='Status Final', order=2, color='#22c55e', column_type=Column.ColumnType.STATUS_FINAL),
+        ])
+        # Notifica participantes (pessoas avulsas + membros das áreas)
+        destinatarios = set(board.members.all())
+        for dept in board.member_departments.all():
+            destinatarios.update(dept.users.filter(is_active=True))
+        link = f'/kanban/{board.pk}/'
+        for u in destinatarios:
+            Notification.send(
+                u, user, Notification.Type.PROJETO_NOVO,
+                f'Novo projeto: {board.name}', 'Você foi incluído em um projeto entre áreas.', link,
+            )
+        messages.success(request, f'Projeto "{board.name}" criado.')
+        return redirect('kanban:board_detail', pk=board.pk)
+    return render(request, 'kanban/projeto_form.html', {'form': form, 'title': 'Novo Projeto'})
+
+
+@login_required
+@require_POST
+def projeto_finalizar(request, pk):
+    board = get_object_or_404(Board, pk=pk, is_cross_department=True)
+    if not _pode_finalizar_projeto(request.user, board):
+        return HttpResponseForbidden()
+    if board.status != Board.Status.FINALIZADO:
+        board.status = Board.Status.FINALIZADO
+        board.finished_at = timezone.now()
+        board.finished_by = request.user
+        board.save(update_fields=['status', 'finished_at', 'finished_by'])
+        destinatarios = set(board.members.all())
+        for dept in board.member_departments.all():
+            destinatarios.update(dept.users.filter(is_active=True))
+        link = f'/kanban/{board.pk}/'
+        for u in destinatarios:
+            Notification.send(
+                u, request.user, Notification.Type.PROJETO_FIM,
+                f'Projeto finalizado: {board.name}', 'O projeto foi encerrado (somente leitura).', link,
+            )
+        messages.success(request, f'Projeto "{board.name}" finalizado.')
+    return redirect('kanban:board_detail', pk=board.pk)
+
+
+@login_required
+@require_POST
+def projeto_reabrir(request, pk):
+    board = get_object_or_404(Board, pk=pk, is_cross_department=True)
+    if not _pode_finalizar_projeto(request.user, board):
+        return HttpResponseForbidden()
+    if board.status != Board.Status.ATIVO:
+        board.status = Board.Status.ATIVO
+        board.finished_at = None
+        board.finished_by = None
+        board.save(update_fields=['status', 'finished_at', 'finished_by'])
+        messages.success(request, f'Projeto "{board.name}" reaberto.')
+    return redirect('kanban:board_detail', pk=board.pk)
+
+
+# ───────────────────────── Documentos e Mural (pasta OU projeto) ─────────────────────────
+
+def _scope_target(scope, obj_pk):
+    if scope == 'pasta':
+        return get_object_or_404(BoardFolder.objects.select_related('department'), pk=obj_pk)
+    if scope == 'projeto':
+        return get_object_or_404(Board, pk=obj_pk)
+    from django.http import Http404
+    raise Http404('Escopo inválido.')
+
+
+def _scope_can_view(user, scope, owner):
+    if scope == 'pasta':
+        return _pode_ver_departamento(user, owner.department)
+    return owner.can_access(user)  # projeto
+
+
+def _scope_can_write(user, scope, owner):
+    """Pode anexar documento / postar no mural."""
+    if not _scope_can_view(user, scope, owner):
+        return False
+    if scope == 'projeto' and owner.is_locked:
+        return False  # projeto finalizado = somente leitura
+    return True
+
+
+def _scope_can_manage(user, scope, owner):
+    if scope == 'pasta':
+        return pode_gerenciar_pastas(user, owner.department)
+    return user.is_admin_ti or owner.created_by_id == user.pk  # projeto
+
+
+def _scope_back_url(scope, owner, tab):
+    if scope == 'pasta':
+        url = reverse('kanban:pasta', kwargs={'dept_pk': owner.department_id, 'folder_pk': owner.pk})
+    else:
+        url = reverse('kanban:board_detail', kwargs={'pk': owner.pk})
+    return f'{url}?tab={tab}'
+
+
+def _scope_fk(scope, owner):
+    return {'folder': owner} if scope == 'pasta' else {'board': owner}
+
+
+MURAL_LIMIT = 50  # quantas mensagens recentes do mural carregar de início
+
+
+def _mural_posts(manager, request):
+    """Retorna (posts_ascendente, qtd_anteriores_ocultas) para o mural.
+    Por padrão traz só as últimas MURAL_LIMIT; ?mural_all=1 traz todas."""
+    qs = manager.select_related('author')
+    if request.GET.get('mural_all') == '1':
+        return list(qs.order_by('created_at')), 0
+    total = manager.count()
+    recentes = list(qs.order_by('-created_at')[:MURAL_LIMIT])[::-1]
+    return recentes, max(0, total - len(recentes))
+
+
+DOCS_POR_PAGINA = 20
+
+
+def _paginar_documentos(manager, request):
+    """Página de documentos (mais recentes primeiro). Usa ?doc_page= para não
+    colidir com outros paginadores/estado de aba na mesma tela."""
+    from django.core.paginator import Paginator
+    qs = manager.select_related('enviado_por').order_by('-created_at')
+    return Paginator(qs, DOCS_POR_PAGINA).get_page(request.GET.get('doc_page', 1))
+
+
+@login_required
+@require_POST
+def documento_upload(request, scope, obj_pk):
+    owner = _scope_target(scope, obj_pk)
+    if not _scope_can_write(request.user, scope, owner):
+        return HttpResponseForbidden()
+    back = _scope_back_url(scope, owner, 'documentos')
+    arquivo = request.FILES.get('arquivo')
+    if not arquivo:
+        messages.error(request, 'Selecione um arquivo.')
+        return redirect(back)
+    try:
+        validate_file_extension(arquivo)
+        validate_file_size(arquivo)
+    except ValidationError as e:
+        messages.error(request, e.message)
+        return redirect(back)
+    PastaDocumento.objects.create(
+        arquivo=arquivo, nome_original=arquivo.name,
+        descricao=(request.POST.get('descricao') or '').strip(),
+        enviado_por=request.user, **_scope_fk(scope, owner),
+    )
+    messages.success(request, 'Documento anexado.')
+    return redirect(back)
+
+
+@login_required
+@require_POST
+def documento_delete(request, pk):
+    doc = get_object_or_404(PastaDocumento.objects.select_related('folder__department', 'board'), pk=pk)
+    scope, owner = ('pasta', doc.folder) if doc.folder_id else ('projeto', doc.board)
+    if scope == 'projeto' and owner.is_locked:
+        return HttpResponseForbidden()
+    if not (doc.enviado_por_id == request.user.pk or _scope_can_manage(request.user, scope, owner)):
+        return HttpResponseForbidden()
+    doc.delete()
+    messages.success(request, 'Documento excluído.')
+    return redirect(_scope_back_url(scope, owner, 'documentos'))
+
+
+@login_required
+@require_POST
+def post_create(request, scope, obj_pk):
+    owner = _scope_target(scope, obj_pk)
+    if not _scope_can_write(request.user, scope, owner):
+        return HttpResponseForbidden()
+    back = _scope_back_url(scope, owner, 'mural')
+    content = (request.POST.get('content') or '').strip()
+    if not content:
+        messages.error(request, 'Escreva uma mensagem.')
+        return redirect(back)
+    PastaPost.objects.create(author=request.user, content=content, **_scope_fk(scope, owner))
+    return redirect(back)
+
+
+@login_required
+@require_POST
+def post_delete(request, pk):
+    post = get_object_or_404(PastaPost.objects.select_related('folder__department', 'board'), pk=pk)
+    scope, owner = ('pasta', post.folder) if post.folder_id else ('projeto', post.board)
+    if scope == 'projeto' and owner.is_locked:
+        return HttpResponseForbidden()
+    if not (post.author_id == request.user.pk or _scope_can_manage(request.user, scope, owner)):
+        return HttpResponseForbidden()
+    post.delete()
+    messages.success(request, 'Mensagem excluída.')
+    return redirect(_scope_back_url(scope, owner, 'mural'))
+
+
+def _annotated_cards_qs(user):
+    """Queryset base de cards com contagens + relações para o board, já filtrado
+    pela visibilidade do usuário (esconde cards privados de quem não tem acesso)."""
+    return Card.objects.visible_to(user).annotate(
         comment_count=Count('comments', distinct=True),
         subtask_total=Count('subtasks', distinct=True),
         subtask_done=Count('subtasks', filter=Q(subtasks__is_done=True), distinct=True),
@@ -78,28 +447,88 @@ def board_detail(request, pk):
     sort_by = request.GET.get('sort', '')
     columns = build_grouped_columns(
         board.columns.prefetch_related(
-            Prefetch('cards', queryset=_annotated_cards_qs())
+            Prefetch('cards', queryset=_annotated_cards_qs(request.user))
         ),
         sort_by=sort_by,
     )
     board_members = CustomUser.objects.filter(
         assigned_cards__column__board=board, is_active=True
     ).distinct().order_by('first_name')
-    return render(request, 'kanban/board.html', {
+    back_url, back_label = _board_back(board)
+    ctx = {
         'board': board,
         'columns': columns,
         'board_members': board_members,
-    })
+        'pode_finalizar': _pode_finalizar_projeto(request.user, board),
+        'back_url': back_url,
+        'back_label': back_label,
+    }
+    if board.is_cross_department:
+        posts, posts_restantes = _mural_posts(board.posts, request)
+        ctx.update({
+            'scope': 'projeto', 'owner_pk': board.pk,
+            'documentos': _paginar_documentos(board.documentos, request),
+            'posts': posts, 'posts_restantes': posts_restantes,
+            'pode_escrever': not board.is_locked,
+            'pode_gerenciar_conteudo': request.user.is_admin_ti or board.created_by_id == request.user.pk,
+            'tab_inicial': request.GET.get('tab', 'quadro'),
+        })
+    return render(request, 'kanban/board.html', ctx)
+
+
+def _depts_gerenciaveis(user):
+    """Departamentos onde o usuário pode criar quadros/pastas.
+
+    Mesma regra de pode_gerenciar_pastas: admin TI e presidência gerenciam todos;
+    os demais, apenas os departamentos que lideram. (can_see_all é permissão de
+    LEITURA — inclui líder/diretor — e não deve liberar criação em qualquer área.)
+    """
+    if user.is_admin_ti or user.is_presidente:
+        return Department.objects.all()
+    return Department.objects.filter(leaders=user).distinct()
+
+
+def _origem_back(request):
+    """URL/rótulo de 'voltar' de acordo com a origem (departamento/pasta) da tela."""
+    dept_pk = request.GET.get('department')
+    folder_pk = request.GET.get('folder')
+    if dept_pk and folder_pk:
+        return reverse('kanban:pasta', kwargs={'dept_pk': dept_pk, 'folder_pk': folder_pk}), 'Voltar à pasta'
+    if dept_pk:
+        return reverse('kanban:departamento', kwargs={'dept_pk': dept_pk}), 'Voltar ao departamento'
+    return reverse('kanban:departamentos'), 'Kanban'
+
+
+def _board_back(board):
+    """URL/rótulo de 'voltar' a partir de um quadro, respeitando de onde ele vive."""
+    if board.is_cross_department:
+        return reverse('kanban:projetos'), 'Projetos'
+    if board.department_id and board.folder_id:
+        return reverse('kanban:pasta', kwargs={'dept_pk': board.department_id, 'folder_pk': board.folder_id}), board.folder.name
+    if board.department_id:
+        return reverse('kanban:departamento', kwargs={'dept_pk': board.department_id}), board.department.name
+    return reverse('kanban:departamentos'), 'Kanban'
 
 
 @login_required
 def board_create(request):
-    if not request.user.can_see_all:
+    user = request.user
+    gerenciaveis = _depts_gerenciaveis(user)
+    if not gerenciaveis.exists():
         return HttpResponseForbidden()
-    form = BoardForm(request.POST or None, user=request.user)
+    initial = {}
+    if request.GET.get('department'):
+        initial['department'] = request.GET.get('department')
+    if request.GET.get('folder'):
+        initial['folder'] = request.GET.get('folder')
+    form = BoardForm(request.POST or None, user=user, initial=initial or None)
+    back_url, back_label = _origem_back(request)
     if request.method == 'POST' and form.is_valid():
         board = form.save(commit=False)
-        board.created_by = request.user
+        # Só cria quadro em departamento que o usuário gerencia.
+        if not board.department_id or not gerenciaveis.filter(pk=board.department_id).exists():
+            return HttpResponseForbidden()
+        board.created_by = user
         board.save()
         form.save_m2m()
         Column.objects.bulk_create([
@@ -109,7 +538,10 @@ def board_create(request):
         ])
         messages.success(request, f'Quadro "{board.name}" criado.')
         return redirect('kanban:board_detail', pk=board.pk)
-    return render(request, 'kanban/board_form.html', {'form': form, 'title': 'Novo Quadro'})
+    return render(request, 'kanban/board_form.html', {
+        'form': form, 'title': 'Novo Quadro',
+        'back_url': back_url, 'back_label': back_label,
+    })
 
 
 @login_required
@@ -123,6 +555,8 @@ def card_detail(request, board_pk, pk):
     is_creator = card.creator_id == request.user.pk
     if not is_member and not is_creator:
         return HttpResponseForbidden()
+    if not card.can_view(request.user):
+        return HttpResponseForbidden()
 
     comment_form = CardCommentForm()
     subtask_form = SubTaskForm()
@@ -130,6 +564,8 @@ def card_detail(request, board_pk, pk):
     if request.method == 'POST':
         if not is_member:
             return HttpResponseForbidden()
+        if not _board_writable(request, board):
+            return redirect('kanban:card_detail', board_pk=board.pk, pk=card.pk)
         action = request.POST.get('action')
         if action == 'comment':
             comment_form = CardCommentForm(request.POST)
@@ -236,6 +672,8 @@ def subtask_toggle(request, pk):
     board = st.card.column.board
     if not board.can_access(request.user):
         return HttpResponseForbidden()
+    if not _board_writable(request, board):
+        return redirect('kanban:card_detail', board_pk=board.pk, pk=st.card.pk)
     st.is_done = not st.is_done
     st.save(update_fields=['is_done'])
     CardActivity.objects.create(
@@ -257,6 +695,8 @@ def subtask_delete(request, pk):
     board = st.card.column.board
     if not board.can_access(request.user):
         return HttpResponseForbidden()
+    if not _board_writable(request, board):
+        return redirect('kanban:card_detail', board_pk=board.pk, pk=st.card.pk)
     card_pk = st.card.pk
     st.delete()
     return redirect('kanban:card_detail', board_pk=board.pk, pk=card_pk)
@@ -269,6 +709,8 @@ def subtask_attach(request, pk):
     board = st.card.column.board
     if not board.can_access(request.user):
         return HttpResponseForbidden()
+    if not _board_writable(request, board):
+        return redirect('kanban:card_detail', board_pk=board.pk, pk=st.card.pk)
     arquivo = request.FILES.get('arquivo')
     if arquivo:
         try:
@@ -296,7 +738,11 @@ def card_attach(request, board_pk, pk):
     board = get_object_or_404(Board, pk=board_pk)
     if not board.can_access(request.user):
         return HttpResponseForbidden()
+    if not _board_writable(request, board):
+        return redirect('kanban:board_detail', pk=board.pk)
     card = get_object_or_404(Card, pk=pk, column__board=board)
+    if not card.can_view(request.user):
+        return HttpResponseForbidden()
     arquivo = request.FILES.get('arquivo')
     if arquivo:
         try:
@@ -323,6 +769,8 @@ def card_create(request, board_pk):
     board = get_object_or_404(Board, pk=board_pk)
     if not board.can_access(request.user):
         return HttpResponseForbidden()
+    if not _board_writable(request, board):
+        return redirect('kanban:board_detail', pk=board.pk)
     form = CardForm(request.POST or None, board=board)
     if request.method == 'POST' and form.is_valid():
         card = form.save(commit=False)
@@ -330,6 +778,7 @@ def card_create(request, board_pk):
         last = Card.objects.filter(column=card.column).order_by('-order').first()
         card.order = (last.order + 1) if last else 0
         card.save()
+        form.save_m2m()  # allowed_users (card privado)
         CardActivity.objects.create(card=card, user=request.user, action='Criou o card')
         AuditLog.log(
             request.user, AuditLog.Action.CARD_CREATE,
@@ -338,7 +787,11 @@ def card_create(request, board_pk):
         )
         _notify_card(card, request.user, created=True)
         if request.headers.get('HX-Request'):
-            columns = board.columns.prefetch_related('cards__assignee')
+            columns = build_grouped_columns(
+                board.columns.prefetch_related(
+                    Prefetch('cards', queryset=_annotated_cards_qs(request.user))
+                ),
+            )
             return render(request, 'kanban/partials/board_columns.html', {'board': board, 'columns': columns})
         return redirect('kanban:board_detail', pk=board.pk)
     return render(request, 'kanban/card_form.html', {'form': form, 'board': board, 'title': 'Novo Card'})
@@ -349,7 +802,11 @@ def card_edit(request, board_pk, pk):
     board = get_object_or_404(Board, pk=board_pk)
     if not board.can_access(request.user):
         return HttpResponseForbidden()
+    if not _board_writable(request, board):
+        return redirect('kanban:board_detail', pk=board.pk)
     card = get_object_or_404(Card, pk=pk, column__board=board)
+    if not card.can_view(request.user):
+        return HttpResponseForbidden()
     old_assignee = card.assignee
     form = CardForm(request.POST or None, instance=card, board=board)
     if request.method == 'POST' and form.is_valid():
@@ -376,6 +833,10 @@ def card_move(request, pk):
     board = card.column.board
     if not board.can_access(request.user):
         return HttpResponseForbidden()
+    if not card.can_view(request.user):
+        return HttpResponseForbidden()
+    if board.is_locked:
+        return JsonResponse({'status': 'locked', 'detail': 'Projeto finalizado: somente leitura.'}, status=403)
 
     data = json.loads(request.body)
     column_id = data.get('column_id')
@@ -430,6 +891,10 @@ def card_move_direction(request, pk):
     board = card.column.board
     if not board.can_access(request.user):
         return HttpResponseForbidden()
+    if not card.can_view(request.user):
+        return HttpResponseForbidden()
+    if not _board_writable(request, board):
+        return redirect('kanban:board_detail', pk=board.pk)
 
     direction = request.POST.get('direction')
     columns = list(board.columns.order_by('order'))
@@ -507,7 +972,7 @@ def board_columns_partial(request, pk):
     from django.utils import timezone as tz
     today = tz.now().date()
 
-    annotated_cards = _apply_card_filters(_annotated_cards_qs(), request, today)
+    annotated_cards = _apply_card_filters(_annotated_cards_qs(request.user), request, today)
     sort_by = request.GET.get('sort', '')
 
     columns = build_grouped_columns(
@@ -534,7 +999,7 @@ def board_finalizados(request, board_pk, column_pk):
     col = get_object_or_404(Column, pk=column_pk, board=board,
                             column_type=Column.ColumnType.STATUS_FINAL)
 
-    cards = col.cards.select_related('assignee', 'creator').order_by('-updated_at')
+    cards = col.cards.visible_to(request.user).select_related('assignee', 'creator').order_by('-updated_at')
 
     final_status = request.GET.get('final_status', '')
     if final_status:
@@ -570,6 +1035,8 @@ def card_delete(request, board_pk, pk):
     is_creator = card.creator_id == request.user.pk
     if not is_member and not is_creator:
         return HttpResponseForbidden()
+    if not card.can_view(request.user):
+        return HttpResponseForbidden()
     AuditLog.log(
         request.user, AuditLog.Action.CARD_DELETE,
         resource_type='Card', resource_id=card.pk,
@@ -585,9 +1052,14 @@ def card_delete(request, board_pk, pk):
 
 @login_required
 def board_edit(request, pk):
-    if not request.user.is_admin_ti:
-        return HttpResponseForbidden()
     board = get_object_or_404(Board, pk=pk)
+    # Projetos (entre áreas) não usam o formulário de quadro (que é por departamento).
+    if board.is_cross_department:
+        return redirect('kanban:board_detail', pk=board.pk)
+    if not (request.user.is_admin_ti or (
+        board.department and pode_gerenciar_pastas(request.user, board.department)
+    )):
+        return HttpResponseForbidden()
     form = BoardForm(request.POST or None, instance=board, user=request.user)
     if request.method == 'POST' and form.is_valid():
         form.save()
@@ -605,9 +1077,12 @@ def board_delete(request, pk):
         return HttpResponseForbidden()
     board = get_object_or_404(Board, pk=pk)
     name = board.name
+    dept_pk = board.department_id
     board.delete()
     messages.success(request, f'Quadro "{name}" excluído.')
-    return redirect('kanban:board_list')
+    if dept_pk:
+        return redirect('kanban:departamento', dept_pk=dept_pk)
+    return redirect('kanban:departamentos')
 
 
 @login_required
@@ -615,6 +1090,8 @@ def column_create(request, board_pk):
     if not request.user.is_admin_ti:
         return HttpResponseForbidden()
     board = get_object_or_404(Board, pk=board_pk)
+    if not _board_writable(request, board):
+        return redirect('kanban:board_detail', pk=board.pk)
     form = ColumnForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         col = form.save(commit=False)
@@ -634,6 +1111,8 @@ def column_edit(request, board_pk, pk):
     if not request.user.is_admin_ti:
         return HttpResponseForbidden()
     board = get_object_or_404(Board, pk=board_pk)
+    if not _board_writable(request, board):
+        return redirect('kanban:board_detail', pk=board.pk)
     column = get_object_or_404(Column, pk=pk, board=board)
     form = ColumnForm(request.POST or None, instance=column)
     if request.method == 'POST' and form.is_valid():
@@ -651,6 +1130,8 @@ def column_delete(request, board_pk, pk):
     if not request.user.is_admin_ti:
         return HttpResponseForbidden()
     board = get_object_or_404(Board, pk=board_pk)
+    if not _board_writable(request, board):
+        return redirect('kanban:board_detail', pk=board.pk)
     column = get_object_or_404(Column, pk=pk, board=board)
     if column.cards.exists():
         messages.error(request, f'A coluna "{column.name}" possui cards. Mova ou exclua os cards antes.')
@@ -722,7 +1203,7 @@ def analise(request):
 
     lider_depts = request.user.departments.all() if request.user.is_lider else None
 
-    all_cards = Card.objects.select_related('column__board__department', 'assignee')
+    all_cards = Card.objects.visible_to(request.user).select_related('column__board__department', 'assignee')
     if lider_depts is not None:
         all_cards = all_cards.filter(column__board__department__in=lider_depts)
 
@@ -825,7 +1306,7 @@ def analise(request):
         else Department.objects.filter(boards__isnull=False).distinct().order_by('name')
     )
     for dept in depts_iter:
-        dc = Card.objects.filter(column__board__department=dept)
+        dc = Card.objects.visible_to(request.user).filter(column__board__department=dept)
         dept_stats.append({
             'dept': dept,
             'total': dc.count(),
@@ -1142,16 +1623,140 @@ def minhas_solicitacoes(request):
     })
 
 
+@login_required
+def tarefas_hub(request):
+    """Hub de acompanhamento: caixas dos quadros/projetos acessíveis (com contagem
+    de tarefas ativas). Clicar entra na tabela de tarefas daquele quadro."""
+    from django.db.models import Count
+    CT = Column.ColumnType
+    boards = list(
+        _accessible_boards(request.user)
+        .select_related('department', 'created_by')
+        .prefetch_related('member_departments')
+        .order_by('name')
+    )
+    ids = [b.pk for b in boards]
+    counts = dict(
+        Card.objects.visible_to(request.user)
+        .filter(column__board_id__in=ids)
+        .exclude(column__column_type=CT.STATUS_FINAL)
+        .order_by()  # limpa Meta.ordering p/ não vazar no GROUP BY
+        .values_list('column__board_id')
+        .annotate(n=Count('id', distinct=True))
+    )
+    for b in boards:
+        b.task_count = counts.get(b.pk, 0)
+    return render(request, 'kanban/tarefas_hub.html', {
+        'dept_boards': [b for b in boards if not b.is_cross_department],
+        'projetos':    [b for b in boards if b.is_cross_department],
+        'total_tarefas': sum(counts.values()),
+    })
+
+
+@login_required
+def todas_tarefas(request):
+    """Visão global tipo tabela: todas as tarefas dos quadros que o usuário acessa,
+    com Responsável, Data e Status (a coluna do card). Filtrável e paginada."""
+    from django.core.paginator import Paginator
+    from django.db.models import Case, When, IntegerField, F
+    from django.utils import timezone as tz
+    CT = Column.ColumnType
+    today = tz.now().date()
+
+    accessible_ids = list(_accessible_boards(request.user).values_list('pk', flat=True))
+    cards = (
+        Card.objects.visible_to(request.user)
+        .filter(column__board_id__in=accessible_ids)
+        .select_related('assignee', 'creator', 'column', 'column__board', 'column__board__department')
+    )
+
+    # ── Filtros ──────────────────────────────────────────────────────────────
+    q = (request.GET.get('q') or '').strip()
+    if q:
+        cards = cards.filter(title__icontains=q)
+
+    board_id = request.GET.get('board')
+    if board_id:
+        cards = cards.filter(column__board_id=board_id)
+
+    status = request.GET.get('status', '')
+    valid_status = {CT.A_FAZER, CT.EM_ANDAMENTO, CT.STATUS_FINAL}
+    if status in valid_status:
+        cards = cards.filter(column__column_type=status)
+    elif status != 'todos':
+        # padrão: esconde finalizados
+        cards = cards.exclude(column__column_type=CT.STATUS_FINAL)
+
+    # prioridade / responsável / prazo (reusa a mesma lógica do board)
+    cards = _apply_card_filters(cards, request, today)
+
+    # ── Ordenação ────────────────────────────────────────────────────────────
+    sort = request.GET.get('sort', '')
+    if sort == 'prazo':
+        cards = cards.order_by(F('due_date').asc(nulls_last=True), '-updated_at')
+    elif sort == 'prioridade':
+        cards = cards.annotate(_prio=Case(
+            When(priority='URGENT', then=0), When(priority='HIGH', then=1),
+            When(priority='MEDIUM', then=2), When(priority='LOW', then=3),
+            default=4, output_field=IntegerField(),
+        )).order_by('_prio', F('due_date').asc(nulls_last=True))
+    elif sort == 'titulo':
+        cards = cards.order_by('title')
+    elif sort == 'responsavel':
+        cards = cards.order_by('assignee__first_name', 'assignee__last_name', '-updated_at')
+    else:
+        sort = 'atualizacao'
+        cards = cards.order_by('-updated_at')
+
+    paginator = Paginator(cards, 40)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    # ── Querystrings p/ links (preservam filtros) ────────────────────────────
+    qs_nopage = request.GET.copy()
+    qs_nopage.pop('page', None)
+    qs_nosort = qs_nopage.copy()
+    qs_nosort.pop('sort', None)
+
+    # ── Opções dos dropdowns ─────────────────────────────────────────────────
+    boards = _accessible_boards(request.user).order_by('name')
+    sel_board = boards.filter(pk=board_id).first() if board_id else None
+    responsaveis = (
+        CustomUser.objects
+        .filter(assigned_cards__column__board_id__in=accessible_ids, is_active=True)
+        .distinct().order_by('first_name', 'last_name')
+    )
+
+    return render(request, 'kanban/todas_tarefas.html', {
+        'page_obj': page_obj,
+        'total': paginator.count,
+        'boards': boards,
+        'sel_board': sel_board,
+        'responsaveis': responsaveis,
+        'status_choices': CT.choices,
+        'qs_nopage': qs_nopage.urlencode(),
+        'qs_nosort': qs_nosort.urlencode(),
+        # ecoar filtros p/ manter estado nos selects e na paginação
+        'f': {
+            'q': q, 'board': board_id or '', 'status': status,
+            'assignee': request.GET.get('assignee', ''),
+            'priority': request.GET.get('priority', ''),
+            'prazo': request.GET.get('prazo', ''),
+            'sort': sort,
+        },
+    })
+
+
 # ── Tarefas Recorrentes ───────────────────────────────────────────────────────
 
 def _accessible_boards(user):
-    """Boards que o usuário pode ver — mesma lógica do board_list."""
+    """Boards que o usuário pode ver — espelha Board.can_access()."""
     if user.can_see_all:
         return Board.objects.all()
     return Board.objects.filter(
-        Q(department__in=user.departments.all()) |
-        Q(members=user) |
         Q(is_global=True)
+        | Q(members=user)
+        | Q(department__in=user.departments.all())
+        | Q(is_cross_department=True, member_departments__in=user.departments.all())
     ).distinct()
 
 

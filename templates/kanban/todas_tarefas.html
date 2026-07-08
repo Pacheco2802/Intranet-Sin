@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Todas as tarefas{% endblock %}
+{% block page_title %}
+<div class="flex items-center gap-2">
+  {% if sel_board %}{{ sel_board.name }}{% else %}Todas as tarefas{% endif %}
+  <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-accent/10 text-accent">{{ total }}</span>
+</div>
+{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'kanban:tarefas_hub' %}" class="btn-secondary text-xs">← Quadros</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+
+  <!-- Filtros -->
+  <form method="get" class="flex flex-wrap items-center gap-2 mb-4">
+    <input type="hidden" name="sort" value="{{ f.sort }}">
+    <input type="text" name="q" value="{{ f.q }}" placeholder="🔎 Buscar tarefa..."
+           class="text-xs form-input py-1 w-48">
+    <select name="board" class="text-xs form-input py-1 w-auto">
+      <option value="">Todos os quadros</option>
+      {% for b in boards %}
+      <option value="{{ b.pk }}" {% if f.board == b.pk|stringformat:'s' %}selected{% endif %}>{{ b.name }}</option>
+      {% endfor %}
+    </select>
+    <select name="status" class="text-xs form-input py-1 w-auto">
+      <option value="">Ativas</option>
+      <option value="todos" {% if f.status == 'todos' %}selected{% endif %}>Todas (inclui finalizadas)</option>
+      {% for val, label in status_choices %}
+      <option value="{{ val }}" {% if f.status == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <select name="assignee" class="text-xs form-input py-1 w-auto">
+      <option value="">Todos os responsáveis</option>
+      {% for u in responsaveis %}
+      <option value="{{ u.pk }}" {% if f.assignee == u.pk|stringformat:'s' %}selected{% endif %}>{{ u.get_full_name|default:u.first_name }}</option>
+      {% endfor %}
+    </select>
+    <select name="priority" class="text-xs form-input py-1 w-auto">
+      <option value="">Todas as prioridades</option>
+      <option value="URGENT" {% if f.priority == 'URGENT' %}selected{% endif %}>Urgente</option>
+      <option value="HIGH" {% if f.priority == 'HIGH' %}selected{% endif %}>Alta</option>
+      <option value="MEDIUM" {% if f.priority == 'MEDIUM' %}selected{% endif %}>Média</option>
+      <option value="LOW" {% if f.priority == 'LOW' %}selected{% endif %}>Baixa</option>
+    </select>
+    <select name="prazo" class="text-xs form-input py-1 w-auto">
+      <option value="">Qualquer prazo</option>
+      <option value="vencidos" {% if f.prazo == 'vencidos' %}selected{% endif %}>Vencidos</option>
+      <option value="hoje" {% if f.prazo == 'hoje' %}selected{% endif %}>Vencem hoje</option>
+      <option value="semana" {% if f.prazo == 'semana' %}selected{% endif %}>Próximos 7 dias</option>
+    </select>
+    <button type="submit" class="btn-primary text-xs py-1">Filtrar</button>
+    <a href="{% url 'kanban:todas_tarefas' %}" class="text-xs text-gray-400 hover:text-gray-600 underline">Limpar</a>
+  </form>
+
+  {% if page_obj.object_list %}
+  <div class="card overflow-x-auto p-0">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-[11px] uppercase tracking-wide text-gray-400 border-b border-gray-100">
+          <th class="px-4 py-2.5 font-semibold">
+            <a href="?{% if qs_nosort %}{{ qs_nosort }}&{% endif %}sort=titulo" class="hover:text-gray-700">Tarefa{% if f.sort == 'titulo' %} ↓{% endif %}</a>
+          </th>
+          <th class="px-4 py-2.5 font-semibold">Quadro / Área</th>
+          <th class="px-4 py-2.5 font-semibold">
+            <a href="?{% if qs_nosort %}{{ qs_nosort }}&{% endif %}sort=responsavel" class="hover:text-gray-700">Resp.{% if f.sort == 'responsavel' %} ↓{% endif %}</a>
+          </th>
+          <th class="px-4 py-2.5 font-semibold">
+            <a href="?{% if qs_nosort %}{{ qs_nosort }}&{% endif %}sort=prazo" class="hover:text-gray-700">Data{% if f.sort == 'prazo' %} ↓{% endif %}</a>
+          </th>
+          <th class="px-4 py-2.5 font-semibold">Status</th>
+          <th class="px-4 py-2.5 font-semibold">
+            <a href="?{% if qs_nosort %}{{ qs_nosort }}&{% endif %}sort=prioridade" class="hover:text-gray-700">Prioridade{% if f.sort == 'prioridade' %} ↓{% endif %}</a>
+          </th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for card in page_obj %}
+        <tr class="hover:bg-gray-50 cursor-pointer transition-colors{% if card.assignee_id == user.pk %} bg-accent/5{% endif %}"
+            onclick="location.href='{% url 'kanban:card_detail' card.column.board_id card.pk %}'">
+          <!-- Tarefa -->
+          <td class="px-4 py-2.5 max-w-xs">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              {% if card.is_private %}<span class="kc-pill bg-slate-500" title="Privado">🔒</span>{% endif %}
+              {% if card.source_atendimento_id %}<span class="kc-pill bg-blue-500" title="Atendimento">🩺</span>
+              {% elif card.source_subtask_id %}<span class="kc-pill bg-purple-500" title="Subtarefa">↳</span>
+              {% elif 'solicitacao' in card.tags %}<span class="kc-pill bg-amber-500" title="Solicitação">⚡</span>{% endif %}
+              <span class="font-medium text-gray-800 truncate">{{ card.title }}</span>
+            </div>
+          </td>
+          <!-- Quadro / Área -->
+          <td class="px-4 py-2.5 whitespace-nowrap">
+            {% if card.column.board.department %}
+            <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+                  style="background: {{ card.column.board.department.color }}18; color: {{ card.column.board.department.color }};">
+              {{ card.column.board.department.icon }} {{ card.column.board.name }}
+            </span>
+            {% else %}
+            <span class="text-xs text-gray-500">{{ card.column.board.name }}</span>
+            {% endif %}
+          </td>
+          <!-- Responsável -->
+          <td class="px-4 py-2.5 whitespace-nowrap">
+            {% if card.assignee %}
+            <div class="flex items-center gap-1.5">
+              <div class="w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0"
+                   style="background: linear-gradient(135deg, hsl({{ card.assignee_id|add:120 }},55%,45%), hsl({{ card.assignee_id|add:160 }},65%,35%));"
+                   title="{{ card.assignee.get_full_name|default:card.assignee.first_name }}">
+                {{ card.assignee.first_name|first|upper }}
+              </div>
+              <span class="text-xs text-gray-600">
+                {{ card.assignee.first_name }}{% if card.assignee_id == user.pk %} <span class="text-accent font-semibold">(Você)</span>{% endif %}
+              </span>
+            </div>
+            {% else %}
+            <span class="inline-flex items-center gap-1 text-xs text-gray-400">
+              <span class="w-5 h-5 rounded-full border border-dashed border-gray-300 flex items-center justify-center text-gray-300 text-[10px]">👤</span>
+              Sem resp.
+            </span>
+            {% endif %}
+          </td>
+          <!-- Data -->
+          <td class="px-4 py-2.5 whitespace-nowrap">
+            {% if card.due_date %}
+            <span class="text-xs {% if card.is_overdue %}text-red-600 font-semibold{% else %}text-gray-500{% endif %}">
+              {% if card.is_overdue %}⚠ {% endif %}{{ card.due_date|date:"d M" }}
+            </span>
+            {% else %}
+            <span class="text-xs text-gray-300">—</span>
+            {% endif %}
+          </td>
+          <!-- Status (coluna do card) -->
+          <td class="px-4 py-2.5 whitespace-nowrap">
+            <span class="kc-pill" style="background: {{ card.column.color|default:'#64748b' }};">{{ card.column.name }}</span>
+          </td>
+          <!-- Prioridade -->
+          <td class="px-4 py-2.5 whitespace-nowrap">
+            <span class="inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded"
+                  style="color:{{ card.priority_color }}; background-color:{{ card.priority_color }}1a;">
+              ● {{ card.get_priority_display }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Paginação -->
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="flex items-center justify-between pt-3 text-xs text-gray-500">
+    {% if page_obj.has_previous %}
+    <a href="?{% if qs_nopage %}{{ qs_nopage }}&{% endif %}page={{ page_obj.previous_page_number }}" class="hover:text-blue-600 font-medium">← Anteriores</a>
+    {% else %}<span class="text-gray-300">← Anteriores</span>{% endif %}
+    <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }} · {{ total }} tarefa{{ total|pluralize }}</span>
+    {% if page_obj.has_next %}
+    <a href="?{% if qs_nopage %}{{ qs_nopage }}&{% endif %}page={{ page_obj.next_page_number }}" class="hover:text-blue-600 font-medium">Próximas →</a>
+    {% else %}<span class="text-gray-300">Próximas →</span>{% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="card text-center py-20">
+    <div class="text-5xl mb-4">📋</div>
+    <p class="text-gray-800 font-semibold">Nenhuma tarefa encontrada</p>
+    <p class="text-gray-400 text-sm mt-1">Ajuste os filtros ou limpe a busca.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

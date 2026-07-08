@@ -13,6 +13,7 @@ from datetime import date
 
 from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 
 logger = logging.getLogger(__name__)
@@ -22,21 +23,35 @@ _warned = False
 
 
 def _get_fernet() -> Fernet | None:
+    """Retorna o Fernet configurado.
+
+    Em produção (DEBUG=False), a ausência/invalidez da chave é FATAL — preferimos
+    recusar gravar/ler PII a degradar silenciosamente para plaintext (fail-closed).
+    Em desenvolvimento, sem chave, retorna None e opera em plaintext com aviso.
+    """
     global _fernet, _warned
     if _fernet:
         return _fernet
     key = getattr(settings, 'FIELD_ENCRYPTION_KEY', '')
+    prod = not getattr(settings, 'DEBUG', False)
     if not key:
+        if prod:
+            raise ImproperlyConfigured(
+                'FIELD_ENCRYPTION_KEY ausente em produção: recusando manipular PII '
+                'sem criptografia. Configure a chave no ambiente.'
+            )
         if not _warned:
             logger.warning(
-                'FIELD_ENCRYPTION_KEY não configurada — campos sensíveis '
-                'serão armazenados em plaintext. Configure antes de ir para produção.'
+                'FIELD_ENCRYPTION_KEY não configurada — campos sensíveis em '
+                'plaintext (apenas desenvolvimento).'
             )
             _warned = True
         return None
     try:
         _fernet = Fernet(key.encode() if isinstance(key, str) else key)
     except Exception:
+        if prod:
+            raise ImproperlyConfigured('FIELD_ENCRYPTION_KEY inválida.')
         logger.error('FIELD_ENCRYPTION_KEY inválida. Verifique o valor no .env.')
         return None
     return _fernet

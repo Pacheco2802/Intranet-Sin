@@ -9,7 +9,7 @@
 </div>
 {% endblock %}
 {% block topbar_actions %}
-<a href="{% url 'kanban:board_list' %}" class="btn-secondary text-xs">Ver todos os boards</a>
+<a href="{% url 'kanban:departamentos' %}" class="btn-secondary text-xs">Ver por departamento</a>
 {% endblock %}
 
 {% block content %}
@@ -27,7 +27,7 @@
   </div>
 
   {% else %}
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
     <!-- A Fazer -->
     <div>
@@ -36,7 +36,7 @@
         <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider">A Fazer</h2>
         <span class="ml-auto text-xs text-gray-400 font-medium">{{ a_fazer|length }}</span>
       </div>
-      <div class="space-y-2.5">
+      <div class="space-y-2">
         {% for card in a_fazer %}
         {% with show_prev=False show_next=True %}
         {% include "kanban/partials/meu_card.html" %}
@@ -54,7 +54,7 @@
         <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Em Andamento</h2>
         <span class="ml-auto text-xs text-gray-400 font-medium">{{ em_andamento|length }}</span>
       </div>
-      <div class="space-y-2.5">
+      <div class="space-y-2">
         {% for card in em_andamento %}
         {% with show_prev=True show_next=True %}
         {% include "kanban/partials/meu_card.html" %}
@@ -72,7 +72,7 @@
         <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Concluídos</h2>
         <span class="ml-auto text-xs text-gray-400 font-medium">{{ concluidos|length }}</span>
       </div>
-      <div class="space-y-2.5">
+      <div class="space-y-2">
         {% for card in concluidos %}
         {% with show_prev=True show_next=False %}
         {% include "kanban/partials/meu_card.html" %}

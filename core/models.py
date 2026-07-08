@@ -284,6 +284,8 @@ class Notification(models.Model):
         DIRETORIA_NOVA = 'DIRETORIA_NOVA', 'Nova atividade para aprovar'
         DIRETORIA_STATUS = 'DIRETORIA_STATUS', 'Atualização da sua atividade'
         DIRETORIA_PAGO = 'DIRETORIA_PAGO', 'Pagamento de diretoria realizado'
+        PROJETO_NOVO = 'PROJETO_NOVO', 'Você foi incluído em um projeto'
+        PROJETO_FIM = 'PROJETO_FIM', 'Projeto finalizado'
 
     user = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE,

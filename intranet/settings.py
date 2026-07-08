@@ -38,9 +38,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.AdminLoginThrottleMiddleware',
     'core.middleware.LGPDConsentMiddleware',
     'core.middleware.DiretorScopeMiddleware',
     'core.middleware.AuditMiddleware',
+    'core.middleware.ContentSecurityPolicyMiddleware',
 ]
 
 ROOT_URLCONF = 'intranet.urls'
@@ -71,6 +73,22 @@ DATABASES = {
 }
 
 AUTH_USER_MODEL = 'core.CustomUser'
+
+# ── Cache ─────────────────────────────────────────────────────────────────────
+# Usa Redis se REDIS_URL estiver definido (torna o throttle de login global entre
+# workers/deploys); caso contrário, cache local por processo — suficiente para o
+# throttle básico, mas os contadores não são compartilhados.
+_redis_url = config('REDIS_URL', default='')
+if _redis_url:
+    CACHES = {'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': _redis_url,
+    }}
+else:
+    CACHES = {'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'intranet-locmem',
+    }}
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -145,8 +163,14 @@ SESSION_COOKIE_HTTPONLY = True
 
 CSRF_COOKIE_HTTPONLY = True
 X_FRAME_OPTIONS = 'DENY'
-SECURE_BROWSER_XSS_FILTER = True
+# X-XSS-Protection é um header depreciado (pode introduzir bugs em navegadores antigos);
+# a proteção real vem de Content-Security-Policy + autoescape do Django.
+SECURE_BROWSER_XSS_FILTER = False
 SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Content-Security-Policy: começa em Report-Only (ver ContentSecurityPolicyMiddleware).
+# Defina CSP_ENFORCE=True no ambiente para aplicar de fato.
+CSP_ENFORCE = config('CSP_ENFORCE', default=False, cast=bool)
 
 # ── Segurança adicional em produção ──────────────────────────────────────────
 if not DEBUG:

@@ -11,6 +11,7 @@ from django.views.decorators.http import require_POST
 from .models import CustomUser, Department, Team, LGPDConsent, AuditLog, Notification, _anonymize_ip
 from .forms import LoginForm, RegisterForm, UserCreateForm, UserEditForm, ProfileForm, TeamForm, DepartmentForm, ApproveUserForm, AdminPasswordResetForm, ChangeOwnPasswordForm
 from .middleware import AuditMiddleware
+from . import throttle
 
 # ──────────────────────────────────────────────
 # REGRAS DE NEGÓCIO — EQUIPES
@@ -41,18 +42,24 @@ def login_view(request):
         return redirect(_post_login_dest(request.user))
     form = LoginForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
+        email = form.cleaned_data['email']
+        if throttle.is_blocked(request, email):
+            form.add_error(None, 'Muitas tentativas de acesso. Aguarde alguns minutos e tente novamente.')
+            return render(request, 'auth/login.html', {'form': form})
         user = authenticate(
             request,
-            username=form.cleaned_data['email'],
+            username=email,
             password=form.cleaned_data['password'],
         )
         if user:
+            throttle.clear(request, email)
             login(request, user)
             AuditLog.log(user, AuditLog.Action.LOGIN, ip=AuditMiddleware.get_client_ip(request))
             next_url = request.GET.get('next', '')
             if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
                 next_url = _post_login_dest(user)
             return redirect(next_url)
+        throttle.record_failure(request, email)
         try:
             pending = CustomUser.objects.get(email__iexact=form.cleaned_data['email'])
             if not pending.is_approved:
@@ -934,7 +941,7 @@ def visao_executiva(request):
 
     # ── Kanban ────────────────────────────────────
     CT = Column.ColumnType
-    cards_base = Card.objects
+    cards_base = Card.objects.visible_to(request.user)
     if lider_depts is not None:
         cards_base = cards_base.filter(column__board__department__in=lider_depts)
     cards_ativos = cards_base.exclude(column__column_type=CT.STATUS_FINAL)
@@ -957,7 +964,7 @@ def visao_executiva(request):
     dept_saude = []
     depts_iter = lider_depts.order_by('name') if lider_depts is not None else Department.objects.order_by('name')
     for dept in depts_iter:
-        dc = Card.objects.filter(column__board__department=dept)
+        dc = Card.objects.visible_to(request.user).filter(column__board__department=dept)
         total_dept   = dc.count()
         ativos_dept  = dc.exclude(column__column_type=CT.STATUS_FINAL).count()
         venc_dept    = dc.exclude(column__column_type=CT.STATUS_FINAL).filter(

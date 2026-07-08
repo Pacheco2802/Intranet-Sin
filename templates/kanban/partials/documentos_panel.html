@@ -1,0 +1,57 @@
+{# Espera: scope, owner_pk, documentos, pode_escrever, pode_gerenciar_conteudo #}
+<div class="space-y-4">
+  {% if pode_escrever %}
+  <form method="post" action="{% url 'kanban:documento_upload' scope owner_pk %}" enctype="multipart/form-data"
+        class="card flex flex-col sm:flex-row sm:items-end gap-3">
+    {% csrf_token %}
+    <div class="flex-1">
+      <label class="block text-xs font-medium text-gray-500 mb-1">Arquivo</label>
+      <input type="file" name="arquivo" required class="form-input text-sm">
+      <p class="text-xs text-gray-400 mt-1">PDF, DOC, XLS, imagem, ZIP… Máx. 5 MB.</p>
+    </div>
+    <div class="flex-1">
+      <label class="block text-xs font-medium text-gray-500 mb-1">Descrição (opcional)</label>
+      <input type="text" name="descricao" maxlength="200" class="form-input text-sm" placeholder="Ex.: contrato assinado">
+    </div>
+    <button type="submit" class="btn-primary text-sm">Anexar</button>
+  </form>
+  {% endif %}
+
+  {% if documentos %}
+  <div class="space-y-2">
+    {% for doc in documentos %}
+    <div class="card flex items-center gap-3 py-3">
+      <span class="text-xl flex-shrink-0">🧾</span>
+      <a href="{{ doc.arquivo.url }}" target="_blank" class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-gray-800 truncate hover:text-blue-600">{{ doc.nome_original }}</p>
+        <p class="text-xs text-gray-400 truncate">
+          {% if doc.descricao %}{{ doc.descricao }} · {% endif %}
+          {{ doc.enviado_por.get_full_name|default:doc.enviado_por.first_name|default:"—" }} · {{ doc.created_at|date:"d/m/Y H:i" }}
+        </p>
+      </a>
+      {% if pode_gerenciar_conteudo or doc.enviado_por_id == user.pk %}
+      <form method="post" action="{% url 'kanban:documento_delete' doc.pk %}"
+            onsubmit="return confirm('Excluir este documento?')" class="flex-shrink-0">
+        {% csrf_token %}
+        <button type="submit" class="text-xs text-gray-400 hover:text-red-600 font-medium">Excluir</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if documentos.paginator.num_pages > 1 %}
+  <div class="flex items-center justify-between pt-1 text-xs text-gray-500">
+    {% if documentos.has_previous %}
+    <a href="?tab=documentos&doc_page={{ documentos.previous_page_number }}" class="hover:text-blue-600 font-medium">← Anteriores</a>
+    {% else %}<span class="text-gray-300">← Anteriores</span>{% endif %}
+    <span>Página {{ documentos.number }} de {{ documentos.paginator.num_pages }}</span>
+    {% if documentos.has_next %}
+    <a href="?tab=documentos&doc_page={{ documentos.next_page_number }}" class="hover:text-blue-600 font-medium">Próximas →</a>
+    {% else %}<span class="text-gray-300">Próximas →</span>{% endif %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="card text-center py-10 text-gray-400 text-sm">Nenhum documento anexado ainda.</div>
+  {% endif %}
+</div>

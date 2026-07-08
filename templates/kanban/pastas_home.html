@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Kanban — Departamentos{% endblock %}
+{% block page_title %}Kanban — Departamentos{% endblock %}
+{% block topbar_actions %}
+{% endblock %}
+
+{% block content %}
+{% if not departamentos %}
+<div class="card text-center py-16">
+  <div class="text-5xl mb-4">🏢</div>
+  <p class="text-gray-500">Você ainda não participa de nenhum departamento com quadros.</p>
+</div>
+{% else %}
+<p class="text-sm text-gray-400 mb-4">Escolha um departamento para ver suas pastas e quadros.</p>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+  {% for item in departamentos %}
+  {% with dept=item.dept %}
+  <a href="{% url 'kanban:departamento' dept.pk %}"
+     class="card hover:border-blue-300 hover:shadow-md transition-all group cursor-pointer border border-gray-100">
+    <div class="flex items-start justify-between mb-3">
+      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+           style="background:{{ dept.color }}22; border: 2px solid {{ dept.color }}44;">
+        {{ dept.icon }}
+      </div>
+    </div>
+    <h3 class="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{{ dept.name }}</h3>
+    <div class="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400">
+      <span>📁 {{ item.n_folders }} pasta{{ item.n_folders|pluralize:"s" }}</span>
+      <span>📋 {{ item.n_boards }} quadro{{ item.n_boards|pluralize:"s" }}</span>
+    </div>
+  </a>
+  {% endwith %}
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

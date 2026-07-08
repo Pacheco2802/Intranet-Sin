@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Projetos{% endblock %}
+{% block page_title %}Projetos{% endblock %}
+{% block topbar_actions %}
+{% if pode_criar %}
+<a href="{% url 'kanban:projeto_create' %}" class="btn-primary text-xs">+ Novo projeto</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Abas Ativos / Finalizados -->
+<div class="flex items-center gap-1 mb-5 border-b border-gray-100">
+  <a href="{% url 'kanban:projetos' %}?aba=ativos"
+     class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors {% if aba != 'finalizados' %}border-accent text-accent{% else %}border-transparent text-gray-400 hover:text-gray-600{% endif %}">
+    Ativos
+  </a>
+  <a href="{% url 'kanban:projetos' %}?aba=finalizados"
+     class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors {% if aba == 'finalizados' %}border-accent text-accent{% else %}border-transparent text-gray-400 hover:text-gray-600{% endif %}">
+    Finalizados
+  </a>
+</div>
+
+{% if not projetos %}
+<div class="card text-center py-16">
+  <div class="text-5xl mb-4">🤝</div>
+  <p class="text-gray-500">
+    {% if aba == 'finalizados' %}Nenhum projeto finalizado.{% else %}Nenhum projeto ativo no momento.{% endif %}
+  </p>
+  {% if pode_criar and aba != 'finalizados' %}
+  <a href="{% url 'kanban:projeto_create' %}" class="btn-primary inline-block mt-4">Criar projeto</a>
+  {% endif %}
+</div>
+{% else %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+  {% for board in projetos %}
+  <a href="{% url 'kanban:board_detail' board.pk %}"
+     class="card hover:border-violet-300 hover:shadow-md transition-all group cursor-pointer border border-violet-100">
+    <div class="flex items-start justify-between mb-3">
+      <div class="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600 text-xl flex-shrink-0">🤝</div>
+      {% if board.is_locked %}
+      <span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Finalizado</span>
+      {% else %}
+      <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Ativo</span>
+      {% endif %}
+    </div>
+    <h3 class="font-semibold text-gray-900 group-hover:text-violet-600 transition-colors text-sm">{{ board.name }}</h3>
+    <p class="text-xs text-gray-400 mt-1">
+      {% with areas=board.member_departments.all %}
+      {% if areas %}{% for d in areas %}{{ d.name }}{% if not forloop.last %} · {% endif %}{% endfor %}{% else %}Participantes avulsos{% endif %}
+      {% endwith %}
+    </p>
+    <div class="flex items-center justify-between mt-3 pt-3 border-t border-violet-50 text-xs text-gray-400">
+      <span>{{ board.columns.count }} coluna{{ board.columns.count|pluralize:"s" }}</span>
+      {% if board.is_locked and board.finished_at %}<span>fim {{ board.finished_at|date:"d/m/Y" }}</span>{% else %}<span>{{ board.created_by.first_name }}</span>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

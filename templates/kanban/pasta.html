@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ folder.name }} — {{ dept.name }}{% endblock %}
+{% block page_title %}{{ folder.display_icon }} {{ folder.name }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'kanban:departamento' dept.pk %}" class="btn-secondary text-xs">← {{ dept.name }}</a>
+{% if pode_gerenciar %}
+<a href="{% url 'kanban:folder_edit' folder.pk %}" class="btn-secondary text-xs">Editar pasta</a>
+<a href="{% url 'kanban:board_create' %}?department={{ dept.pk }}&folder={{ folder.pk }}" class="btn-primary text-xs">+ Novo quadro</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if folder.description %}
+<p class="text-sm text-gray-500 mb-4">{{ folder.description }}</p>
+{% endif %}
+
+<div x-data="{ tab: '{{ tab_inicial|default:"quadros" }}' }">
+  <!-- Abas -->
+  <div class="flex items-center gap-1 mb-5 border-b border-gray-100">
+    <button @click="tab='quadros'" :class="tab==='quadros' ? 'border-accent text-accent' : 'border-transparent text-gray-400 hover:text-gray-600'"
+            class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors">Quadros <span class="text-xs text-gray-400">{{ boards|length }}</span></button>
+    <button @click="tab='documentos'" :class="tab==='documentos' ? 'border-accent text-accent' : 'border-transparent text-gray-400 hover:text-gray-600'"
+            class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors">📎 Documentos <span class="text-xs text-gray-400">{{ documentos.paginator.count }}</span></button>
+    <button @click="tab='mural'" :class="tab==='mural' ? 'border-accent text-accent' : 'border-transparent text-gray-400 hover:text-gray-600'"
+            class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors">💬 Mural <span class="text-xs text-gray-400">{{ posts|length }}</span></button>
+  </div>
+
+  <!-- Quadros -->
+  <div x-show="tab==='quadros'" x-cloak>
+    {% if boards %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {% for board in boards %}
+      {% include "kanban/partials/quadro_card.html" with board=board %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card text-center py-16">
+      <div class="text-5xl mb-4">📁</div>
+      <p class="text-gray-500">Esta pasta ainda não tem quadros.</p>
+      {% if pode_gerenciar %}
+      <a href="{% url 'kanban:board_create' %}?department={{ dept.pk }}&folder={{ folder.pk }}" class="btn-primary inline-block mt-4">Criar quadro nesta pasta</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Documentos -->
+  <div x-show="tab==='documentos'" x-cloak>
+    {% include "kanban/partials/documentos_panel.html" %}
+  </div>
+
+  <!-- Mural -->
+  <div x-show="tab==='mural'" x-cloak>
+    {% include "kanban/partials/mural_panel.html" %}
+  </div>
+</div>
+{% endblock %}

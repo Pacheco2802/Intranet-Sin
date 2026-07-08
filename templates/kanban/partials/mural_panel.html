@@ -1,0 +1,62 @@
+{# Espera: scope, owner_pk, posts (ascendente), posts_restantes, pode_escrever, pode_gerenciar_conteudo #}
+<div class="space-y-3">
+
+  {% if posts %}
+  <div data-mural-scroll class="space-y-2 overflow-y-auto pr-1" style="max-height: 50vh;">
+    {% if posts_restantes %}
+    <div class="text-center py-1">
+      <a href="?tab=mural&mural_all=1" class="text-xs text-accent hover:underline">↑ Ver {{ posts_restantes }} mensagem{{ posts_restantes|pluralize:"ns" }} anterior{{ posts_restantes|pluralize:"es" }}</a>
+    </div>
+    {% endif %}
+    {% for post in posts %}
+    <div class="card py-2.5">
+      <div class="flex items-center gap-2 mb-1">
+        <div class="w-6 h-6 rounded-full bg-accent flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">
+          {{ post.author.first_name|first|upper }}{{ post.author.last_name|first|upper }}
+        </div>
+        <span class="text-sm font-medium text-gray-800">{{ post.author.get_full_name|default:post.author.first_name|default:"—" }}</span>
+        <span class="text-xs text-gray-400">{{ post.created_at|date:"d/m/Y H:i" }}</span>
+        {% if pode_gerenciar_conteudo or post.author_id == user.pk %}
+        <form method="post" action="{% url 'kanban:post_delete' post.pk %}"
+              onsubmit="return confirm('Excluir esta mensagem?')" class="ml-auto">
+          {% csrf_token %}
+          <button type="submit" class="text-xs text-gray-400 hover:text-red-600 font-medium">Excluir</button>
+        </form>
+        {% endif %}
+      </div>
+      <p class="text-sm text-gray-600 whitespace-pre-wrap pl-8">{{ post.content }}</p>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card text-center py-10 text-gray-400 text-sm">Nenhuma mensagem no mural ainda. Seja o primeiro a escrever 👇</div>
+  {% endif %}
+
+  {% if pode_escrever %}
+  <form method="post" action="{% url 'kanban:post_create' scope owner_pk %}" class="card space-y-2">
+    {% csrf_token %}
+    <textarea name="content" rows="2" required class="form-input text-sm"
+              placeholder="Escreva uma mensagem para o mural..."></textarea>
+    <div class="flex justify-end">
+      <button type="submit" class="btn-primary text-sm">Publicar</button>
+    </div>
+  </form>
+  {% endif %}
+</div>
+
+<script>
+(function () {
+  document.querySelectorAll('[data-mural-scroll]').forEach(function (el) {
+    if (el.dataset.bound) return;
+    el.dataset.bound = '1';
+    var toBottom = function () { el.scrollTop = el.scrollHeight; };
+    toBottom();
+    // Reposiciona quando o mural ficar visível (ex.: troca de aba)
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { if (e.isIntersecting) toBottom(); });
+      }).observe(el);
+    }
+  });
+})();
+</script>

@@ -7,6 +7,7 @@ from django.db.models import Sum
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from core.middleware import AuditMiddleware
@@ -61,6 +62,15 @@ def _aprovadores_diretoria():
 
 def _ip(request):
     return AuditMiddleware.get_client_ip(request)
+
+
+def _safe_next(request, fallback):
+    """Retorna o 'next' do POST só se for URL interna segura; senão, o fallback.
+    Evita open redirect (o redirect() do Django não valida host)."""
+    nxt = request.POST.get('next')
+    if nxt and url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()}):
+        return nxt
+    return fallback
 
 
 _MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
@@ -212,7 +222,7 @@ def reembolso_pagar(request, pk):
         'Reembolso pago', r.titulo, f'/financeiro/reembolsos/{r.pk}/',
     )
     messages.success(request, 'Pagamento do reembolso confirmado.')
-    return redirect(request.POST.get('next') or f'/financeiro/reembolsos/{r.pk}/')
+    return redirect(_safe_next(request, f'/financeiro/reembolsos/{r.pk}/'))
 
 
 @login_required
@@ -391,7 +401,7 @@ def atividade_aprovar(request, pk):
         titulo_notif, corpo_notif, f'/financeiro/diretoria/{a.pk}/',
     )
     messages.success(request, msg)
-    return redirect(request.POST.get('next') or f'/financeiro/diretoria/{a.pk}/')
+    return redirect(_safe_next(request, f'/financeiro/diretoria/{a.pk}/'))
 
 
 @login_required
@@ -413,7 +423,7 @@ def atividade_rejeitar(request, pk):
         'Atividade rejeitada', motivo or a.titulo, f'/financeiro/diretoria/{a.pk}/',
     )
     messages.success(request, 'Atividade rejeitada.')
-    return redirect(request.POST.get('next') or f'/financeiro/diretoria/{a.pk}/')
+    return redirect(_safe_next(request, f'/financeiro/diretoria/{a.pk}/'))
 
 
 # ───────────────────────── Pagamentos (a pagar + realizados) ─────────────────────────

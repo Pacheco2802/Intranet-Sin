@@ -8,6 +8,8 @@ class CoreConfig(AppConfig):
         from django.db.models.signals import post_save
         from django.dispatch import receiver
 
+        from core import checks  # noqa: F401 — registra os system checks de segurança
+
         @receiver(post_save, sender='core.Department')
         def bootstrap_department(sender, instance, created, **kwargs):
             if not created:

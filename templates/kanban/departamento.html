@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ dept.name }} — Kanban{% endblock %}
+{% block page_title %}{{ dept.name }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'kanban:departamentos' %}" class="btn-secondary text-xs">← Departamentos</a>
+{% if pode_gerenciar %}
+<a href="{% url 'kanban:folder_create' dept.pk %}" class="btn-secondary text-xs">+ Nova pasta</a>
+<a href="{% url 'kanban:board_create' %}?department={{ dept.pk }}" class="btn-primary text-xs">+ Novo quadro</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Pastas -->
+{% if folders %}
+<div class="mb-6">
+  <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Pastas</h2>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    {% for item in folders %}
+    {% with folder=item.folder %}
+    <div class="card border border-gray-100 hover:border-blue-300 hover:shadow-md transition-all group relative">
+      <a href="{% url 'kanban:pasta' dept.pk folder.pk %}" class="block">
+        <div class="flex items-start justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+               style="background:{{ folder.display_color }}22; border: 2px solid {{ folder.display_color }}44;">
+            {{ folder.display_icon }}
+          </div>
+          <span class="text-xs text-gray-400">{{ item.n }} quadro{{ item.n|pluralize:"s" }}</span>
+        </div>
+        <h3 class="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors text-sm">{{ folder.name }}</h3>
+        {% if folder.description %}<p class="text-xs text-gray-400 mt-1">{{ folder.description }}</p>{% endif %}
+      </a>
+      {% if pode_gerenciar %}
+      <div class="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+        <a href="{% url 'kanban:folder_edit' folder.pk %}" class="text-xs text-gray-400 hover:text-blue-600 font-medium">Editar</a>
+        <a href="{% url 'kanban:board_create' %}?department={{ dept.pk }}&folder={{ folder.pk }}" class="text-xs text-green-600 hover:underline font-medium">+ Quadro</a>
+        <form method="post" action="{% url 'kanban:folder_delete' folder.pk %}" class="ml-auto"
+              onsubmit="return confirm('Excluir a pasta {{ folder.name }}? Os quadros dela voltam para Geral (não são apagados).')">
+          {% csrf_token %}
+          <button type="submit" class="text-xs text-gray-400 hover:text-red-600 font-medium">Excluir</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    {% endwith %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Geral (quadros sem pasta) -->
+<div>
+  <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Geral</h2>
+  {% if geral_boards %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    {% for board in geral_boards %}
+    {% include "kanban/partials/quadro_card.html" with board=board %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card text-center py-10 text-gray-400 text-sm">
+    Nenhum quadro fora de pasta neste departamento.
+    {% if pode_gerenciar %}<a href="{% url 'kanban:board_create' %}?department={{ dept.pk }}" class="text-accent hover:underline ml-1">Criar quadro</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% if not folders and pode_gerenciar %}
+<div class="card bg-blue-50 border border-blue-100 mt-6">
+  <p class="text-sm text-blue-700">Organize os quadros deste departamento em pastas.
+    <a href="{% url 'kanban:folder_create' dept.pk %}" class="font-medium hover:underline">Criar a primeira pasta →</a>
+  </p>
+</div>
+{% endif %}
+
+{% endblock %}
