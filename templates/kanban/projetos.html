@@ -35,7 +35,13 @@
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
   {% for board in projetos %}
   <a href="{% url 'kanban:board_detail' board.pk %}"
-     class="card hover:border-violet-300 hover:shadow-md transition-all group cursor-pointer border border-violet-100">
+     class="card hover:border-violet-300 hover:shadow-md transition-all group cursor-pointer relative {% if board.unread_count %}border-2 border-red-300 shadow-sm{% else %}border border-violet-100{% endif %}">
+    {% if board.unread_count %}
+    <span class="absolute -top-2 -right-2 bg-red-500 text-white text-[11px] font-bold rounded-full min-w-[22px] h-[22px] flex items-center justify-center px-1.5 shadow"
+          title="{{ board.unread_count }} nova{{ board.unread_count|pluralize:'s' }} atualizaç{{ board.unread_count|pluralize:'ão,ões' }}">
+      {{ board.unread_count }}
+    </span>
+    {% endif %}
     <div class="flex items-start justify-between mb-3">
       <div class="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600 text-xl flex-shrink-0">🤝</div>
       {% if board.is_locked %}

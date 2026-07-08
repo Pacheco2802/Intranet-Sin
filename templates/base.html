@@ -363,9 +363,13 @@
       <!-- Comunicados — link direto -->
       <a href="{% url 'comunicados:list' %}"
          class="sb-item {% if 'comunicados' in request.path %}active{% endif %}"
-         title="Comunicados">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
-        <span x-show="panelOpen" x-cloak>Comunicados</span>
+         :class="!panelOpen && 'justify-center'"
+         title="Comunicados{% if comunicados_unread_count %} ({{ comunicados_unread_count }} novo{{ comunicados_unread_count|pluralize:'s' }}){% endif %}">
+        <div class="relative flex-shrink-0">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+          {% if comunicados_unread_count > 0 %}<span class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-bold rounded-full min-w-[13px] h-[13px] flex items-center justify-center px-0.5 leading-none">{{ comunicados_unread_count }}</span>{% endif %}
+        </div>
+        <span x-show="panelOpen" x-cloak class="flex-1">Comunicados{% if comunicados_unread_count > 0 %} <span class="text-[10px] font-bold px-1 py-0.5 rounded-full ml-1" style="background:rgba(239,68,68,.8);color:#fff;">{{ comunicados_unread_count }}</span>{% endif %}</span>
       </a>
 
       <!-- Chat — accordion -->
@@ -493,9 +497,12 @@
       <a href="{% url 'kanban:projetos' %}"
          class="sb-item {% if 'projetos' in request.path %}active{% endif %}"
          :class="!panelOpen && 'justify-center'"
-         title="Projetos">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-        <span x-show="panelOpen" x-cloak>Projetos</span>
+         title="Projetos{% if projetos_unread_count %} ({{ projetos_unread_count }} nova{{ projetos_unread_count|pluralize:'s' }}){% endif %}">
+        <div class="relative flex-shrink-0">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+          {% if projetos_unread_count > 0 %}<span class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-bold rounded-full min-w-[13px] h-[13px] flex items-center justify-center px-0.5 leading-none">{{ projetos_unread_count }}</span>{% endif %}
+        </div>
+        <span x-show="panelOpen" x-cloak class="flex-1">Projetos{% if projetos_unread_count > 0 %} <span class="text-[10px] font-bold px-1 py-0.5 rounded-full ml-1" style="background:rgba(239,68,68,.8);color:#fff;">{{ projetos_unread_count }}</span>{% endif %}</span>
       </a>
 
       <!-- Equipes — link direto -->

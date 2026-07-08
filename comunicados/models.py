@@ -28,6 +28,12 @@ class Comunicado(models.Model):
         verbose_name='Departamentos',
         help_text='Deixe em branco para enviar a todos',
     )
+    read_by = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name='comunicados_lidos',
+        verbose_name='Lido por',
+    )
 
     class Meta:
         verbose_name = 'Comunicado'

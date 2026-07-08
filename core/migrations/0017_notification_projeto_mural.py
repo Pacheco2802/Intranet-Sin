@@ -1,0 +1,16 @@
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('core', '0016_alter_notification_type'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='notification',
+            name='type',
+            field=models.CharField(choices=[('CARD_ASSIGNED', 'Card atribuído a você'), ('CARD_DEPT', 'Card criado na sua área'), ('CARD_CROSS', 'Card entre departamentos'), ('CARD_COMMENT', 'Comentário em card'), ('CARD_MOVED', 'Card movido de coluna'), ('EVENT_INVITE', 'Convite para evento'), ('EVENT_REMINDER', 'Lembrete de evento'), ('REEMBOLSO_NOVO', 'Novo reembolso para análise'), ('REEMBOLSO_STATUS', 'Atualização do seu reembolso'), ('DIRETORIA_NOVA', 'Nova atividade para aprovar'), ('DIRETORIA_STATUS', 'Atualização da sua atividade'), ('DIRETORIA_PAGO', 'Pagamento de diretoria realizado'), ('PROJETO_NOVO', 'Você foi incluído em um projeto'), ('PROJETO_FIM', 'Projeto finalizado'), ('PROJETO_MURAL', 'Nova mensagem no mural do projeto')], max_length=20, verbose_name='Tipo'),
+        ),
+    ]

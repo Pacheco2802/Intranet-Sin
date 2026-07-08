@@ -3,8 +3,28 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from core.models import CustomUser, Notification
 from .models import Comunicado
 from .forms import ComunicadoForm
+
+
+def _destinatarios_comunicado(comunicado):
+    """Usuários ativos que devem receber notificação do comunicado."""
+    depts = list(comunicado.departments.all())
+    users = CustomUser.objects.filter(is_active=True)
+    if depts:
+        users = users.filter(departments__in=depts).distinct()
+    return users
+
+
+def _notificar_publicacao(comunicado, actor):
+    link = f'/comunicados/{comunicado.pk}/'
+    for u in _destinatarios_comunicado(comunicado):
+        Notification.send(
+            u, actor, Notification.Type.COMUNICADO_NOVO,
+            f'Novo comunicado: {comunicado.title}',
+            'Um novo comunicado foi publicado.', link,
+        )
 
 
 def _pode_gerenciar(user):
@@ -29,6 +49,12 @@ def comunicado_detail(request, pk):
     comunicado = get_object_or_404(Comunicado, pk=pk)
     if not comunicado.is_published and not _pode_gerenciar(request.user):
         return HttpResponseForbidden()
+    if comunicado.is_published:
+        comunicado.read_by.add(request.user)
+        Notification.objects.filter(
+            user=request.user, is_read=False,
+            link__startswith=f'/comunicados/{comunicado.pk}/',
+        ).update(is_read=True)
     return render(request, 'comunicados/detail.html', {
         'comunicado': comunicado,
         'pode_gerenciar': _pode_gerenciar(request.user),
@@ -40,6 +66,8 @@ def _salvar_comunicado(request, form, comunicado=None):
     obj = form.save(commit=False)
     if comunicado is None:
         obj.author = request.user
+
+    ja_publicado = bool(comunicado and comunicado.is_published)
 
     publicar = request.POST.get('publicar') == '1'
     if publicar:
@@ -56,6 +84,10 @@ def _salvar_comunicado(request, form, comunicado=None):
 
     obj.save()
     form.save_m2m()
+
+    # Notifica só na transição rascunho→publicado (evita duplicar em edição)
+    if obj.is_published and not ja_publicado:
+        _notificar_publicacao(obj, request.user)
     return obj
 
 

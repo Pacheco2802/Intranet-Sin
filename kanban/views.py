@@ -192,9 +192,14 @@ def projetos(request):
     qs = Board.objects.filter(is_cross_department=True, status=status).select_related(
         'created_by'
     ).prefetch_related('member_departments', 'members')
-    projetos = [b for b in qs if b.can_access(user)]
+    projetos_list = [b for b in qs if b.can_access(user)]
+    # Notificações não lidas por projeto (cards + mural, atribuídas a este usuário)
+    for b in projetos_list:
+        b.unread_count = Notification.objects.filter(
+            user=user, is_read=False, link__startswith=f'/kanban/{b.pk}/',
+        ).count()
     return render(request, 'kanban/projetos.html', {
-        'projetos': projetos,
+        'projetos': projetos_list,
         'aba': aba,
         'pode_criar': user.can_see_all or Department.objects.filter(leaders=user).exists(),
     })
@@ -393,6 +398,17 @@ def post_create(request, scope, obj_pk):
         messages.error(request, 'Escreva uma mensagem.')
         return redirect(back)
     PastaPost.objects.create(author=request.user, content=content, **_scope_fk(scope, owner))
+    if scope == 'projeto':
+        destinatarios = set(owner.members.all())
+        for dept in owner.member_departments.all():
+            destinatarios.update(dept.users.filter(is_active=True))
+        link = f'/kanban/{owner.pk}/?tab=mural'
+        trecho = content[:100] + ('…' if len(content) > 100 else '')
+        for u in destinatarios:
+            Notification.send(
+                u, request.user, Notification.Type.PROJETO_MURAL,
+                f'Nova mensagem no mural: {owner.name}', trecho, link,
+            )
     return redirect(back)
 
 
@@ -464,6 +480,10 @@ def board_detail(request, pk):
         'back_label': back_label,
     }
     if board.is_cross_department:
+        # Marca como lidas as notificações relativas a este projeto (badges limpam ao abrir)
+        Notification.objects.filter(
+            user=request.user, is_read=False, link__startswith=f'/kanban/{board.pk}/',
+        ).update(is_read=True)
         posts, posts_restantes = _mural_posts(board.posts, request)
         ctx.update({
             'scope': 'projeto', 'owner_pk': board.pk,

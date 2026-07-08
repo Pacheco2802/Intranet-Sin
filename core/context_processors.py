@@ -27,8 +27,36 @@ def global_context(request):
     from core.models import Notification
     notification_count = Notification.objects.filter(user=request.user, is_read=False).count()
 
+    projetos_unread_count = 0
+    try:
+        from kanban.models import Board
+        project_pks = list(
+            Board.objects.filter(is_cross_department=True).values_list('pk', flat=True)
+        )
+        if project_pks:
+            pattern = r'^/kanban/(' + '|'.join(str(pk) for pk in project_pks) + r')/'
+            projetos_unread_count = Notification.objects.filter(
+                user=request.user, is_read=False, link__regex=pattern,
+            ).count()
+    except Exception:
+        pass
+
+    comunicados_unread_count = 0
+    try:
+        from comunicados.models import Comunicado
+        from django.db.models import Q
+        user_dept_pks = list(request.user.departments.values_list('pk', flat=True))
+        qs = Comunicado.objects.filter(is_published=True).exclude(read_by=request.user)
+        # Comunicado sem departamento vai para todos; com departamentos, só para os das áreas do usuário.
+        qs = qs.filter(Q(departments__isnull=True) | Q(departments__pk__in=user_dept_pks))
+        comunicados_unread_count = qs.distinct().count()
+    except Exception:
+        pass
+
     return {
         'unread_messages_count': unread_count,
         'pending_count': pending_count,
         'notification_count': notification_count,
+        'projetos_unread_count': projetos_unread_count,
+        'comunicados_unread_count': comunicados_unread_count,
     }

@@ -286,6 +286,8 @@ class Notification(models.Model):
         DIRETORIA_PAGO = 'DIRETORIA_PAGO', 'Pagamento de diretoria realizado'
         PROJETO_NOVO = 'PROJETO_NOVO', 'Você foi incluído em um projeto'
         PROJETO_FIM = 'PROJETO_FIM', 'Projeto finalizado'
+        PROJETO_MURAL = 'PROJETO_MURAL', 'Nova mensagem no mural do projeto'
+        COMUNICADO_NOVO = 'COMUNICADO_NOVO', 'Novo comunicado publicado'
 
     user = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE,
