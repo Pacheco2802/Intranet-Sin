@@ -3,8 +3,10 @@
 {% block page_title %}{{ dept.name }}{% endblock %}
 {% block topbar_actions %}
 <a href="{% url 'kanban:departamentos' %}" class="btn-secondary text-xs">← Departamentos</a>
-{% if pode_gerenciar %}
+{% if pode_criar_pasta %}
 <a href="{% url 'kanban:folder_create' dept.pk %}" class="btn-secondary text-xs">+ Nova pasta</a>
+{% endif %}
+{% if pode_gerenciar %}
 <a href="{% url 'kanban:board_create' %}?department={{ dept.pk }}" class="btn-primary text-xs">+ Novo quadro</a>
 {% endif %}
 {% endblock %}
@@ -65,7 +67,7 @@
   {% endif %}
 </div>
 
-{% if not folders and pode_gerenciar %}
+{% if not folders and pode_criar_pasta %}
 <div class="card bg-blue-50 border border-blue-100 mt-6">
   <p class="text-sm text-blue-700">Organize os quadros deste departamento em pastas.
     <a href="{% url 'kanban:folder_create' dept.pk %}" class="font-medium hover:underline">Criar a primeira pasta →</a>

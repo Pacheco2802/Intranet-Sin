@@ -47,9 +47,19 @@ def board_list(request):
 # ───────────────────────── Pastas por departamento ─────────────────────────
 
 def pode_gerenciar_pastas(user, dept):
-    """Quem pode criar/editar pastas e quadros dentro de um departamento:
+    """Quem pode editar/excluir pastas e criar/editar quadros dentro de um departamento:
     admin TI, presidente/coord geral e líderes do próprio departamento."""
     return user.is_admin_ti or user.is_presidente or dept.leaders.filter(pk=user.pk).exists()
+
+
+def pode_criar_pasta(user, dept):
+    """Criação de pasta liberada a qualquer membro do departamento (além de
+    quem já gerencia). NÃO libera via can_see_all — isso reabriria a brecha
+    do pentest: um líder de outra área veria departments alheios."""
+    return (
+        pode_gerenciar_pastas(user, dept)
+        or user.departments.filter(pk=dept.pk).exists()
+    )
 
 
 def _pode_ver_departamento(user, dept):
@@ -73,6 +83,7 @@ def departamentos(request):
             'n_boards': len(boards_acessiveis),
             'n_folders': dept.board_folders.count(),
             'pode_gerenciar': pode_gerenciar_pastas(user, dept),
+            'pode_criar_pasta': pode_criar_pasta(user, dept),
         })
     return render(request, 'kanban/pastas_home.html', {'departamentos': data})
 
@@ -85,14 +96,16 @@ def departamento(request, dept_pk):
     if not _pode_ver_departamento(user, dept):
         return HttpResponseForbidden()
     pode = pode_gerenciar_pastas(user, dept)
+    pode_criar = pode_criar_pasta(user, dept)
     folders = []
     for f in dept.board_folders.prefetch_related('boards').all():
         boards = [b for b in f.boards.all() if b.can_access(user)]
-        if boards or pode:
+        if boards or pode_criar:
             folders.append({'folder': f, 'boards': boards, 'n': len(boards)})
     geral = [b for b in dept.boards.filter(folder__isnull=True) if b.can_access(user)]
     return render(request, 'kanban/departamento.html', {
-        'dept': dept, 'folders': folders, 'geral_boards': geral, 'pode_gerenciar': pode,
+        'dept': dept, 'folders': folders, 'geral_boards': geral,
+        'pode_gerenciar': pode, 'pode_criar_pasta': pode_criar,
     })
 
 
@@ -125,7 +138,7 @@ def pasta(request, dept_pk, folder_pk):
 @login_required
 def folder_create(request, dept_pk):
     dept = get_object_or_404(Department, pk=dept_pk)
-    if not pode_gerenciar_pastas(request.user, dept):
+    if not pode_criar_pasta(request.user, dept):
         return HttpResponseForbidden()
     form = BoardFolderForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
