@@ -581,10 +581,21 @@ def board_create(request):
 def card_detail(request, board_pk, pk):
     board = get_object_or_404(Board, pk=board_pk)
     is_member = board.can_access(request.user)
-    card = get_object_or_404(
-        Card.objects.select_related('source_subtask__card__column__board'),
-        pk=pk, column__board=board,
-    )
+    try:
+        card = Card.objects.select_related(
+            'source_subtask__card__column__board', 'column__board',
+        ).get(pk=pk, column__board=board)
+    except Card.DoesNotExist:
+        # Card pode ter sido transferido para outro quadro; se ainda existir e
+        # o usuário puder abri-lo lá, redireciona para a URL correta em vez
+        # de devolver 404 (mantém válidos os links de notificações antigas).
+        card_atual = get_object_or_404(
+            Card.objects.select_related('column__board'), pk=pk,
+        )
+        board_atual = card_atual.column.board
+        if board_atual.can_access(request.user) or card_atual.creator_id == request.user.pk:
+            return redirect('kanban:card_detail', board_pk=board_atual.pk, pk=card_atual.pk)
+        return HttpResponseForbidden()
     is_creator = card.creator_id == request.user.pk
     if not is_member and not is_creator:
         return HttpResponseForbidden()
@@ -592,7 +603,7 @@ def card_detail(request, board_pk, pk):
         return HttpResponseForbidden()
 
     comment_form = CardCommentForm()
-    subtask_form = SubTaskForm()
+    subtask_form = SubTaskForm(board=board)
 
     if request.method == 'POST':
         if not is_member:
@@ -639,7 +650,7 @@ def card_detail(request, board_pk, pk):
                     )
             return redirect('kanban:card_detail', board_pk=board.pk, pk=card.pk)
         elif action == 'subtask':
-            subtask_form = SubTaskForm(request.POST)
+            subtask_form = SubTaskForm(request.POST, board=board)
             if subtask_form.is_valid():
                 st = subtask_form.save(commit=False)
                 st.card = card
@@ -994,6 +1005,226 @@ def card_move_direction(request, pk):
             link=f'/kanban/{board.pk}/card/{card.pk}/',
         )
     return _redirect()
+
+
+# ── Transferir card entre quadros ─────────────────────────────────────────────
+
+def _boards_para_transferir(user):
+    """Quadros elegíveis como destino para transferência.
+
+    Espelha estritamente a lógica de Board.can_access — mais rígido que
+    _accessible_boards, que inclui a mais quadros cross-department cujo
+    'department' coincide com o do usuário (mesmo sem estar em members/
+    member_departments). Também exclui quadros finalizados (somente leitura).
+    """
+    base = Board.objects.exclude(status=Board.Status.FINALIZADO)
+    if user.can_see_all:
+        return base
+    return base.filter(
+        Q(is_global=True)
+        | Q(members=user)
+        | Q(is_cross_department=False, department__in=user.departments.all())
+        | Q(is_cross_department=True, member_departments__in=user.departments.all())
+    ).distinct()
+
+
+def _transfer_warnings(card, dest_board):
+    """Retorna a lista de avisos (strings) que o usuário precisa confirmar antes
+    de mover um card para dest_board."""
+    warnings = []
+
+    # Assignee que perde acesso (deixa de conseguir abrir o detalhe do card).
+    if card.assignee_id and not dest_board.can_access(card.assignee):
+        warnings.append(
+            f'A responsável atual ({card.assignee.get_full_name() or card.assignee}) '
+            f'não é membro de "{dest_board.name}" — ela verá o card em "Meu Kanban", '
+            'mas não conseguirá abrir os detalhes no quadro de destino.'
+        )
+
+    # allowed_users (card privado) que perdem acesso.
+    if card.is_private:
+        extras = card.allowed_users.exclude(pk=card.creator_id or 0)
+        if card.assignee_id:
+            extras = extras.exclude(pk=card.assignee_id)
+        sem_acesso = [u for u in extras if not dest_board.can_access(u)]
+        if sem_acesso:
+            nomes = ', '.join((u.get_full_name() or str(u)) for u in sem_acesso)
+            warnings.append(
+                f'{len(sem_acesso)} pessoa(s) com acesso individual a este card não '
+                f'são membros do quadro de destino e perderão o acesso: {nomes}.'
+            )
+
+    # Card em coluna de status final — desfecho será descartado se o destino não
+    # for status final.
+    if card.column.column_type == Column.ColumnType.STATUS_FINAL:
+        warnings.append(
+            'Este card está em uma coluna de Status Final. Se a coluna de destino '
+            'não for de Status Final, o desfecho registrado será descartado.'
+        )
+
+    # Card filho de sub-tarefa — perde o agrupamento no quadro original.
+    if card.source_subtask_id:
+        parent_title = card.source_subtask.card.title
+        warnings.append(
+            f'Este card veio de uma sub-tarefa de "{parent_title}". Após mover, '
+            'ele deixará de aparecer agrupado no quadro original.'
+        )
+
+    return warnings
+
+
+def _agrupa_boards_por_dept(boards, user):
+    """Agrupa uma lista de Boards para exibição em dois blocos: 'meus deptos'
+    e 'outros deptos' (aos quais o usuário tem acesso via member/cross-dept).
+    Dentro de cada bloco, organiza por Departamento › Pasta."""
+    user_dept_ids = set(user.departments.values_list('pk', flat=True))
+    meus, outros = {}, {}
+    for b in boards:
+        target = meus if (b.department_id in user_dept_ids) else outros
+        dept_key = (
+            (b.department_id, b.department.name if b.department else '—')
+            if not b.is_cross_department else (-1, 'Projetos entre áreas')
+        )
+        folder_key = (
+            (b.folder_id, b.folder.name) if b.folder_id else (0, 'Geral')
+        )
+        target.setdefault(dept_key, {}).setdefault(folder_key, []).append(b)
+
+    def _sort(bucket):
+        out = []
+        for dept_key in sorted(bucket.keys(), key=lambda k: k[1].lower()):
+            folders = bucket[dept_key]
+            out.append({
+                'dept_name': dept_key[1],
+                'folders': [
+                    {'folder_name': fk[1], 'boards': folders[fk]}
+                    for fk in sorted(folders.keys(), key=lambda k: (k[0] != 0, k[1].lower()))
+                ],
+            })
+        return out
+
+    return {'meus': _sort(meus), 'outros': _sort(outros)}
+
+
+@login_required
+def card_transfer(request, pk):
+    """Move um card para outro quadro (e coluna) ao qual o usuário tem acesso."""
+    card = get_object_or_404(
+        Card.objects.select_related('column__board', 'source_subtask__card'),
+        pk=pk,
+    )
+    source = card.column.board
+
+    if not source.can_access(request.user):
+        return HttpResponseForbidden()
+    if not card.can_view(request.user):
+        return HttpResponseForbidden()
+    if source.is_locked:
+        messages.error(request, 'Quadro de origem finalizado: somente leitura.')
+        return redirect('kanban:card_detail', board_pk=source.pk, pk=card.pk)
+
+    boards_qs = (
+        _boards_para_transferir(request.user)
+        .exclude(pk=source.pk)
+        .select_related('department', 'folder')
+        .order_by('department__name', 'folder__name', 'name')
+    )
+    grouped = _agrupa_boards_por_dept(list(boards_qs), request.user)
+
+    if request.method == 'POST':
+        dest_id = request.POST.get('board_id')
+        col_id = request.POST.get('column_id')
+        confirmed = request.POST.get('confirmed') == '1'
+
+        if not dest_id or not col_id:
+            messages.error(request, 'Escolha o quadro e a coluna de destino.')
+            return redirect('kanban:card_transfer', pk=card.pk)
+
+        dest = get_object_or_404(Board, pk=dest_id)
+        if not dest.can_access(request.user) or dest.pk == source.pk:
+            return HttpResponseForbidden()
+        if dest.is_locked:
+            messages.error(request, 'Quadro de destino está finalizado: não é possível receber cards.')
+            return redirect('kanban:card_transfer', pk=card.pk)
+
+        dest_col = get_object_or_404(Column, pk=col_id, board=dest)
+
+        warnings = _transfer_warnings(card, dest)
+        if warnings and not confirmed:
+            return render(request, 'kanban/card_transfer.html', {
+                'card': card,
+                'source': source,
+                'grouped': grouped,
+                'warnings': warnings,
+                'dest': dest,
+                'dest_col': dest_col,
+            })
+
+        old_col = card.column
+        card.column = dest_col
+        last = Card.objects.filter(column=dest_col).order_by('-order').first()
+        card.order = (last.order + 1) if last else 0
+
+        cleared_final = False
+        update_fields = ['column', 'order']
+        if (old_col.column_type == Column.ColumnType.STATUS_FINAL
+                and dest_col.column_type != Column.ColumnType.STATUS_FINAL):
+            card.final_status = ''
+            card.final_notes = ''
+            card.completed_at = None
+            cleared_final = True
+            update_fields += ['final_status', 'final_notes', 'completed_at']
+        card.save(update_fields=update_fields)
+
+        if dest_col.column_type == Column.ColumnType.STATUS_FINAL:
+            _propagar_conclusao_para_subtarefa(card, request.user)
+
+        CardActivity.objects.create(
+            card=card, user=request.user,
+            action=(
+                f'Movido de "{source.name} / {old_col.name}" '
+                f'para "{dest.name} / {dest_col.name}"'
+            ),
+        )
+        if cleared_final:
+            CardActivity.objects.create(
+                card=card, user=request.user,
+                action='Desfecho descartado ao mover para outro quadro',
+            )
+
+        AuditLog.log(
+            request.user, AuditLog.Action.CARD_UPDATE,
+            resource_type='Card', resource_id=card.pk,
+            ip=AuditMiddleware.get_client_ip(request),
+        )
+
+        link = f'/kanban/{dest.pk}/card/{card.pk}/'
+        notified = set()
+        card.refresh_from_db(fields=['assignee', 'creator'])
+        if card.assignee_id and card.assignee_id != request.user.pk:
+            Notification.send(
+                user=card.assignee, actor=request.user,
+                ntype=Notification.Type.CARD_MOVED,
+                title=f'Card movido para "{dest.name}"',
+                body=card.title, link=link,
+            )
+            notified.add(card.assignee_id)
+        if card.creator_id and card.creator_id != request.user.pk and card.creator_id not in notified:
+            Notification.send(
+                user=card.creator, actor=request.user,
+                ntype=Notification.Type.CARD_MOVED,
+                title=f'Sua solicitação foi movida para "{dest.name}"',
+                body=card.title, link=link,
+            )
+
+        messages.success(request, f'Card movido para "{dest.name} / {dest_col.name}".')
+        return redirect('kanban:card_detail', board_pk=dest.pk, pk=card.pk)
+
+    return render(request, 'kanban/card_transfer.html', {
+        'card': card,
+        'source': source,
+        'grouped': grouped,
+    })
 
 
 @login_required

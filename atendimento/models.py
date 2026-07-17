@@ -37,7 +37,8 @@ class Atendimento(models.Model):
     nextqs_fila = models.CharField(
         'Fila NextQS', max_length=1, blank=True,
         choices=[('J', 'Jurídico'), ('P', 'Previdenciário'), ('T', 'Trabalhista'),
-                 ('A', 'Andamento de Processo'), ('M', 'Médico do Trabalho')],
+                 ('A', 'Andamento de Processo'), ('M', 'Médico do Trabalho'),
+                 ('D', 'Denúncia')],
     )
     is_retorno = models.BooleanField('É retorno?', default=False)
     is_preferencial = models.BooleanField('Atendimento preferencial', default=False)

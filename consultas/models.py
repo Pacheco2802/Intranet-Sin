@@ -7,24 +7,30 @@ from core.validators import validate_file_extension, validate_file_size
 
 
 class Doctor(models.Model):
-    name   = models.CharField('Nome', max_length=100)
-    room   = models.CharField('Sala', max_length=50, blank=True)
-    color  = models.CharField('Cor', max_length=7, default='#1e3a5f')
-    user   = models.OneToOneField(
+    name      = models.CharField('Nome', max_length=100)
+    room      = models.CharField('Sala', max_length=50, blank=True)
+    color     = models.CharField('Cor', max_length=7, default='#1e3a5f')
+    user      = models.OneToOneField(
         settings.AUTH_USER_MODEL, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='doctor_profile',
         verbose_name='Usuário vinculado',
     )
-    active = models.BooleanField('Ativo', default=True)
-    order  = models.SmallIntegerField('Ordem', default=0)
+    active    = models.BooleanField('Ativo', default=True)
+    is_medico = models.BooleanField('É médico', default=True,
+                                    help_text='Desmarque para atendentes (pré/pós, triagem).')
+    order     = models.SmallIntegerField('Ordem', default=0)
 
     class Meta:
-        verbose_name = 'Médico'
-        verbose_name_plural = 'Médicos'
+        verbose_name = 'Profissional'
+        verbose_name_plural = 'Profissionais'
         ordering = ['order', 'name']
 
     def __str__(self):
         return self.name
+
+    @property
+    def role_label(self):
+        return 'Médico' if self.is_medico else 'Atendente'
 
 
 class DoctorSchedule(models.Model):

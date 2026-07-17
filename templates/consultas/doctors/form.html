@@ -3,7 +3,7 @@
 {% block page_title %}{{ title }}{% endblock %}
 
 {% block topbar_actions %}
-<a href="{% url 'consultas:doctor_list' %}" class="btn-secondary text-xs">← Médicos</a>
+<a href="{% url 'consultas:doctor_list' %}" class="btn-secondary text-xs">← Profissionais</a>
 {% endblock %}
 
 {% block content %}
@@ -41,7 +41,15 @@
 
       <div class="flex items-center gap-2">
         {{ form.active }}
-        <label class="text-sm text-gray-700">Médico ativo</label>
+        <label class="text-sm text-gray-700">Ativo</label>
+      </div>
+
+      <div class="flex items-start gap-2">
+        {{ form.is_medico }}
+        <div>
+          <label class="text-sm text-gray-700 block">É médico</label>
+          <p class="text-xs text-gray-400">Desmarque para atendentes (pré/pós, triagem).</p>
+        </div>
       </div>
     </div>
 

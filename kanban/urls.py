@@ -43,6 +43,7 @@ urlpatterns = [
     path('<int:board_pk>/card/<int:pk>/anexar/', views.card_attach, name='card_attach'),
     path('card/<int:pk>/mover/', views.card_move, name='card_move'),
     path('card/<int:pk>/mover-direcao/', views.card_move_direction, name='card_move_direction'),
+    path('card/<int:pk>/transferir/', views.card_transfer, name='card_transfer'),
     path('<int:pk>/colunas/', views.board_columns_partial, name='board_columns_partial'),
     path('<int:board_pk>/finalizados/<int:column_pk>/', views.board_finalizados, name='board_finalizados'),
     path('subtarefa/<int:pk>/toggle/', views.subtask_toggle, name='subtask_toggle'),

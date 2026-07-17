@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Horários Livres{% endblock %}
+{% block page_title %}Horários Livres{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'consultas:agenda' %}" class="btn-secondary text-xs">← Agenda</a>
+{% if not transfer_from %}
+<a href="{% url 'consultas:consulta_create' %}" class="btn-primary text-xs">+ Nova Consulta</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+{% if transfer_from %}
+<div class="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+  <span class="text-2xl leading-none">🔄</span>
+  <div class="flex-1">
+    <div class="text-sm font-semibold text-amber-900">
+      Transferindo paciente: {{ transfer_from.patient_name }}
+    </div>
+    <div class="text-xs text-amber-700 mt-0.5">
+      Vindo de <span class="font-medium">{{ transfer_from.doctor.name }}</span>
+      · {{ transfer_from.date|date:"d/m/Y" }} às {{ transfer_from.time|time:"H:i" }}.
+      Escolha abaixo o horário com o médico.
+    </div>
+  </div>
+  <a href="{% url 'consultas:consulta_detail' transfer_from.pk %}"
+     class="text-xs text-amber-700 hover:underline flex-shrink-0">Cancelar</a>
+</div>
+{% endif %}
+
+<!-- ── Filtros ─────────────────────────────────────────── -->
+<form method="get" class="card mb-5">
+  {% if transfer_from %}<input type="hidden" name="from_consulta" value="{{ transfer_from.pk }}">{% endif %}
+  {% if patient_ctx.patient_name %}<input type="hidden" name="patient_name" value="{{ patient_ctx.patient_name }}">{% endif %}
+  {% if patient_ctx.patient_cpf %}<input type="hidden" name="patient_cpf" value="{{ patient_ctx.patient_cpf }}">{% endif %}
+  {% if patient_ctx.patient_phone %}<input type="hidden" name="patient_phone" value="{{ patient_ctx.patient_phone }}">{% endif %}
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+
+    <div>
+      <label class="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
+      <select name="type" class="form-input text-sm" onchange="this.form.submit()">
+        <option value=""          {% if not ptype %}selected{% endif %}>Todos</option>
+        <option value="medico"    {% if ptype == 'medico' %}selected{% endif %}>Médicos</option>
+        <option value="atendente" {% if ptype == 'atendente' %}selected{% endif %}>Atendentes</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-xs font-medium text-gray-500 mb-1">Profissional</label>
+      <select name="doctor" class="form-input text-sm" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        {% for d in doctors %}
+        <option value="{{ d.pk }}" {% if doctor_id == d.pk|stringformat:"s" %}selected{% endif %}>
+          {{ d.name }}{% if not d.is_medico %} (Atendente){% endif %}{% if d.room %} — {{ d.room }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-xs font-medium text-gray-500 mb-1">Período à frente</label>
+      <select name="days" class="form-input text-sm" onchange="this.form.submit()">
+        <option value="7"  {% if days == 7 %}selected{% endif %}>Próximos 7 dias</option>
+        <option value="15" {% if days == 15 %}selected{% endif %}>Próximos 15 dias</option>
+        <option value="30" {% if days == 30 %}selected{% endif %}>Próximos 30 dias</option>
+        <option value="60" {% if days == 60 %}selected{% endif %}>Próximos 60 dias</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-xs font-medium text-gray-500 mb-1">Turno</label>
+      <select name="period" class="form-input text-sm" onchange="this.form.submit()">
+        <option value=""          {% if not period %}selected{% endif %}>Qualquer</option>
+        <option value="morning"   {% if period == 'morning' %}selected{% endif %}>Manhã</option>
+        <option value="afternoon" {% if period == 'afternoon' %}selected{% endif %}>Tarde</option>
+      </select>
+    </div>
+
+    <div class="text-sm text-gray-600 sm:text-right">
+      {% if total %}
+        <span class="font-semibold text-gray-800">{{ total }}</span> horário{{ total|pluralize }} livre{{ total|pluralize }}
+        {% if hit_limit %}<span class="text-xs text-amber-600 block">(limite de {{ limit }} — refine os filtros)</span>{% endif %}
+      {% else %}
+        <span class="text-gray-400">Nenhum encontrado</span>
+      {% endif %}
+    </div>
+  </div>
+</form>
+
+<!-- ── Resultados ─────────────────────────────────────── -->
+{% if not grouped %}
+<div class="card text-center py-16">
+  <div class="text-4xl mb-3">📅</div>
+  <p class="text-gray-500 font-medium">
+    Nenhum horário livre no período selecionado.
+  </p>
+  <p class="text-sm text-gray-400 mt-1">
+    Tente aumentar o intervalo ou remover algum filtro.
+  </p>
+</div>
+{% else %}
+
+<div class="space-y-4">
+  {% for day in grouped %}
+  <div class="rounded-xl border border-gray-200 bg-white overflow-hidden">
+    <div class="px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+      <div class="text-sm font-semibold text-gray-700">
+        {{ day.date|date:"l, d \d\e F" }}
+        {% if day.date == today %}<span class="ml-2 text-xs text-blue-600 font-medium">Hoje</span>{% endif %}
+      </div>
+      <div class="text-xs text-gray-400">{{ day.slots|length }} livre{{ day.slots|length|pluralize }}</div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 p-3">
+      {% for s in day.slots %}
+      <a href="{% url 'consultas:consulta_create' %}?date={{ day.date|date:'Y-m-d' }}&time={{ s.time|time:'H:i' }}&doctor={{ s.doctor.pk }}{% if patient_ctx.patient_name %}&patient_name={{ patient_ctx.patient_name|urlencode }}{% endif %}{% if patient_ctx.patient_cpf %}&patient_cpf={{ patient_ctx.patient_cpf|urlencode }}{% endif %}{% if patient_ctx.patient_phone %}&patient_phone={{ patient_ctx.patient_phone|urlencode }}{% endif %}{% if transfer_from %}&from_consulta={{ transfer_from.pk }}{% endif %}"
+         class="flex items-center gap-3 p-2.5 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/40 transition-all group">
+        <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+             style="background: {{ s.doctor.color }}">
+          {{ s.doctor.name|slice:":1" }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold text-gray-800 truncate flex items-center gap-1.5">
+            {{ s.doctor.name }}
+            {% if not s.doctor.is_medico %}
+            <span class="text-[9px] uppercase tracking-wide px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Atend.</span>
+            {% endif %}
+          </div>
+          <div class="text-xs text-gray-500">
+            {{ s.time|time:"H:i" }}{% if s.doctor.room %} · {{ s.doctor.room }}{% endif %}
+          </div>
+        </div>
+        <div class="text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+          {% if transfer_from %}Transferir →{% else %}Agendar →{% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% endif %}
+
+{% endblock %}

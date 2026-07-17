@@ -4,6 +4,12 @@
 
 {% block topbar_actions %}
 <a href="{% url 'consultas:agenda' %}?date={{ consulta.date|date:'Y-m-d' }}" class="btn-secondary text-xs">← Agenda</a>
+{% if not consulta.doctor.is_medico and consulta.status != 'remarcado' and consulta.status != 'cancelado' %}
+<a href="{% url 'consultas:slots_livres' %}?type=medico&from_consulta={{ consulta.pk }}"
+   class="btn-primary text-xs bg-amber-600 hover:bg-amber-700 border-amber-600">
+  🔄 Transferir para médico
+</a>
+{% endif %}
 {% if not atendimento.finalizado %}
 <a href="{% url 'consultas:consulta_edit' consulta.pk %}" class="btn-secondary text-xs">✎ Editar</a>
 {% endif %}
@@ -19,6 +25,9 @@
         <h2 class="font-bold text-xl text-gray-800 truncate">{{ consulta.patient_name }}</h2>
         <p class="text-sm text-gray-500 mt-0.5">
           <span class="font-medium text-gray-700">{{ consulta.doctor }}</span>
+          {% if not consulta.doctor.is_medico %}
+          <span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium ml-1">Atendente</span>
+          {% endif %}
           {% if consulta.doctor.room %}<span class="text-gray-400"> · {{ consulta.doctor.room }}</span>{% endif %}
           &nbsp;·&nbsp;
           {{ consulta.date|date:"d/m/Y" }} às {{ consulta.time|time:"H:i" }}

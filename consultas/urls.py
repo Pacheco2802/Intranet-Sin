@@ -5,6 +5,7 @@ app_name = 'consultas'
 
 urlpatterns = [
     path('',                                views.agenda,              name='agenda'),
+    path('slots-livres/',                   views.slots_livres,        name='slots_livres'),
     path('nova/',                           views.consulta_create,     name='consulta_create'),
     path('<int:pk>/',                       views.consulta_detail,     name='consulta_detail'),
     path('<int:pk>/editar/',               views.consulta_edit,       name='consulta_edit'),

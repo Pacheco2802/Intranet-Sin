@@ -114,6 +114,127 @@ def agenda(request):
 
 
 # ---------------------------------------------------------------------------
+# Próximos horários livres
+# ---------------------------------------------------------------------------
+
+_BLOCKING_STATUSES = ['agendado', 'confirmado', 'presente', 'faltou', 'finalizado']
+
+
+@login_required
+def slots_livres(request):
+    if not _can_access(request.user):
+        return HttpResponseForbidden()
+
+    try:
+        days = int(request.GET.get('days', 15))
+    except (TypeError, ValueError):
+        days = 15
+    days = max(1, min(days, 60))
+
+    doctor_id = request.GET.get('doctor', '').strip()
+    period    = request.GET.get('period', '').strip()
+    ptype     = request.GET.get('type', '').strip()  # '', 'medico', 'atendente'
+    LIMIT     = 40
+
+    # Contexto de transferência: carregar dados do paciente da consulta origem
+    transfer_from = None
+    patient_ctx = {
+        'patient_name':  request.GET.get('patient_name', '').strip(),
+        'patient_cpf':   request.GET.get('patient_cpf', '').strip(),
+        'patient_phone': request.GET.get('patient_phone', '').strip(),
+    }
+    from_id = request.GET.get('from_consulta', '').strip()
+    if from_id.isdigit():
+        try:
+            transfer_from = Consulta.objects.select_related('doctor').get(pk=int(from_id))
+            patient_ctx['patient_name']  = patient_ctx['patient_name']  or transfer_from.patient_name
+            patient_ctx['patient_cpf']   = patient_ctx['patient_cpf']   or transfer_from.patient_cpf
+            patient_ctx['patient_phone'] = patient_ctx['patient_phone'] or transfer_from.patient_phone
+            if not ptype:
+                ptype = 'medico'
+        except Consulta.DoesNotExist:
+            transfer_from = None
+
+    doctors_qs = Doctor.objects.filter(active=True).order_by('order', 'name')
+    all_doctors = list(doctors_qs)
+
+    selected_doctors = all_doctors
+    if ptype == 'medico':
+        selected_doctors = [d for d in selected_doctors if d.is_medico]
+    elif ptype == 'atendente':
+        selected_doctors = [d for d in selected_doctors if not d.is_medico]
+    if doctor_id.isdigit():
+        selected_doctors = [d for d in selected_doctors if d.pk == int(doctor_id)]
+
+    today = datetime.date.today()
+    now_time = datetime.datetime.now().time()
+    end_date = today + datetime.timedelta(days=days)
+
+    grouped: list = []
+    total = 0
+    hit_limit = False
+
+    if selected_doctors:
+        doc_ids = [d.pk for d in selected_doctors]
+
+        # Grades por (doctor_id, weekday) → lista de horários
+        grade: dict[tuple[int, int], list[datetime.time]] = {}
+        for s in DoctorSchedule.objects.filter(doctor_id__in=doc_ids):
+            grade[(s.doctor_id, s.weekday)] = s.compute_slots()
+
+        # Slots já ocupados no intervalo (cancelado/remarcado liberam)
+        taken: set[tuple[int, datetime.date, datetime.time]] = set()
+        for did, d, t in Consulta.objects.filter(
+            doctor_id__in=doc_ids,
+            date__gte=today,
+            date__lte=end_date,
+            status__in=_BLOCKING_STATUSES,
+        ).values_list('doctor_id', 'date', 'time'):
+            taken.add((did, d, t))
+
+        noon = datetime.time(12, 0)
+        day = today
+        while day <= end_date and total < LIMIT:
+            weekday = day.weekday()
+            day_slots: list[dict] = []
+            for doc in selected_doctors:
+                slots = grade.get((doc.pk, weekday))
+                if not slots:
+                    continue
+                for t in slots:
+                    if period == 'morning'   and t >= noon: continue
+                    if period == 'afternoon' and t <  noon: continue
+                    if day == today and t <= now_time: continue
+                    if (doc.pk, day, t) in taken: continue
+                    day_slots.append({'doctor': doc, 'time': t})
+            day_slots.sort(key=lambda r: (r['time'], r['doctor'].order, r['doctor'].name))
+
+            if day_slots:
+                take = day_slots[:LIMIT - total]
+                grouped.append({'date': day, 'slots': take})
+                total += len(take)
+                if total >= LIMIT:
+                    hit_limit = True
+                    break
+            day += datetime.timedelta(days=1)
+
+    return render(request, 'consultas/slots_livres.html', {
+        'grouped':       grouped,
+        'total':         total,
+        'hit_limit':     hit_limit,
+        'limit':         LIMIT,
+        'doctors':       all_doctors,
+        'days':          days,
+        'doctor_id':     doctor_id,
+        'period':        period,
+        'ptype':         ptype,
+        'today':         today,
+        'transfer_from': transfer_from,
+        'patient_ctx':   patient_ctx,
+    })
+
+
+# ---------------------------------------------------------------------------
 # Detalhe / prontuário da consulta
 # ---------------------------------------------------------------------------
 
@@ -148,12 +269,14 @@ def consulta_create(request):
         return HttpResponseForbidden()
 
     initial = {}
-    if request.GET.get('date'):
-        initial['date'] = request.GET['date']
-    if request.GET.get('time'):
-        initial['time'] = request.GET['time']
-    if request.GET.get('doctor'):
-        initial['doctor'] = request.GET['doctor']
+    for key in ('date', 'time', 'doctor', 'patient_name', 'patient_cpf', 'patient_phone'):
+        if request.GET.get(key):
+            initial[key] = request.GET[key]
+
+    transfer_from = None
+    from_id = request.GET.get('from_consulta', '').strip()
+    if from_id.isdigit():
+        transfer_from = Consulta.objects.filter(pk=int(from_id)).first()
 
     form = ConsultaForm(request.POST or None, initial=initial)
     if form.is_valid():
@@ -163,7 +286,9 @@ def consulta_create(request):
         messages.success(request, 'Consulta agendada com sucesso.')
         return redirect(f'/consultas/?date={consulta.date}')
 
-    return render(request, 'consultas/form.html', {'form': form, 'title': 'Nova Consulta'})
+    return render(request, 'consultas/form.html', {
+        'form': form, 'title': 'Nova Consulta', 'transfer_from': transfer_from,
+    })
 
 
 @login_required

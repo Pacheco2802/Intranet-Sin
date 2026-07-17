@@ -89,6 +89,7 @@ _FILA_PARA_DEPT = {
     'T': 'Jurídico',
     'A': 'Jurídico',
     'M': 'Saúde do Trabalhador',
+    'D': 'Ouvidoria',
 }
 
 _FILA_LABELS = {
@@ -97,6 +98,7 @@ _FILA_LABELS = {
     'T': 'Trabalhista',
     'A': 'Andamento de Processo',
     'M': 'Médico do Trabalho',
+    'D': 'Denúncia',
 }
 
 

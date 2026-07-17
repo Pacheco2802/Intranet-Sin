@@ -15,9 +15,10 @@ _FILA_PARA_DEPT = {
     'T': 'Jurídico',
     'A': 'Jurídico',
     'M': 'Saúde do Trabalhador',
+    'D': 'Ouvidoria',
 }
 
-_VALID_FILAS = {'P', 'T', 'A', 'M'}
+_VALID_FILAS = {'P', 'T', 'A', 'M', 'D'}
 
 
 def _parse_dt(s):

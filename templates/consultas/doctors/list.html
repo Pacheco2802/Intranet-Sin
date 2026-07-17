@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Médicos{% endblock %}
-{% block page_title %}Médicos do Trabalho{% endblock %}
+{% block title %}Profissionais{% endblock %}
+{% block page_title %}Profissionais{% endblock %}
 
 {% block topbar_actions %}
 <a href="{% url 'consultas:agenda' %}" class="btn-secondary text-xs">← Agenda</a>
-<a href="{% url 'consultas:doctor_create' %}" class="btn-primary text-xs">+ Novo Médico</a>
+<a href="{% url 'consultas:doctor_create' %}" class="btn-primary text-xs">+ Novo Profissional</a>
 {% endblock %}
 
 {% block content %}
@@ -24,7 +24,12 @@
       {{ doctor.name|slice:":1" }}
     </div>
     <div class="flex-1 min-w-0">
-      <div class="font-semibold text-gray-800">{{ doctor.name }}</div>
+      <div class="font-semibold text-gray-800 flex items-center gap-2">
+        {{ doctor.name }}
+        {% if not doctor.is_medico %}
+        <span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Atendente</span>
+        {% endif %}
+      </div>
       {% if doctor.room %}<div class="text-sm text-gray-500">{{ doctor.room }}</div>{% endif %}
       {% if not doctor.active %}<span class="text-xs text-gray-400">Inativo</span>{% endif %}
     </div>

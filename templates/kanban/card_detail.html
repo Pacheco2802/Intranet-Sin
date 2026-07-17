@@ -4,6 +4,9 @@
 {% block topbar_actions %}
 {% if is_member %}
 <a href="{% url 'kanban:board_detail' board.pk %}" class="btn-secondary text-xs">← {{ board.name }}</a>
+{% if not board.is_locked %}
+<a href="{% url 'kanban:card_transfer' card.pk %}" class="btn-secondary text-xs">→ Mover</a>
+{% endif %}
 <a href="{% url 'kanban:card_edit' board.pk card.pk %}" class="btn-primary text-xs">Editar</a>
 {% else %}
 <a href="{% url 'kanban:minhas_solicitacoes' %}" class="btn-secondary text-xs">← Minhas solicitações</a>

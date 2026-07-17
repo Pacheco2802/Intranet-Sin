@@ -7,6 +7,7 @@
 {% if user.can_see_all %}
 <a href="{% url 'consultas:doctor_list' %}" class="btn-secondary text-xs">⚕ Médicos</a>
 {% endif %}
+<a href="{% url 'consultas:slots_livres' %}" class="btn-secondary text-xs">🔍 Horários livres</a>
 <a href="{% url 'consultas:consulta_create' %}?date={{ date|date:'Y-m-d' }}" class="btn-primary text-xs">+ Nova Consulta</a>
 {% endblock %}
 

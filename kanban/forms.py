@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 from core.models import CustomUser, Department
 from .models import Board, BoardFolder, Column, Card, CardComment, SubTask, RecurringTask
 
@@ -126,21 +127,26 @@ class CardForm(forms.ModelForm):
         if board:
             self.fields['column'].queryset = Column.objects.filter(board=board)
             # Pessoas elegíveis para responsável / acesso a card privado: mesma regra.
-            if board.is_global or board.is_cross_department:
-                # Global/cross-dept boards: todos os usuários ativos
-                elegiveis = CustomUser.objects.filter(
-                    is_active=True, is_approved=True
-                ).order_by('first_name', 'last_name')
+            base = CustomUser.objects.filter(is_active=True, is_approved=True)
+            if board.is_global:
+                elegiveis = base.order_by('first_name', 'last_name')
+            elif board.is_cross_department:
+                # Projeto: membros diretos + membros das áreas com acesso
+                elegiveis = base.filter(
+                    Q(pk__in=board.members.values('pk'))
+                    | Q(departments__in=board.member_departments.values('pk'))
+                ).distinct().order_by('first_name', 'last_name')
             elif board.department:
-                # Board de departamento: membros do departamento
-                elegiveis = CustomUser.objects.filter(
-                    is_active=True, is_approved=True, departments=board.department
-                ).order_by('first_name', 'last_name')
+                # Board de departamento: membros do depto + membros diretos do quadro
+                elegiveis = base.filter(
+                    Q(departments=board.department)
+                    | Q(pk__in=board.members.values('pk'))
+                ).distinct().order_by('first_name', 'last_name')
                 if not elegiveis.exists():
-                    elegiveis = CustomUser.objects.filter(is_active=True, is_approved=True)
+                    elegiveis = base.order_by('first_name', 'last_name')
             else:
-                members = board.members.filter(is_active=True)
-                elegiveis = members if members.exists() else CustomUser.objects.filter(is_active=True)
+                members = board.members.filter(is_active=True, is_approved=True)
+                elegiveis = members if members.exists() else base
             self.fields['assignee'].queryset = elegiveis
             self.fields['allowed_users'].queryset = elegiveis
 
@@ -165,11 +171,25 @@ class SubTaskForm(forms.ModelForm):
             'due_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-input'}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, board=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['assignee'].queryset = CustomUser.objects.filter(
-            is_active=True, is_approved=True
-        ).order_by('first_name', 'last_name')
+        base = CustomUser.objects.filter(is_active=True, is_approved=True)
+        if board and not board.is_global:
+            if board.is_cross_department:
+                qs = base.filter(
+                    Q(pk__in=board.members.values('pk'))
+                    | Q(departments__in=board.member_departments.values('pk'))
+                ).distinct()
+            elif board.department:
+                qs = base.filter(
+                    Q(departments=board.department)
+                    | Q(pk__in=board.members.values('pk'))
+                ).distinct()
+            else:
+                qs = base
+            self.fields['assignee'].queryset = qs.order_by('first_name', 'last_name')
+        else:
+            self.fields['assignee'].queryset = base.order_by('first_name', 'last_name')
         self.fields['assignee'].empty_label = 'Sem responsável'
         self.fields['assignee'].required = False
         self.fields['target_department'].queryset = Department.objects.all().order_by('name')

@@ -50,13 +50,14 @@ class RescheduleForm(forms.Form):
 class DoctorForm(forms.ModelForm):
     class Meta:
         model = Doctor
-        fields = ['name', 'room', 'color', 'user', 'active', 'order']
+        fields = ['name', 'room', 'color', 'user', 'active', 'is_medico', 'order']
         widgets = {
-            'name':  forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Dr. Almeida'}),
-            'room':  forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Sala 1'}),
-            'color': forms.TextInput(attrs={'class': 'form-input', 'type': 'color'}),
-            'user':  forms.Select(attrs={'class': 'form-input'}),
-            'order': forms.NumberInput(attrs={'class': 'form-input', 'min': 0}),
+            'name':      forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Dr. Almeida'}),
+            'room':      forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Sala 1'}),
+            'color':     forms.TextInput(attrs={'class': 'form-input', 'type': 'color'}),
+            'user':      forms.Select(attrs={'class': 'form-input'}),
+            'is_medico': forms.CheckboxInput(),
+            'order':     forms.NumberInput(attrs={'class': 'form-input', 'min': 0}),
         }
 
 

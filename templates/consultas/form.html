@@ -8,6 +8,19 @@
 
 {% block content %}
 <div class="max-w-xl mx-auto">
+
+  {% if transfer_from %}
+  <div class="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800 flex items-start gap-2">
+    <span class="text-lg leading-none">🔄</span>
+    <div>
+      Transferindo <span class="font-semibold">{{ transfer_from.patient_name }}</span>
+      de <span class="font-semibold">{{ transfer_from.doctor.name }}</span>
+      ({{ transfer_from.date|date:"d/m" }} {{ transfer_from.time|time:"H:i" }}).
+      Confira os dados abaixo e salve para criar o novo agendamento.
+    </div>
+  </div>
+  {% endif %}
+
   <form method="post" class="space-y-4">
     {% csrf_token %}
 

@@ -61,6 +61,7 @@ class AtendimentoForm(forms.ModelForm):
             ('T', 'Trabalhista'),
             ('A', 'Andamento de Processo'),
             ('M', 'Médico do Trabalho'),
+            ('D', 'Denúncia'),
         ]
 
     def clean_cpf(self):
