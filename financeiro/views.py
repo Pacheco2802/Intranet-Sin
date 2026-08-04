@@ -273,8 +273,33 @@ def atividade_list(request):
         vh = a.diretor.valor_hora_diretoria or params.valor_hora_diretoria_padrao
         a.valor_estimado = a.horas_efetivas * vh
 
+    # Na aba "Para aprovar", agrupa por diretor: a coordenação abre o nome do
+    # diretor e vê todas as atividades pendentes dele de uma vez, em vez de uma
+    # lista solta de atividades.
+    grupos = None
+    if aba == 'aprovar':
+        por_diretor = {}
+        for a in atividades_list:
+            g = por_diretor.get(a.diretor_id)
+            if g is None:
+                g = {
+                    'diretor': a.diretor,
+                    'atividades': [],
+                    'total_horas': Decimal('0'),
+                    'total_valor': Decimal('0'),
+                }
+                por_diretor[a.diretor_id] = g
+            g['atividades'].append(a)
+            g['total_horas'] += a.horas
+            g['total_valor'] += a.valor_estimado
+        grupos = sorted(
+            por_diretor.values(),
+            key=lambda g: (g['diretor'].get_full_name() or g['diretor'].email).lower(),
+        )
+
     return render(request, 'financeiro/atividade_list.html', {
         'atividades': atividades_list,
+        'grupos': grupos,
         'pode_lancar': pode_lancar,
         'is_aprovador': is_aprovador,
         'is_financeiro': visualiza_tudo,
@@ -402,6 +427,46 @@ def atividade_aprovar(request, pk):
     )
     messages.success(request, msg)
     return redirect(_safe_next(request, f'/financeiro/diretoria/{a.pk}/'))
+
+
+@login_required
+@require_POST
+def atividade_aprovar_diretor(request, diretor_pk):
+    """Aprova de uma vez todas as atividades pendentes de um diretor (horas cheias)."""
+    if not _is_aprovador_diretoria(request.user):
+        return HttpResponseForbidden()
+
+    pendentes = list(
+        AtividadeDiretoria.objects.select_related('diretor').filter(
+            diretor_id=diretor_pk, status=AtividadeDiretoria.Status.PENDENTE
+        )
+    )
+    if not pendentes:
+        messages.error(request, 'Este diretor não tem atividades pendentes.')
+        return redirect(_safe_next(request, '/financeiro/diretoria/?aba=aprovar'))
+
+    agora = timezone.now()
+    for a in pendentes:
+        a.status = AtividadeDiretoria.Status.APROVADA
+        a.horas_aprovadas = a.horas
+        a.motivo_ajuste = ''
+        a.aprovado_por = request.user
+        a.aprovado_em = agora
+        a.save()
+        AuditLog.log(
+            request.user, AuditLog.Action.DIRAT_APPROVE, 'AtividadeDiretoria', a.pk, ip=_ip(request),
+            horas_lancadas=str(a.horas), horas_aprovadas=str(a.horas), motivo_ajuste='',
+        )
+        Notification.send(
+            a.diretor, request.user, Notification.Type.DIRETORIA_STATUS,
+            'Atividade aprovada', a.titulo, f'/financeiro/diretoria/{a.pk}/',
+        )
+
+    diretor = pendentes[0].diretor
+    nome = diretor.get_full_name() or diretor.email
+    n = len(pendentes)
+    messages.success(request, f'{n} atividade{"s" if n != 1 else ""} de {nome} aprovada{"s" if n != 1 else ""}.')
+    return redirect(_safe_next(request, '/financeiro/diretoria/?aba=aprovar'))
 
 
 @login_required

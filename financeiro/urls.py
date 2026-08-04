@@ -27,5 +27,6 @@ urlpatterns = [
     path('diretoria/nova/', views.atividade_create, name='atividade_create'),
     path('diretoria/<int:pk>/', views.atividade_detail, name='atividade_detail'),
     path('diretoria/<int:pk>/aprovar/', views.atividade_aprovar, name='atividade_aprovar'),
+    path('diretoria/diretor/<int:diretor_pk>/aprovar-todas/', views.atividade_aprovar_diretor, name='atividade_aprovar_diretor'),
     path('diretoria/<int:pk>/rejeitar/', views.atividade_rejeitar, name='atividade_rejeitar'),
 ]
