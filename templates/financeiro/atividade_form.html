@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load l10n %}
 {% block title %}Nova atividade{% endblock %}
 {% block page_title %}Nova atividade de diretoria{% endblock %}
 {% block topbar_actions %}
@@ -7,7 +8,7 @@
 
 {% block content %}
 <div class="max-w-xl mx-auto space-y-4"
-     x-data="{ horas: '{{ horas_mes }}', teto: {{ teto }}, horasCampo: 0,
+     x-data="{ horas: '{{ horas_mes|unlocalize }}', teto: {{ teto|unlocalize }}, horasCampo: 0,
                get restante() { return Math.max(0, this.teto - parseFloat(this.horas||0) - parseFloat(this.horasCampo||0)) } }">
 
   <!-- Banner de horas -->
