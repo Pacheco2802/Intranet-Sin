@@ -172,6 +172,15 @@
           {% endif %}
           <td class="px-4 py-3">{% include "financeiro/partials/status_badge.html" with label=a.get_status_display color=a.status_color %}</td>
           <td class="px-4 py-3 text-right whitespace-nowrap">
+            {% if a.status == 'PENDENTE' %}
+            <a href="{% url 'financeiro:atividade_editar' a.pk %}" class="text-xs text-gray-600 hover:text-gray-900 font-medium mr-3">✏️ Editar</a>
+            <form method="post" action="{% url 'financeiro:atividade_excluir' a.pk %}" class="inline"
+                  onsubmit="return confirm('Excluir esta atividade? Esta ação não pode ser desfeita.');">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="text-xs text-red-600 hover:text-red-800 font-medium mr-3">🗑️ Excluir</button>
+            </form>
+            {% endif %}
             <a href="{% url 'financeiro:atividade_detail' a.pk %}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Ver →</a>
           </td>
         </tr>

@@ -91,6 +91,20 @@
       </div>
     </div>
 
+    {% if pode_editar %}
+    <div class="card space-y-2">
+      <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-3">Gerenciar</h3>
+      <a href="{% url 'financeiro:atividade_editar' a.pk %}" class="btn-secondary w-full justify-center py-2.5 text-sm font-semibold">✏️ Editar atividade</a>
+      <form method="post" action="{% url 'financeiro:atividade_excluir' a.pk %}"
+            onsubmit="return confirm('Excluir esta atividade? Esta ação não pode ser desfeita.');">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'financeiro:atividade_list' %}">
+        <button type="submit" class="btn-danger w-full justify-center py-2.5 text-sm font-semibold">🗑️ Excluir atividade</button>
+      </form>
+      <p class="text-xs text-gray-400 pt-1">Disponível apenas enquanto a atividade está pendente.</p>
+    </div>
+    {% endif %}
+
     {% if is_aprovador and a.status == 'PENDENTE' %}
     <div class="card space-y-2">
       <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-3">Aprovação</h3>

@@ -48,6 +48,14 @@ def _pode_lancar_diretoria(user):
     return user.role == CustomUser.Role.DIRETOR or user.is_admin_ti
 
 
+def _pode_editar_atividade(user, a):
+    """Editar/excluir é permitido só enquanto PENDENTE, e apenas para o
+    diretor dono da atividade ou a coordenação (aprovador de diretoria)."""
+    if a.status != AtividadeDiretoria.Status.PENDENTE:
+        return False
+    return a.diretor_id == user.pk or _is_aprovador_diretoria(user)
+
+
 def _financeiro_users():
     return CustomUser.objects.filter(
         is_active=True, is_approved=True, departments__slug='financeiro'
@@ -350,6 +358,74 @@ def atividade_create(request):
 
 
 @login_required
+def atividade_editar(request, pk):
+    a = get_object_or_404(AtividadeDiretoria.objects.select_related('diretor'), pk=pk)
+    if not _pode_editar_atividade(request.user, a):
+        return HttpResponseForbidden()
+
+    if request.method == 'POST':
+        form = AtividadeDiretoriaForm(request.POST, request.FILES, instance=a)
+        if form.is_valid():
+            form.save()
+            AuditLog.log(request.user, 'DIRAT_EDIT', 'AtividadeDiretoria', a.pk, ip=_ip(request))
+            # Se quem editou não é o próprio diretor (foi a coordenação), avisa o diretor.
+            if a.diretor_id != request.user.pk:
+                Notification.send(
+                    a.diretor, request.user, Notification.Type.DIRETORIA_STATUS,
+                    'Sua atividade foi editada', a.titulo, f'/financeiro/diretoria/{a.pk}/',
+                )
+            messages.success(request, 'Atividade atualizada.')
+            return redirect('financeiro:atividade_detail', pk=a.pk)
+        messages.error(
+            request,
+            'Não foi possível salvar. Confira os campos destacados — '
+            'a causa mais comum é o comprovante (formato não aceito ou maior que 5 MB).'
+        )
+    else:
+        form = AtividadeDiretoriaForm(instance=a)
+
+    teto = ParametroFinanceiro.get().teto_horas_mensal
+    # Horas já lançadas no mês pelo diretor, exceto esta atividade (evita contar em dobro).
+    horas_mes = AtividadeDiretoria.objects.filter(
+        diretor=a.diretor, competencia=a.competencia,
+    ).exclude(status=AtividadeDiretoria.Status.REJEITADA).exclude(pk=a.pk).aggregate(
+        total=Sum('horas')
+    )['total'] or Decimal('0')
+
+    return render(request, 'financeiro/atividade_form.html', {
+        'form': form, 'teto': teto, 'horas_mes': horas_mes, 'competencia': a.competencia,
+        'editing': True, 'atividade': a,
+    })
+
+
+@login_required
+@require_POST
+def atividade_excluir(request, pk):
+    a = get_object_or_404(AtividadeDiretoria.objects.select_related('diretor'), pk=pk)
+    if not _pode_editar_atividade(request.user, a):
+        return HttpResponseForbidden()
+
+    titulo = a.titulo
+    diretor = a.diretor
+    por_outro = a.diretor_id != request.user.pk
+    AuditLog.log(
+        request.user, 'DIRAT_DELETE', 'AtividadeDiretoria', a.pk, ip=_ip(request),
+        titulo=titulo, horas=str(a.horas),
+        diretor=diretor.get_full_name() or diretor.email,
+    )
+    if a.comprovante:
+        a.comprovante.delete(save=False)  # remove o arquivo do storage
+    a.delete()
+    if por_outro:
+        Notification.send(
+            diretor, request.user, Notification.Type.DIRETORIA_STATUS,
+            'Sua atividade foi excluída', titulo, '/financeiro/diretoria/?aba=minhas',
+        )
+    messages.success(request, f'Atividade "{titulo}" excluída.')
+    return redirect(_safe_next(request, '/financeiro/diretoria/'))
+
+
+@login_required
 def atividade_detail(request, pk):
     a = get_object_or_404(
         AtividadeDiretoria.objects.select_related('diretor', 'aprovado_por', 'pagamento'), pk=pk
@@ -366,6 +442,7 @@ def atividade_detail(request, pk):
     return render(request, 'financeiro/atividade_detail.html', {
         'a': a,
         'is_aprovador': _is_aprovador_diretoria(user),
+        'pode_editar': _pode_editar_atividade(user, a),
         'horas_mes_diretor': horas_mes_diretor,
         'teto_mensal': teto_mensal,
     })
