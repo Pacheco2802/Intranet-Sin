@@ -8,7 +8,7 @@
 
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-4"
-     x-data="{ confirmModal: false, confirmMsg: '', pendingForm: null }">
+     x-data="{ confirmModal: false, confirmMsg: '', pendingForm: null, rejectOpen: false, rejectAction: '', rejectLabel: '' }">
 
   <!-- Modal de confirmação de aprovação -->
   <template x-if="confirmModal">
@@ -25,6 +25,26 @@
             Cancelar
           </button>
         </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Modal de rejeição -->
+  <template x-if="rejectOpen">
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+        <p class="text-lg font-bold text-gray-900 mb-1">Rejeitar atividade?</p>
+        <p class="text-sm text-gray-600 mb-4" x-text="rejectLabel"></p>
+        <form method="post" :action="rejectAction">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <label class="block text-xs font-medium text-gray-500 mb-1">Motivo da rejeição</label>
+          <textarea name="motivo" rows="3" class="form-input w-full" placeholder="Descreva o motivo (opcional)..."></textarea>
+          <div class="flex gap-3 mt-4">
+            <button type="submit" class="btn-danger flex-1 text-sm justify-center">✕ Rejeitar</button>
+            <button type="button" @click="rejectOpen=false" class="btn-secondary flex-1 text-sm">Cancelar</button>
+          </div>
+        </form>
       </div>
     </div>
   </template>
@@ -97,6 +117,9 @@
                           @click="confirmMsg='{{ a.titulo|escapejs }} — {{ a.horas }}h de {{ g.diretor.get_full_name|escapejs }}'; pendingForm=$el.closest('form'); confirmModal=true"
                           class="text-xs text-green-600 hover:text-green-800 font-medium mr-3">✓ Aprovar</button>
                 </form>
+                <button type="button"
+                        @click="rejectAction='{% url 'financeiro:atividade_rejeitar' a.pk %}'; rejectLabel='{{ a.titulo|escapejs }} — {{ a.horas }}h de {{ g.diretor.get_full_name|escapejs }}'; rejectOpen=true"
+                        class="text-xs text-red-600 hover:text-red-800 font-medium mr-3">✕ Rejeitar</button>
                 <a href="{% url 'financeiro:atividade_detail' a.pk %}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Ver →</a>
               </td>
             </tr>
