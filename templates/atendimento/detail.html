@@ -55,6 +55,29 @@
       </div>
     </div>
 
+    <!-- Triagem preenchida pelo filiado -->
+    {% if at.triagem_preenchida_em and at.triagem_publica %}
+    <div class="card border-l-4 border-l-emerald-500">
+      <div class="flex items-center gap-2 mb-3">
+        <h3 class="font-semibold text-gray-900">📋 Triagem do filiado</h3>
+        <span class="text-xs text-gray-400 ml-auto">
+          {{ at.triagem_publica.created_at|date:"d/m/Y H:i" }} · {{ at.triagem_publica.get_origem_display }}
+        </span>
+      </div>
+      <p class="text-sm font-semibold text-emerald-700 mb-1">{{ at.triagem_publica.get_motivo_display }}</p>
+      <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ at.triagem_publica.descricao }}</p>
+      {% if at.triagem_publica.nome_informado or at.triagem_publica.telefone or at.triagem_publica.cargo or at.triagem_publica.empregador %}
+      <div class="flex flex-wrap gap-3 mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
+        {% if at.triagem_publica.nome_informado %}<span>👤 {{ at.triagem_publica.nome_informado }}</span>{% endif %}
+        {% if at.triagem_publica.telefone %}<span>📞 {{ at.triagem_publica.telefone }}</span>{% endif %}
+        {% if at.triagem_publica.cargo %}<span>💼 {{ at.triagem_publica.cargo }}</span>{% endif %}
+        {% if at.triagem_publica.empregador %}<span>🏥 {{ at.triagem_publica.empregador }}</span>{% endif %}
+      </div>
+      {% endif %}
+      <p class="text-xs text-gray-400 mt-2">Consentimento LGPD registrado (política v{{ at.triagem_publica.policy_version }}).</p>
+    </div>
+    {% endif %}
+
     <!-- Timeline -->
     <div class="card">
       <h3 class="font-semibold text-gray-900 mb-5">Histórico</h3>
@@ -75,7 +98,7 @@
             <div class="flex-1 pb-1">
               <div class="flex items-center gap-2 mb-1 flex-wrap">
                 <span class="text-sm font-medium text-gray-800">
-                  {{ etapa.autor.get_full_name|default:etapa.autor.email|default:"Sistema" }}
+                  {% if etapa.autor %}{{ etapa.autor.get_full_name|default:etapa.autor.email }}{% else %}Sistema{% endif %}
                 </span>
                 {% if etapa.departamento %}
                 <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{{ etapa.departamento.name }}</span>
@@ -304,6 +327,15 @@
       </form>
       {% endif %}
     </div>
+    {% endif %}
+
+    <!-- Ficha do associado -->
+    {% if at.associado_id %}
+    <a href="{% url 'associados:detail' at.associado_id %}"
+       class="card block hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-all text-center">
+      <p class="text-sm font-medium text-emerald-700">📇 Ficha do associado</p>
+      <p class="text-xs text-emerald-500 mt-0.5">{{ at.nome_filiado }}</p>
+    </a>
     {% endif %}
 
     <!-- Histórico do filiado -->

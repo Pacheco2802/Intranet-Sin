@@ -1,4 +1,5 @@
 import hashlib
+import secrets
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -9,6 +10,29 @@ from core.validators import validate_file_extension, validate_file_size
 def _cpf_hash(cpf: str) -> str:
     digits = ''.join(c for c in (cpf or '') if c.isdigit())
     return hashlib.sha256(digits.encode()).hexdigest() if digits else ''
+
+
+# Alfabeto sem caracteres ambíguos (0/O, 1/I/L) para o código digitado no totem
+_CODIGO_ALFABETO = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+
+
+def gerar_triagem_credenciais():
+    """Gera (token, codigo) para o vínculo público da triagem.
+
+    O token vai no QR do slip; o código curto é digitado no totem. O código é
+    único entre os atendimentos ativos do dia (retry na colisão).
+    """
+    from django.utils.timezone import localdate
+    token = secrets.token_urlsafe(24)
+    for _ in range(20):
+        codigo = ''.join(secrets.choice(_CODIGO_ALFABETO) for _ in range(6))
+        existe = Atendimento.objects.filter(
+            triagem_codigo=codigo,
+            created_at__date=localdate(),
+        ).exclude(status__in=[Atendimento.Status.CONCLUIDO, Atendimento.Status.CANCELADO]).exists()
+        if not existe:
+            return token, codigo
+    return token, ''
 
 
 class Atendimento(models.Model):
@@ -67,6 +91,16 @@ class Atendimento(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='atendimentos_responsavel', verbose_name='Responsável'
     )
+
+    associado = models.ForeignKey(
+        'associados.Associado', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='atendimentos', verbose_name='Associado',
+    )
+
+    # Triagem pública (QR do slip / totem)
+    triagem_token = models.CharField('Token da triagem', max_length=64, blank=True, db_index=True)
+    triagem_codigo = models.CharField('Código curto da triagem', max_length=8, blank=True, db_index=True)
+    triagem_preenchida_em = models.DateTimeField('Triagem preenchida em', null=True, blank=True)
 
     created_at = models.DateTimeField('Criado em', auto_now_add=True)
     updated_at = models.DateTimeField('Atualizado em', auto_now=True)
@@ -178,3 +212,51 @@ class AtendimentoAnexo(models.Model):
 
     def __str__(self):
         return self.nome_original
+
+
+class TriagemPublica(models.Model):
+    """Triagem preenchida pelo próprio filiado (QR do slip ou totem da recepção).
+
+    Guarda o conteúdo informado e a prova de consentimento LGPD do não-usuário
+    (o LGPDConsent do core exige FK de CustomUser).
+    """
+
+    class Motivo(models.TextChoices):
+        PREVIDENCIARIO = 'P', 'Previdenciário (aposentadoria, INSS, benefícios)'
+        TRABALHISTA = 'T', 'Trabalhista (demissão, verbas, direitos)'
+        ANDAMENTO = 'A', 'Andamento de processo já em curso'
+        MEDICO = 'M', 'Médico do Trabalho'
+        DENUNCIA = 'D', 'Denúncia'
+        OUTRO = 'O', 'Outro assunto'
+
+    class Origem(models.TextChoices):
+        QR = 'QR', 'QR code (celular)'
+        TOTEM = 'TOTEM', 'Totem da recepção'
+
+    atendimento = models.OneToOneField(
+        Atendimento, on_delete=models.CASCADE,
+        related_name='triagem_publica', verbose_name='Atendimento',
+    )
+    motivo = models.CharField('Motivo', max_length=1, choices=Motivo.choices)
+    descricao = models.TextField('Descrição do problema')
+    nome_informado = models.CharField('Nome informado', max_length=200, blank=True)
+    telefone = EncryptedCharField('Telefone', max_length=200, blank=True)
+    email = models.EmailField('E-mail', blank=True)
+    cargo = models.CharField('Cargo', max_length=120, blank=True)
+    empregador = models.CharField('Empregador', max_length=200, blank=True)
+    origem = models.CharField('Origem', max_length=10, choices=Origem.choices, default=Origem.QR)
+
+    lgpd_consent = models.BooleanField('Consentimento LGPD', default=False)
+    policy_version = models.CharField('Versão da política', max_length=20, default='1.0')
+    consent_ip = models.GenericIPAddressField('IP do consentimento', null=True, blank=True)
+
+    created_at = models.DateTimeField('Enviada em', auto_now_add=True)
+    updated_at = models.DateTimeField('Atualizada em', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Triagem pública'
+        verbose_name_plural = 'Triagens públicas'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Triagem — {self.atendimento}'

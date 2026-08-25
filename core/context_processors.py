@@ -53,10 +53,25 @@ def global_context(request):
     except Exception:
         pass
 
+    chamados_pendentes_count = 0
+    if request.user.is_admin_ti or request.user.can_see_all:
+        try:
+            from chamados.models import Chamado
+            chamados_pendentes_count = Chamado.objects.filter(
+                status__in=[
+                    Chamado.Status.ABERTO,
+                    Chamado.Status.EM_ANDAMENTO,
+                    Chamado.Status.AGUARDANDO,
+                ]
+            ).count()
+        except Exception:
+            pass
+
     return {
         'unread_messages_count': unread_count,
         'pending_count': pending_count,
         'notification_count': notification_count,
         'projetos_unread_count': projetos_unread_count,
         'comunicados_unread_count': comunicados_unread_count,
+        'chamados_pendentes_count': chamados_pendentes_count,
     }

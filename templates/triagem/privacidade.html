@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Aviso de Privacidade — Atendimento{% endblock %}
+{% block auth_content %}
+<div class="min-h-screen py-8 px-4 flex justify-center" style="background:#f5f3ef;">
+  <div class="w-full max-w-2xl">
+    <div class="bg-white rounded-2xl shadow-lg overflow-hidden" style="box-shadow:0 4px 24px rgba(0,0,0,.10),0 1px 4px rgba(0,0,0,.06);">
+      <div class="px-6 py-4 flex items-center gap-3" style="background:#1b2c4a;">
+        <img src="{% static 'img/logo-sinsaude.png' %}" alt="SINSAÚDE-SP" class="w-10 h-10 object-contain flex-shrink-0">
+        <div>
+          <h1 class="text-base font-semibold text-white">Aviso de Privacidade — Atendimento ao Filiado</h1>
+          <p class="text-white/50 text-xs mt-0.5">SINSAÚDE-SP · Versão 1.0 · Lei nº 13.709/2018 (LGPD)</p>
+        </div>
+      </div>
+      <div class="p-6 space-y-5 text-sm text-gray-600 leading-relaxed">
+        <div>
+          <h2 class="font-semibold text-gray-900 mb-1">Quais dados coletamos</h2>
+          <p>Nome, CPF, telefone, e-mail, cargo, empregador e o relato do seu caso, informados por você
+          no formulário de triagem ou na recepção.</p>
+        </div>
+        <div>
+          <h2 class="font-semibold text-gray-900 mb-1">Para que usamos</h2>
+          <p>Organizar e agilizar o seu atendimento (o atendente conhece o seu caso antes de chamá-lo),
+          manter o seu histórico de atendimentos no sindicato e acompanhar os seus casos.
+          <strong class="text-gray-800">Base legal:</strong> execução de procedimentos a seu pedido e
+          consentimento (art. 7º, I e V da LGPD).</p>
+        </div>
+        <div>
+          <h2 class="font-semibold text-gray-900 mb-1">Como protegemos</h2>
+          <p>Dados sensíveis como CPF e telefone são armazenados com criptografia. O acesso é restrito
+          aos setores envolvidos no seu atendimento, e toda consulta à sua ficha fica registrada.</p>
+        </div>
+        <div>
+          <h2 class="font-semibold text-gray-900 mb-1">Compartilhamento</h2>
+          <p>Seus dados não são vendidos nem compartilhados para fins comerciais. São usados apenas
+          internamente pelo SINSAÚDE-SP para o seu atendimento.</p>
+        </div>
+        <div>
+          <h2 class="font-semibold text-gray-900 mb-1">Seus direitos</h2>
+          <p>Você pode solicitar acesso, correção ou eliminação dos seus dados a qualquer momento
+          com o Encarregado de Dados: <a href="mailto:ti@sinsaudesp.org.br" class="underline" style="color:#1a6b45;">ti@sinsaudesp.org.br</a>.</p>
+        </div>
+      </div>
+    </div>
+    <div class="text-center mt-4">
+      <a href="/triagem/{% if kiosk %}?kiosk=1{% endif %}" class="text-sm underline" style="color:#1a6b45;">← Voltar para a triagem</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

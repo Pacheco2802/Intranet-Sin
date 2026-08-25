@@ -40,24 +40,26 @@
 
 {% block content %}
 {% if board.is_locked %}
-<div class="card bg-gray-50 border border-gray-200 mb-4 flex items-center gap-3">
-  <span class="text-xl">🔒</span>
+<div class="card mb-4 flex items-center gap-3" style="background:var(--surf-raised); border-color:var(--border-std);">
+  <span class="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center text-lg flex-shrink-0">🔒</span>
   <div>
-    <p class="text-sm font-medium text-gray-700">Projeto finalizado — somente leitura</p>
+    <p class="text-sm font-semibold text-gray-700">Projeto finalizado — somente leitura</p>
     <p class="text-xs text-gray-400">Finalizado {% if board.finished_at %}em {{ board.finished_at|date:"d/m/Y" }}{% endif %}{% if board.finished_by %} por {{ board.finished_by.get_full_name|default:board.finished_by.first_name }}{% endif %}. Reabra para voltar a editar.</p>
   </div>
 </div>
 {% endif %}
 <!-- Board info -->
-<div class="flex items-center gap-3 mb-5">
-  <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold"
+<div class="flex items-center gap-3 mb-4">
+  <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-white text-lg font-bold flex-shrink-0 shadow-sm"
        style="background:{{ board.department.color|default:'#1e3a5f' }}">
     {{ board.department.icon|default:"📋" }}
   </div>
-  <div>
-    <span class="font-semibold text-gray-900">{{ board.name }}</span>
-    {% if board.department %}<span class="text-gray-400 text-sm ml-2">{{ board.department }}</span>{% endif %}
-    {% if board.is_cross_department %}<span class="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Entre departamentos</span>{% endif %}
+  <div class="min-w-0">
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="font-bold text-gray-900 text-base leading-tight">{{ board.name }}</span>
+      {% if board.is_cross_department %}<span class="text-[11px] font-semibold bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">Entre departamentos</span>{% endif %}
+    </div>
+    {% if board.department %}<span class="text-gray-400 text-sm">{{ board.department }}</span>{% endif %}
   </div>
 </div>
 
@@ -80,11 +82,15 @@
 {% endif %}
 
 <!-- Filtros -->
-<form id="board-filters" class="flex flex-wrap items-center gap-2 mb-4">
-  <input type="text" id="board-search" placeholder="🔎 Buscar tarefa..."
-         autocomplete="off"
-         class="text-xs form-input py-1 w-48">
-  <select name="priority" class="text-xs form-input py-1 w-auto">
+<form id="board-filters" class="flex flex-wrap items-center gap-2 mb-3 p-2.5 rounded-xl border border-gray-100 bg-white/60"
+      style="box-shadow:var(--shadow-card);">
+  <div class="relative flex-shrink-0">
+    <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+    <input type="text" id="board-search" placeholder="Buscar tarefa..."
+           autocomplete="off"
+           class="text-xs form-input py-1.5 pl-8 w-52">
+  </div>
+  <select name="priority" class="text-xs form-input py-1.5 w-auto">
     <option value="">Todas as prioridades</option>
     <option value="LOW">Baixa</option>
     <option value="MEDIUM">Média</option>
@@ -92,20 +98,20 @@
     <option value="URGENT">Urgente</option>
   </select>
   {% if board_members %}
-  <select name="assignee" class="text-xs form-input py-1 w-auto">
+  <select name="assignee" class="text-xs form-input py-1.5 w-auto">
     <option value="">Todos os responsáveis</option>
     {% for u in board_members %}
     <option value="{{ u.pk }}">{{ u.first_name }} {{ u.last_name }}</option>
     {% endfor %}
   </select>
   {% endif %}
-  <select name="prazo" class="text-xs form-input py-1 w-auto">
+  <select name="prazo" class="text-xs form-input py-1.5 w-auto">
     <option value="">Qualquer prazo</option>
     <option value="vencidos">Vencidos</option>
     <option value="hoje">Vencem hoje</option>
     <option value="semana">Próximos 7 dias</option>
   </select>
-  <select name="sort" class="text-xs form-input py-1 w-auto">
+  <select name="sort" class="text-xs form-input py-1.5 w-auto">
     <option value="">Ordenar: padrão</option>
     <option value="priority">Prioridade</option>
     <option value="due_date">Prazo</option>
@@ -114,17 +120,17 @@
   </select>
   <button type="button"
           onclick="this.form.reset(); htmx.trigger('#board-columns', 'change')"
-          class="text-xs text-gray-400 hover:text-gray-600 underline">
-    Limpar
+          class="ml-auto text-xs font-medium text-gray-400 hover:text-blue-600 transition-colors px-2 py-1">
+    Limpar filtros
   </button>
 </form>
 
 <!-- Legenda -->
 <details class="kc-legend mb-3 text-xs">
-  <summary class="inline-flex items-center gap-1 cursor-pointer text-gray-400 hover:text-gray-600 select-none list-none">
-    <span class="leg-caret inline-block transition-transform">▸</span> Legenda
+  <summary class="inline-flex items-center gap-1 cursor-pointer text-gray-400 hover:text-blue-600 select-none list-none transition-colors">
+    <span class="leg-caret inline-block transition-transform">▸</span> O que os símbolos significam
   </summary>
-  <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 px-3 py-2 bg-gray-50 rounded-lg">
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 px-3 py-2.5 bg-gray-50 rounded-lg">
     <span class="inline-flex items-center gap-1.5"><span class="kc-legend-mine"></span> <span class="text-accent font-semibold">Você</span> = card atribuído a você</span>
     <span class="inline-flex items-center gap-1.5"><span class="kc-pill bg-slate-500">🔒 Privado</span> Só pessoas escolhidas</span>
     <span class="inline-flex items-center gap-1.5"><span class="kc-pill bg-purple-500">↳ Subtarefa</span> Gerado de uma sub-tarefa</span>
@@ -136,7 +142,7 @@
 
 <!-- Kanban board (atualiza a cada 5s) -->
 <div id="board-columns"
-     class="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6"
+     class="flex gap-4 overflow-x-auto pb-4 -mx-5 px-5"
      style="min-height: calc(100vh - 14rem)"
      hx-get="{% url 'kanban:board_columns_partial' board.pk %}"
      hx-trigger="every 5s, change from:#board-filters"
@@ -163,7 +169,7 @@
   .kc-stripe { position: relative; }
   .kc-stripe::before {
     content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
-    border-radius: .5rem 0 0 .5rem; background: var(--prio, #94a3b8);
+    border-radius: .75rem 0 0 .75rem; background: var(--prio, #94a3b8);
   }
   /* Legenda: caret e marcador de "details" */
   .kc-legend > summary::-webkit-details-marker { display: none; }

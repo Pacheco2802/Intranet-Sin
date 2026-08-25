@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Triagem de Atendimento{% endblock %}
+{% block extra_head %}
+<script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/mask@3.x.x/dist/cdn.min.js"></script>
+{% endblock %}
+{% block auth_content %}
+<div class="min-h-screen py-6 px-4 flex justify-center {% if kiosk %}kiosk-mode{% endif %}" style="background:#f5f3ef;" id="triagem-page">
+  <div class="w-full max-w-lg">
+
+    <!-- Cabeçalho -->
+    <div class="text-center mb-6">
+      <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 p-2" style="background:#1b2c4a;">
+        <img src="{% static 'img/logo-sinsaude.png' %}" alt="SINSAÚDE-SP" class="w-full h-full object-contain">
+      </div>
+      <h1 class="text-2xl font-bold" style="color:#1b2c4a;">SINSAÚDE-SP</h1>
+      <p class="text-sm text-gray-500 mt-1">Conte o seu caso antes de ser chamado —<br>assim o atendimento fica mais rápido.</p>
+    </div>
+
+    {% if senha_display %}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 mb-4 flex items-center justify-between">
+      <span class="text-sm text-gray-500">Sua senha</span>
+      <span class="text-3xl font-black tracking-widest" style="color:#1b2c4a;">{{ senha_display }}</span>
+    </div>
+    {% endif %}
+
+    {% if ja_preenchida %}
+    <div class="mb-4 flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg text-sm">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Você já enviou sua triagem. Pode revisar abaixo e enviar novamente se quiser corrigir algo.
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-2xl shadow-lg overflow-hidden" style="box-shadow:0 4px 24px rgba(0,0,0,.10),0 1px 4px rgba(0,0,0,.06);">
+      <div class="px-6 py-4" style="background:#1b2c4a;">
+        <h2 class="text-base font-semibold text-white">Triagem de atendimento</h2>
+        <p class="text-white/50 text-xs mt-0.5">Leva menos de 2 minutos</p>
+      </div>
+      <div class="p-6">
+        <form method="post" novalidate {% if com_identificacao %}x-data="{ modo: '{{ form.modo.value|default:'codigo' }}' }"{% endif %}>
+          {% csrf_token %}
+          <input type="hidden" name="kiosk" value="{{ kiosk }}">
+          {{ form.ts }}
+          <div style="position:absolute;left:-5000px;top:-5000px;" aria-hidden="true">
+            <input type="text" name="website" tabindex="-1" autocomplete="off" value="">
+          </div>
+
+          {% if form.non_field_errors %}
+          <div class="mb-4 flex items-center gap-2 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>{{ form.non_field_errors|join:" " }}</span>
+          </div>
+          {% endif %}
+
+          {% if com_identificacao %}
+          <input type="hidden" name="modo" :value="modo">
+
+          <!-- Identificação por código do slip -->
+          <div x-show="modo === 'codigo'">
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{{ form.codigo.label }}</label>
+            <p class="text-xs text-gray-400 mb-2">São as 6 letras/números impressos no papel que você recebeu na recepção.</p>
+            {{ form.codigo }}
+            {% if form.codigo.errors %}<p class="text-xs text-red-600 mt-1">{{ form.codigo.errors|join:" " }}</p>{% endif %}
+            <button type="button" @click="modo = 'senha'" class="text-xs mt-2 underline" style="color:#1a6b45;">
+              Perdi meu papel / não tenho o código
+            </button>
+          </div>
+
+          <!-- Fallback: senha + CPF -->
+          <div x-show="modo === 'senha'" x-cloak>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{{ form.senha.label }}</label>
+                {{ form.senha }}
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{{ form.cpf.label }}</label>
+                {{ form.cpf }}
+              </div>
+            </div>
+            {% if form.senha.errors %}<p class="text-xs text-red-600 mt-1">{{ form.senha.errors|join:" " }}</p>{% endif %}
+            {% if form.cpf.errors %}<p class="text-xs text-red-600 mt-1">{{ form.cpf.errors|join:" " }}</p>{% endif %}
+            <button type="button" @click="modo = 'codigo'" class="text-xs mt-2 underline" style="color:#1a6b45;">
+              Tenho o código do papel
+            </button>
+          </div>
+
+          <hr class="my-5 border-gray-100">
+          {% endif %}
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{{ form.motivo.label }} *</label>
+              {{ form.motivo }}
+              {% if form.motivo.errors %}<p class="text-xs text-red-600 mt-1">{{ form.motivo.errors|join:" " }}</p>{% endif %}
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{{ form.descricao.label }} *</label>
+              {{ form.descricao }}
+              {% if form.descricao.errors %}<p class="text-xs text-red-600 mt-1">{{ form.descricao.errors|join:" " }}</p>{% endif %}
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{{ form.nome.label }}</label>
+              {{ form.nome }}
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{{ form.telefone.label }}</label>
+                {{ form.telefone }}
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{{ form.email.label }}</label>
+                {{ form.email }}
+                {% if form.email.errors %}<p class="text-xs text-red-600 mt-1">{{ form.email.errors|join:" " }}</p>{% endif %}
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{{ form.cargo.label }}</label>
+                {{ form.cargo }}
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{{ form.empregador.label }}</label>
+                {{ form.empregador }}
+              </div>
+            </div>
+
+            <label class="flex items-start gap-3 p-3 rounded-lg border {% if form.lgpd_consent.errors %}border-red-300 bg-red-50{% else %}border-gray-200 bg-gray-50{% endif %} cursor-pointer">
+              {{ form.lgpd_consent }}
+              <span class="text-xs text-gray-600 leading-relaxed">
+                Autorizo o SINSAÚDE-SP a usar os dados informados para organizar meu atendimento
+                e manter meu histórico, conforme o
+                <a href="{% url 'triagem:privacidade' %}{% if kiosk %}?kiosk=1{% endif %}" target="_blank" class="underline font-semibold" style="color:#1a6b45;">aviso de privacidade</a>.
+              </span>
+            </label>
+            {% if form.lgpd_consent.errors %}<p class="text-xs text-red-600">É necessário concordar para enviar a triagem.</p>{% endif %}
+          </div>
+
+          <button type="submit"
+            class="w-full mt-6 text-white font-bold py-3.5 rounded-xl transition-colors text-base"
+            style="background:#1a6b45;" onmouseover="this.style.background='#155a38'" onmouseout="this.style.background='#1a6b45'">
+            Enviar triagem
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <p class="text-center text-xs text-gray-400 mt-4">
+      Dúvidas? Fale com a recepção. Seus dados são protegidos (LGPD).
+    </p>
+  </div>
+</div>
+
+{% if kiosk %}
+<style>
+  .kiosk-mode { font-size: 1.05rem; }
+  .kiosk-mode input, .kiosk-mode select, .kiosk-mode textarea { font-size: 1.1rem !important; }
+</style>
+<script>
+  // Totem: sem interação por 120s → recarrega (descarta dados abandonados e renova o CSRF)
+  (function () {
+    var t;
+    function reset() { clearTimeout(t); t = setTimeout(function () { window.location.reload(); }, 120000); }
+    ['input', 'click', 'touchstart', 'keydown', 'scroll'].forEach(function (ev) {
+      document.addEventListener(ev, reset, { passive: true });
+    });
+    reset();
+  })();
+</script>
+{% endif %}
+{% endblock %}

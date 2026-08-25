@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}{{ associado.nome }} — Ficha{% endblock %}
+{% block page_title %}Ficha do Associado{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'associados:list' %}" class="btn-secondary text-xs">← Associados</a>
+<a href="{% url 'associados:edit' associado.pk %}" class="btn-secondary text-xs">✎ Editar ficha</a>
+<a href="{% url 'associados:caso_create' associado.pk %}" class="btn-primary text-xs">+ Novo caso</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+  <!-- Coluna principal -->
+  <div class="lg:col-span-2 space-y-4">
+
+    <!-- Casos -->
+    <div class="card">
+      <div class="flex items-center gap-2 mb-4">
+        <h3 class="font-semibold text-gray-900">Casos</h3>
+        <span class="text-xs bg-blue-50 text-blue-600 font-semibold px-2 py-0.5 rounded-full">{{ casos|length }}</span>
+        <a href="{% url 'associados:caso_create' associado.pk %}" class="ml-auto text-xs font-medium" style="color:#1a6b45;">+ Abrir caso</a>
+      </div>
+      <div class="space-y-2">
+        {% for caso in casos %}
+        <a href="{% url 'associados:caso_detail' caso.pk %}"
+           class="block border border-gray-100 rounded-xl p-3 hover:border-blue-200 transition-all">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs px-2 py-0.5 rounded-full text-white font-medium" style="background-color:{{ caso.status_color }};">
+              {{ caso.get_status_display }}
+            </span>
+            <span class="text-xs text-gray-400">{{ caso.get_tipo_display }}</span>
+            <span class="text-xs text-gray-300 ml-auto">{{ caso.updated_at|date:"d/m/Y" }}</span>
+          </div>
+          <p class="font-semibold text-gray-800 text-sm mt-1.5">{{ caso.titulo }}</p>
+          <div class="flex items-center gap-3 mt-1 text-xs text-gray-400">
+            {% if caso.departamento_responsavel %}<span>{{ caso.departamento_responsavel.name }}</span>{% endif %}
+            {% if caso.responsavel %}<span>👤 {{ caso.responsavel.get_full_name }}</span>{% endif %}
+            {% if caso.documentos.all %}<span>📎 {{ caso.documentos.all|length }} doc{{ caso.documentos.all|length|pluralize }}</span>{% endif %}
+          </div>
+        </a>
+        {% empty %}
+        <div class="text-center py-8 text-gray-400 text-sm border-2 border-dashed border-gray-100 rounded-xl">
+          Nenhum caso aberto para este associado.
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Atendimentos -->
+    <div class="card">
+      <div class="flex items-center gap-2 mb-4">
+        <h3 class="font-semibold text-gray-900">Atendimentos</h3>
+        <span class="text-xs bg-gray-100 text-gray-500 font-semibold px-2 py-0.5 rounded-full">{{ atendimentos|length }}</span>
+      </div>
+      <div class="space-y-2">
+        {% for at in atendimentos %}
+        <a href="{% url 'atendimento:detail' at.pk %}"
+           class="flex items-center gap-3 border border-gray-100 rounded-xl px-3 py-2.5 hover:border-blue-200 transition-all">
+          {% if at.nextqs_fila and at.numero_senha %}
+          <span class="font-mono font-bold text-blue-700 text-sm flex-shrink-0">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
+          {% endif %}
+          <div class="flex-1 min-w-0">
+            <p class="text-sm text-gray-700 truncate">{{ at.assunto|default:"Atendimento" }}</p>
+            <p class="text-xs text-gray-400">{{ at.created_at|date:"d/m/Y H:i" }}
+              {% if at.triagem_preenchida_em %}<span class="text-emerald-600 ml-1">📋 triagem</span>{% endif %}
+            </p>
+          </div>
+          <span class="text-xs px-2 py-0.5 rounded-full text-white font-medium flex-shrink-0" style="background-color:{{ at.status_color }};">
+            {{ at.get_status_display }}
+          </span>
+        </a>
+        {% empty %}
+        <p class="text-center py-6 text-gray-400 text-sm">Nenhum atendimento visível para você.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Sidebar: dados cadastrais -->
+  <div class="space-y-4">
+    <div class="card">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-lg flex-shrink-0">
+          {{ associado.nome|first|upper }}
+        </div>
+        <div class="min-w-0">
+          <h2 class="font-bold text-gray-900 truncate">{{ associado.nome }}</h2>
+          <p class="text-xs text-gray-400 font-mono">{{ associado.cpf }}</p>
+        </div>
+      </div>
+      <div class="space-y-2.5 text-sm">
+        {% if associado.telefone %}
+        <div><p class="text-xs text-gray-400">Telefone</p><p class="text-gray-800 mt-0.5">{{ associado.telefone }}</p></div>
+        {% endif %}
+        {% if associado.email %}
+        <div><p class="text-xs text-gray-400">E-mail</p><p class="text-gray-800 mt-0.5 break-all">{{ associado.email }}</p></div>
+        {% endif %}
+        {% if associado.data_nascimento %}
+        <div><p class="text-xs text-gray-400">Data de nascimento</p><p class="text-gray-800 mt-0.5">{{ associado.data_nascimento|date:"d/m/Y" }}</p></div>
+        {% endif %}
+        {% if associado.cargo %}
+        <div><p class="text-xs text-gray-400">Cargo</p><p class="text-gray-800 mt-0.5">{{ associado.cargo }}</p></div>
+        {% endif %}
+        {% if associado.empregador %}
+        <div><p class="text-xs text-gray-400">Empregador</p><p class="text-gray-800 mt-0.5">{{ associado.empregador }}</p></div>
+        {% endif %}
+        <div class="pt-2 border-t border-gray-100">
+          <p class="text-xs text-gray-400">Ficha criada em</p>
+          <p class="text-gray-800 mt-0.5">{{ associado.created_at|date:"d/m/Y" }} · {{ associado.get_origem_display }}</p>
+        </div>
+        {% if associado.atualizado_por %}
+        <div><p class="text-xs text-gray-400">Última edição</p><p class="text-gray-800 mt-0.5">{{ associado.atualizado_por.get_full_name }}</p></div>
+        {% endif %}
+      </div>
+      <a href="{% url 'associados:edit' associado.pk %}" class="btn-secondary w-full text-sm mt-4 block text-center">✎ Editar dados</a>
+    </div>
+
+    {% if associado.observacoes %}
+    <div class="card">
+      <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-2">Observações</h3>
+      <p class="text-sm text-gray-600 whitespace-pre-wrap">{{ associado.observacoes }}</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

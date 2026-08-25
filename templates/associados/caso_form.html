@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{% if caso %}Editar caso{% else %}Novo caso{% endif %} — {{ associado.nome }}{% endblock %}
+{% block page_title %}{% if caso %}Editar caso{% else %}Novo caso{% endif %}{% endblock %}
+{% block topbar_actions %}
+{% if caso %}
+<a href="{% url 'associados:caso_detail' caso.pk %}" class="btn-secondary text-xs">← Voltar ao caso</a>
+{% else %}
+<a href="{% url 'associados:detail' associado.pk %}" class="btn-secondary text-xs">← Voltar à ficha</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="card">
+    <h2 class="font-bold text-gray-900 mb-1">{% if caso %}Editar caso{% else %}Abrir novo caso{% endif %}</h2>
+    <p class="text-sm text-gray-400 mb-4">Associado: {{ associado.nome }}</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">Tipo *</label>
+          {{ form.tipo }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
+          {{ form.status }}
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-gray-500 mb-1">Título *</label>
+          {{ form.titulo }}
+          {% if form.titulo.errors %}<p class="text-red-500 text-xs mt-1">{{ form.titulo.errors|join:" " }}</p>{% endif %}
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-gray-500 mb-1">Descrição</label>
+          {{ form.descricao }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">Departamento responsável</label>
+          {{ form.departamento_responsavel }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">Responsável</label>
+          {{ form.responsavel }}
+        </div>
+      </div>
+      <div class="flex gap-2 mt-5">
+        <button type="submit" class="btn-primary text-sm">{% if caso %}Salvar caso{% else %}Abrir caso{% endif %}</button>
+        {% if caso %}
+        <a href="{% url 'associados:caso_detail' caso.pk %}" class="btn-secondary text-sm">Cancelar</a>
+        {% else %}
+        <a href="{% url 'associados:detail' associado.pk %}" class="btn-secondary text-sm">Cancelar</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

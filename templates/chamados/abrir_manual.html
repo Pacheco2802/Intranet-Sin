@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Abrir chamado de TI{% endblock %}
+{% block page_title %}Abrir chamado de TI{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'chamados:meus' %}" class="btn-secondary text-xs">Meus chamados</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+
+  <div class="flex items-center gap-4 mb-5">
+    <div class="wiz-badge">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M18 8a6 6 0 10-12 0v5a3 3 0 003 3h1v-6H8V8a4 4 0 118 0v2h-2v6h1a3 3 0 003-3V8z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M16 16v1a3 3 0 01-3 3h-1"/>
+      </svg>
+    </div>
+    <div>
+      <div class="eyebrow" style="margin-bottom:.25rem;">Suporte de TI</div>
+      <h1 class="text-xl font-bold text-gray-900 leading-tight">Abrir um chamado</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Escolha a categoria e descreva o problema. O time de TI recebe na hora.</p>
+    </div>
+  </div>
+
+  <div class="card" style="padding:1.5rem;">
+    <form method="post" enctype="multipart/form-data" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1">Categoria <span class="text-red-500">*</span></label>
+        {{ form.categoria }}
+        {% if form.categoria.errors %}<p class="text-red-500 text-xs mt-1">{{ form.categoria.errors|join:" " }}</p>{% endif %}
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1">Título <span class="text-red-500">*</span></label>
+        {{ form.titulo }}
+        <p class="text-[11px] text-gray-400 mt-1">Um resumo curto do problema. Ex.: “Impressora do 2º andar não imprime”.</p>
+        {% if form.titulo.errors %}<p class="text-red-500 text-xs mt-1">{{ form.titulo.errors|join:" " }}</p>{% endif %}
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1">Descrição do problema</label>
+        {{ form.descricao }}
+        <p class="text-[11px] text-gray-400 mt-1">Conte o que aconteceu, quando começou e o que você já tentou.</p>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1">Anexar arquivo <span class="font-normal text-gray-400">(opcional)</span></label>
+        <input type="file" name="arquivo"
+               class="block w-full text-xs text-gray-500 rounded-lg border border-gray-200
+                      file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0
+                      file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700
+                      hover:file:bg-blue-100 file:cursor-pointer cursor-pointer">
+      </div>
+      <button type="submit" class="btn-primary w-full justify-center py-2.5">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        Abrir chamado
+      </button>
+    </form>
+  </div>
+</div>
+
+<style>
+  .wiz-badge {
+    width: 54px; height: 54px; border-radius: 16px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; background: linear-gradient(135deg, #1a6b45, #124a30);
+    box-shadow: 0 8px 20px rgba(26,107,69,.28);
+  }
+</style>
+{% endblock %}

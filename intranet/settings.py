@@ -24,6 +24,8 @@ INSTALLED_APPS = [
     'mensagens',
     'kanban',
     'atendimento',
+    'chamados',
+    'associados',
     'agenda',
     'consultas',
     'financeiro',

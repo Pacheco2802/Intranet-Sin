@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Meus chamados{% endblock %}
+{% block page_title %}Meus chamados{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'chamados:abrir' %}" class="btn-primary text-xs">+ Abrir chamado</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  {% if abertos %}
+  <p class="text-sm text-gray-500 mb-4">Você tem <span class="font-semibold text-gray-700">{{ abertos }}</span> chamado{{ abertos|pluralize }} em aberto.</p>
+  {% endif %}
+
+  <div class="space-y-2">
+    {% for c in chamados %}
+    <a href="{% url 'chamados:detail' c.pk %}" class="card block hover:shadow-md transition-shadow">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs font-mono text-gray-400">{{ c.codigo }}</span>
+            {% if c.categoria %}<span class="text-xs text-gray-500">{{ c.categoria.display_icon }} {{ c.categoria.nome }}</span>{% endif %}
+          </div>
+          <p class="font-medium text-gray-900 truncate mt-0.5">{{ c.titulo }}</p>
+          <p class="text-xs text-gray-400 mt-1">Aberto em {{ c.created_at|date:"d/m/Y H:i" }}</p>
+        </div>
+        <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
+          <span class="text-xs px-2.5 py-0.5 rounded-full text-white font-medium" style="background-color:{{ c.status_color }}">{{ c.get_status_display }}</span>
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium" style="color:{{ c.prioridade_color }};background-color:{{ c.prioridade_color }}22">{{ c.get_prioridade_display }}</span>
+        </div>
+      </div>
+    </a>
+    {% empty %}
+    <div class="card text-center py-10">
+      <p class="text-gray-400">Você ainda não abriu nenhum chamado.</p>
+      <a href="{% url 'chamados:abrir' %}" class="btn-primary text-sm mt-4 inline-block">Abrir meu primeiro chamado</a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

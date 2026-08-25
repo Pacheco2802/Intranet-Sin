@@ -1,11 +1,13 @@
 import json
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden, FileResponse
 from django.shortcuts import render, redirect, get_object_or_404, resolve_url
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.cache import cache_control
 from django.views.decorators.http import require_POST
 
 from .models import CustomUser, Department, Team, LGPDConsent, AuditLog, Notification, _anonymize_ip
@@ -212,6 +214,26 @@ def lgpd_consent(request):
 @login_required
 def lgpd_policy(request):
     return render(request, 'lgpd/policy.html')
+
+
+# ── PWA ───────────────────────────────────────
+
+@login_required
+def install(request):
+    return render(request, 'core/install.html')
+
+
+@cache_control(max_age=0, no_cache=True, no_store=True, must_revalidate=True)
+def pwa_service_worker(request):
+    path = settings.BASE_DIR / 'static' / 'service-worker.js'
+    resp = FileResponse(open(path, 'rb'), content_type='application/javascript')
+    resp['Service-Worker-Allowed'] = '/'
+    return resp
+
+
+def pwa_manifest(request):
+    path = settings.BASE_DIR / 'static' / 'manifest.webmanifest'
+    return FileResponse(open(path, 'rb'), content_type='application/manifest+json')
 
 
 @login_required

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Triagem enviada{% endblock %}
+{% block auth_content %}
+<div class="min-h-screen flex items-center justify-center px-4" style="background:#f5f3ef;">
+  <div class="w-full max-w-md text-center">
+    <div class="bg-white rounded-2xl shadow-lg p-8" style="box-shadow:0 4px 24px rgba(0,0,0,.10),0 1px 4px rgba(0,0,0,.06);">
+      <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+        <svg class="w-9 h-9 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-900">Triagem recebida!</h1>
+      {% if senha %}
+      <p class="text-gray-500 mt-2 text-sm">Senha</p>
+      <p class="text-4xl font-black tracking-widest" style="color:#1b2c4a;">{{ senha }}</p>
+      {% endif %}
+      <p class="text-gray-600 mt-4 text-sm leading-relaxed">
+        Pronto — o atendente já vai saber do seu caso antes de te chamar.<br>
+        <strong>Aguarde ser chamado no painel.</strong>
+      </p>
+      {% if kiosk %}
+      <p class="text-xs text-gray-400 mt-6">Esta tela volta ao início em <span id="count">15</span>s...</p>
+      {% endif %}
+    </div>
+    <div class="flex items-center justify-center gap-2 mt-5">
+      <img src="{% static 'img/logo-sinsaude.png' %}" alt="SINSAÚDE-SP" class="w-7 h-7 object-contain">
+      <span class="text-xs text-gray-400">SINSAÚDE-SP — Sindicato dos Trabalhadores em Saúde</span>
+    </div>
+  </div>
+</div>
+
+{% if kiosk %}
+<script>
+  (function () {
+    var s = 15, el = document.getElementById('count');
+    setInterval(function () {
+      s -= 1;
+      if (el) el.textContent = s;
+      if (s <= 0) window.location = '/triagem/?kiosk=1';
+    }, 1000);
+  })();
+</script>
+{% endif %}
+{% endblock %}

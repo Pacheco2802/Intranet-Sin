@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Editar ficha — {{ associado.nome }}{% endblock %}
+{% block page_title %}Editar ficha{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'associados:detail' associado.pk %}" class="btn-secondary text-xs">← Voltar à ficha</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="card">
+    <h2 class="font-bold text-gray-900 mb-4">{{ associado.nome }}</h2>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+        {{ form.non_field_errors|join:" " }}
+      </div>
+      {% endif %}
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">CPF *</label>
+          {{ form.cpf }}
+          {% if form.cpf.errors %}<p class="text-red-500 text-xs mt-1">{{ form.cpf.errors|join:" " }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">Nome *</label>
+          {{ form.nome }}
+          {% if form.nome.errors %}<p class="text-red-500 text-xs mt-1">{{ form.nome.errors|join:" " }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">Telefone</label>
+          {{ form.telefone }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">E-mail</label>
+          {{ form.email }}
+          {% if form.email.errors %}<p class="text-red-500 text-xs mt-1">{{ form.email.errors|join:" " }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">Data de nascimento</label>
+          {{ form.data_nascimento }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">Cargo</label>
+          {{ form.cargo }}
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-gray-500 mb-1">Empregador</label>
+          {{ form.empregador }}
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-gray-500 mb-1">Observações</label>
+          {{ form.observacoes }}
+        </div>
+      </div>
+      <div class="flex gap-2 mt-5">
+        <button type="submit" class="btn-primary text-sm">Salvar ficha</button>
+        <a href="{% url 'associados:detail' associado.pk %}" class="btn-secondary text-sm">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

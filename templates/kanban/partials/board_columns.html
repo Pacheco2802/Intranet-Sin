@@ -1,37 +1,38 @@
 {% for col in columns %}
-<div class="kanban-column flex-shrink-0 w-72 bg-gray-100 rounded-xl flex flex-col max-h-full"
+<div class="kanban-column group/col flex-shrink-0 w-72 bg-gray-100 rounded-xl flex flex-col max-h-full"
      data-column-id="{{ col.pk }}"
      style="border-top:3px solid {{ col.color }}">
   <!-- Column header -->
-  <div class="flex items-center justify-between px-4 py-3">
-    <div class="flex items-center gap-2">
-      <div class="w-3 h-3 rounded-full" style="background-color:{{ col.color }}"></div>
-      <h3 class="font-semibold text-gray-700 text-sm">{{ col.name }}</h3>
+  <div class="flex items-center justify-between px-3.5 py-3">
+    <div class="flex items-center gap-2 min-w-0">
+      <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color:{{ col.color }}"></div>
+      <h3 class="font-bold text-gray-700 text-sm truncate">{{ col.name }}</h3>
       {% if col.wip_limit %}
-      <span class="text-xs rounded-full px-2 py-0.5 font-medium
+      <span class="text-[11px] rounded-full px-2 py-0.5 font-semibold flex-shrink-0
         {% if col.wip_exceeded %}bg-red-100 text-red-700{% else %}bg-gray-200 text-gray-600{% endif %}"
         title="Cards na coluna / limite WIP">{{ col.card_count }} / {{ col.wip_limit }}</span>
       {% else %}
-      <span class="text-xs bg-gray-200 text-gray-600 rounded-full px-2">{{ col.total_items }}</span>
+      <span class="text-[11px] bg-gray-200 text-gray-600 font-semibold rounded-full px-2 py-0.5 flex-shrink-0">{{ col.total_items }}</span>
       {% endif %}
     </div>
-    <div class="flex items-center gap-1">
+    <div class="flex items-center gap-0.5 flex-shrink-0">
       {% if user.is_admin_ti %}
       <a href="{% url 'kanban:column_edit' board.pk col.pk %}"
          title="Editar coluna"
-         class="text-gray-400 hover:text-yellow-600 transition-colors p-1 rounded hover:bg-white">
+         class="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded hover:bg-white opacity-0 group-hover/col:opacity-100">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2a2 2 0 01.586-1.414z"/></svg>
       </a>
       <form method="post" action="{% url 'kanban:column_delete' board.pk col.pk %}" class="inline"
             onsubmit="return confirm('Excluir a coluna &quot;{{ col.name }}&quot;?')">
         {% csrf_token %}
         <button type="submit" title="Excluir coluna"
-                class="text-gray-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-white">
+                class="text-gray-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-white opacity-0 group-hover/col:opacity-100">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </form>
       {% endif %}
       <a href="{% url 'kanban:card_create' board.pk %}?column={{ col.pk }}"
+         title="Adicionar card"
          class="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded hover:bg-white">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
       </a>
@@ -39,30 +40,38 @@
   </div>
 
   {% if col.wip_exceeded %}
-  <div class="mx-3 mb-2 text-[11px] text-red-600 bg-red-50 border border-red-100 rounded px-2 py-1">
-    ⚠ Limite de trabalho em andamento excedido ({{ col.wip_limit }})
+  <div class="mx-3 mb-2 text-[11px] text-red-600 bg-red-50 border border-red-100 rounded-lg px-2 py-1 flex items-center gap-1">
+    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+    Limite de trabalho em andamento excedido ({{ col.wip_limit }})
   </div>
   {% endif %}
 
   <!-- Cards -->
-  <div class="flex-1 overflow-y-auto px-3 pb-3 space-y-2 kanban-cards" id="column-{{ col.pk }}" data-col="{{ col.pk }}">
+  <div class="flex-1 overflow-y-auto px-2.5 pb-3 space-y-2 kanban-cards" id="column-{{ col.pk }}" data-col="{{ col.pk }}">
     {% if col.is_final %}
       {% for item in col.grouped_items|slice:":15" %}
         {% include "kanban/partials/_board_item.html" with is_final=col.is_final %}
       {% endfor %}
       {% if col.total_items > 15 %}
       <a href="{% url 'kanban:board_finalizados' board.pk col.pk %}"
-         class="block text-center text-xs text-gray-400 hover:text-blue-600 py-2 transition-colors">
+         class="block text-center text-xs font-medium text-gray-400 hover:text-blue-600 py-2 transition-colors">
         Ver todos {{ col.total_items }} finalizados →
       </a>
       {% endif %}
     {% else %}
       {% for item in col.grouped_items %}
         {% include "kanban/partials/_board_item.html" with is_final=col.is_final %}
+      {% empty %}
+      <div class="text-center py-8 px-3 text-xs text-gray-400 select-none">
+        <div class="w-8 h-8 rounded-lg bg-white/70 flex items-center justify-center mx-auto mb-1.5 text-gray-300">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        </div>
+        Nenhum card aqui
+      </div>
       {% endfor %}
       {% if col.extra_count %}
       <button type="button"
-              class="ver-mais-btn block w-full text-center text-xs text-gray-400 hover:text-blue-600 py-2 transition-colors"
+              class="ver-mais-btn block w-full text-center text-xs font-medium text-gray-400 hover:text-blue-600 py-2 transition-colors"
               data-col="{{ col.pk }}">
         + ver mais {{ col.extra_count }}
       </button>
@@ -71,9 +80,9 @@
   </div>
 
   <!-- Add card button -->
-  <div class="px-3 pb-3">
+  <div class="px-2.5 pb-2.5">
     <a href="{% url 'kanban:card_create' board.pk %}?column={{ col.pk }}"
-       class="flex items-center gap-2 text-gray-400 hover:text-gray-600 text-sm py-2 px-3 rounded-lg hover:bg-gray-200 transition-colors w-full">
+       class="flex items-center justify-center gap-1.5 text-gray-400 hover:text-blue-600 text-sm font-medium py-2 px-3 rounded-lg border border-dashed border-gray-300 hover:border-blue-300 hover:bg-white transition-colors w-full">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
       Adicionar card
     </a>

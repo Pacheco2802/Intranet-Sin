@@ -34,11 +34,14 @@ class ContentSecurityPolicyMiddleware:
 LGPD_EXEMPT_URLS = [
     '/login/',
     '/logout/',
+    '/triagem/',
     '/lgpd/consentimento/',
     '/lgpd/politica/',
     '/admin/',
     '/static/',
     '/media/',
+    '/service-worker.js',
+    '/manifest.webmanifest',
 ]
 
 

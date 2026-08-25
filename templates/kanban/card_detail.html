@@ -64,11 +64,11 @@
     {% endif %}
 
     <!-- Card info -->
-    <div class="card">
+    <div class="card" style="border-left:4px solid {{ card.priority_color }};">
       <div class="flex items-center gap-2 mb-4 flex-wrap">
-        <span class="text-xs px-2.5 py-1 rounded-full text-white font-medium"
+        <span class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full text-white font-semibold"
               style="background-color:{{ card.priority_color }}">
-          {{ card.get_priority_display }}
+          ● {{ card.get_priority_display }}
         </span>
         <span class="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">{{ card.column.name }}</span>
         {% if card.final_status %}
@@ -119,7 +119,7 @@
       {% if subtasks %}
       <div class="space-y-3 mb-4">
         {% for st in subtasks %}
-        <div class="rounded-lg border {% if st.is_done %}border-green-200 bg-green-50{% else %}border-gray-200 bg-gray-50{% endif %}">
+        <div class="rounded-xl border {% if st.is_done %}border-green-200 bg-green-50{% else %}border-gray-200 bg-gray-50{% endif %}">
           <div class="flex items-center gap-3 p-2.5 group">
             {% if is_member %}
             <form method="post" action="{% url 'kanban:subtask_toggle' st.pk %}">

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
@@ -41,6 +41,7 @@
   }
 
   .logo-icon svg { width: 5mm; height: 5mm; }
+  .logo-icon img { width: 6mm; height: 6mm; object-fit: contain; }
 
   .org-name {
     font-size: 13pt;
@@ -185,6 +186,77 @@
     text-transform: uppercase;
   }
 
+  /* ── Triagem (QR + código) ── */
+  .triagem-section {
+    margin: 2mm 0 1mm;
+  }
+
+  .triagem-titulo {
+    font-size: 8pt;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #1a6b45;
+    margin-bottom: 1.5mm;
+  }
+
+  .triagem-qr svg {
+    width: 26mm;
+    height: 26mm;
+  }
+
+  .triagem-instrucao {
+    font-size: 7.5pt;
+    color: #444;
+    line-height: 1.4;
+    margin-top: 1mm;
+  }
+
+  .triagem-codigo-label {
+    font-size: 7pt;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #888;
+    margin-top: 2mm;
+  }
+
+  .triagem-codigo {
+    font-size: 20pt;
+    font-weight: 900;
+    letter-spacing: 4px;
+    color: #1a6b45;
+    line-height: 1.2;
+  }
+
+  /* ── Barra de ações (só na tela) ── */
+  .toolbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    background: #1b2c4a;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px;
+    z-index: 10;
+  }
+
+  .toolbar a, .toolbar button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(255,255,255,.12);
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .toolbar .primario { background: #1a6b45; }
+
+  body { padding-top: 52px; }
+
   @media print {
     body { padding: 0; }
     .no-print { display: none; }
@@ -192,16 +264,19 @@
 </style>
 </head>
 <body>
+
+<div class="toolbar no-print">
+  <button class="primario" onclick="window.print()">🖨 Imprimir novamente</button>
+  <a href="/atendimento/painel/">Voltar ao painel</a>
+</div>
+
 <div class="ticket">
 
   <!-- Cabeçalho -->
   <div class="header">
     <div class="logo-row">
       <div class="logo-icon">
-        <svg fill="none" stroke="#fff" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-        </svg>
+        <img src="{% static 'img/logo-sinsaude.png' %}" alt="SINSAÚDE-SP">
       </div>
       <div>
         <div class="org-name">SINSAÚDE-SP</div>
@@ -237,6 +312,22 @@
     <div class="filiado-assunto">{{ at.assunto }}</div>
     {% endif %}
   </div>
+
+  {% if triagem_qr %}
+  <hr class="divider-solid">
+
+  <!-- Triagem: QR individual + código curto -->
+  <div class="triagem-section">
+    <div class="triagem-titulo">Conte seu caso antes de ser chamado</div>
+    <div class="triagem-qr">{{ triagem_qr|safe }}</div>
+    <div class="triagem-instrucao">
+      Aponte a câmera do celular para o código acima<br>
+      <strong>ou</strong> use o totem da recepção digitando:
+    </div>
+    <div class="triagem-codigo-label">Seu código</div>
+    <div class="triagem-codigo">{{ at.triagem_codigo }}</div>
+  </div>
+  {% endif %}
 
   <hr class="divider-dashed">
 

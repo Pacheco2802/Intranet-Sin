@@ -230,6 +230,12 @@ class AuditLog(models.Model):
         ATENDIMENTO_CREATE = 'ATEND_CREATE', 'Atendimento criado'
         ATENDIMENTO_UPDATE = 'ATEND_UPDATE', 'Atendimento atualizado'
         ATENDIMENTO_CLOSE = 'ATEND_CLOSE', 'Atendimento concluído'
+        TRIAGEM_SUBMIT = 'TRIAGEM_SUBMIT', 'Triagem pública enviada'
+        TRIAGEM_FAIL = 'TRIAGEM_FAIL', 'Triagem pública — tentativa inválida'
+        ASSOCIADO_VIEW = 'ASSOCIADO_VIEW', 'Ficha de associado consultada'
+        ASSOCIADO_EDIT = 'ASSOCIADO_EDIT', 'Ficha de associado editada'
+        CASO_CREATE = 'CASO_CREATE', 'Caso criado'
+        CASO_UPDATE = 'CASO_UPDATE', 'Caso atualizado'
         REEMB_CREATE = 'REEMB_CREATE', 'Reembolso solicitado'
         REEMB_APPROVE = 'REEMB_APPROVE', 'Reembolso aprovado'
         REEMB_PAY = 'REEMB_PAY', 'Reembolso pago'
@@ -238,6 +244,9 @@ class AuditLog(models.Model):
         DIRAT_APPROVE = 'DIRAT_APPROVE', 'Atividade de diretoria aprovada'
         DIRAT_REJECT = 'DIRAT_REJECT', 'Atividade de diretoria rejeitada'
         DIRAT_PAY = 'DIRAT_PAY', 'Pagamento de diretoria realizado'
+        CHAMADO_CREATE = 'CHAMADO_CREATE', 'Chamado de TI aberto'
+        CHAMADO_UPDATE = 'CHAMADO_UPDATE', 'Chamado de TI atualizado'
+        CHAMADO_CLOSE = 'CHAMADO_CLOSE', 'Chamado de TI resolvido'
 
     user = models.ForeignKey(
         CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
@@ -288,6 +297,10 @@ class Notification(models.Model):
         PROJETO_FIM = 'PROJETO_FIM', 'Projeto finalizado'
         PROJETO_MURAL = 'PROJETO_MURAL', 'Nova mensagem no mural do projeto'
         COMUNICADO_NOVO = 'COMUNICADO_NOVO', 'Novo comunicado publicado'
+        CHAMADO_NOVO = 'CHAMADO_NOVO', 'Novo chamado de TI'
+        CHAMADO_ATRIBUIDO = 'CHAMADO_ATRIB', 'Chamado atribuído a você'
+        CHAMADO_STATUS = 'CHAMADO_STATUS', 'Atualização do seu chamado'
+        CHAMADO_COMENTARIO = 'CHAMADO_COMENT', 'Comentário no chamado'
 
     user = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE,

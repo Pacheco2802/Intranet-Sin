@@ -16,7 +16,10 @@ from django.utils.timezone import now, localdate
 from core.models import AuditLog, Notification, CustomUser, Department
 from core.middleware import AuditMiddleware
 from core.validators import validate_file_extension, validate_file_size
-from .models import Atendimento, AtendimentoEtapa, AtendimentoAnexo, _cpf_hash
+from .models import (
+    Atendimento, AtendimentoEtapa, AtendimentoAnexo, _cpf_hash,
+    gerar_triagem_credenciais,
+)
 from .forms import (
     AtendimentoForm, EtapaNotaForm, EncaminharForm,
     ConcluirForm, AtendimentoFilterForm,
@@ -204,6 +207,8 @@ def atendimento_cpf_lookup(request):
     anteriores = list(qs.values('pk', 'assunto', 'created_at', 'status'))
     for a in anteriores:
         a['created_at'] = a['created_at'].strftime('%d/%m/%Y')
+    from associados.models import Associado
+    associado = Associado.objects.filter(cpf_hash=h).only('pk').first()
     return JsonResponse({
         'found': True,
         'nome': first.nome_filiado,
@@ -212,6 +217,7 @@ def atendimento_cpf_lookup(request):
         'total': qs.count(),
         'ultimo_pk': first.pk,
         'cpf_hash': h,
+        'associado_pk': associado.pk if associado else None,
         'anteriores': anteriores[:10],
     })
 
@@ -230,7 +236,15 @@ def atendimento_create(request):
                 at.retorno_de = Atendimento.objects.get(pk=retorno_pk, cpf_hash=h)
             except Atendimento.DoesNotExist:
                 at.retorno_de = None
+        at.triagem_token, at.triagem_codigo = gerar_triagem_credenciais()
         at.save()
+
+        # Cria/complementa a ficha do associado
+        from associados.models import Associado
+        associado = Associado.upsert_from_atendimento(at, Associado.Origem.RECEPCAO)
+        if associado:
+            at.associado = associado
+            at.save(update_fields=['associado'])
 
         etapa = AtendimentoEtapa.objects.create(
             atendimento=at,
@@ -274,7 +288,8 @@ def atendimento_create(request):
             resource_type='Atendimento', resource_id=at.pk,
             ip=AuditMiddleware.get_client_ip(request),
         )
-        return redirect('atendimento:painel')
+        # Abre o slip da triagem (QR + código) para impressão no balcão
+        return redirect('atendimento:imprimir_senha', pk=at.pk)
 
     return render(request, 'atendimento/create.html', {'form': form})
 
@@ -415,7 +430,23 @@ def atendimento_detail(request, pk):
 @login_required
 def atendimento_imprimir_senha(request, pk):
     at = get_object_or_404(_qs_visivel(request.user), pk=pk)
-    return render(request, 'atendimento/imprimir_senha.html', {'at': at})
+
+    # Reimpressão de registro do dia sem credenciais (ex.: stub do sync NextQS):
+    # gera token/código na hora para o slip sair completo
+    ativo = at.status not in (Atendimento.Status.CONCLUIDO, Atendimento.Status.CANCELADO)
+    if not at.triagem_token and ativo and at.created_at.date() == localdate():
+        at.triagem_token, at.triagem_codigo = gerar_triagem_credenciais()
+        at.save(update_fields=['triagem_token', 'triagem_codigo', 'updated_at'])
+
+    triagem_qr = ''
+    if at.triagem_token:
+        from .qr import qr_svg
+        triagem_qr = qr_svg(request.build_absolute_uri(f'/triagem/t/{at.triagem_token}/'))
+
+    return render(request, 'atendimento/imprimir_senha.html', {
+        'at': at,
+        'triagem_qr': triagem_qr,
+    })
 
 
 @login_required
@@ -692,7 +723,7 @@ def atendimento_painel(request):
     filas = _filas_do_usuario(request.user)
     is_profissional = filas is not None
 
-    base = _qs_visivel(request.user)
+    base = _qs_visivel(request.user).select_related('triagem_publica')
     if filas:
         base = base.filter(nextqs_fila__in=filas)
 
@@ -790,6 +821,12 @@ def atendimento_concluir_rapido(request, pk):
 
 @login_required
 def atendimento_filiado(request, cpf_hash):
+    # Se já existe ficha de associado para este CPF, ela é a visão canônica
+    from associados.models import Associado
+    associado = Associado.objects.filter(cpf_hash=cpf_hash).first()
+    if associado:
+        return redirect('associados:detail', pk=associado.pk)
+
     qs = _qs_visivel(request.user).filter(cpf_hash=cpf_hash).order_by('-created_at')
     if not qs.exists():
         messages.error(request, 'Nenhum atendimento encontrado para este filiado.')

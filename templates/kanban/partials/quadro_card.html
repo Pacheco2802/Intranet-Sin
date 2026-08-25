@@ -1,20 +1,27 @@
 <a href="{% url 'kanban:board_detail' board.pk %}"
-   class="card hover:border-blue-300 hover:shadow-md transition-all group cursor-pointer border border-gray-100">
+   class="card card-hover group flex flex-col cursor-pointer hover:border-blue-300">
   <div class="flex items-start justify-between mb-3">
-    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-         style="background:{{ board.department.color|default:'#1e3a5f' }}22; border: 2px solid {{ board.department.color|default:'#1e3a5f' }}44;">
+    <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-xl flex-shrink-0"
+         style="background:{{ board.department.color|default:'#1e3a5f' }}1f; border: 1.5px solid {{ board.department.color|default:'#1e3a5f' }}55;">
       {{ board.department.icon|default:"📋" }}
     </div>
     {% if board.is_cross_department %}
-    <span class="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">Projeto</span>
+    <span class="text-[11px] font-semibold bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">Projeto</span>
     {% else %}
-    <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Interno</span>
+    <span class="text-[11px] font-semibold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Interno</span>
     {% endif %}
   </div>
-  <h3 class="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors text-sm">{{ board.name }}</h3>
+  <h3 class="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors text-sm leading-tight">{{ board.name }}</h3>
   {% if board.department %}<p class="text-xs text-gray-400 mt-1">{{ board.department }}</p>{% endif %}
-  <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-    <span class="text-xs text-gray-400">{{ board.columns.count }} coluna{{ board.columns.count|pluralize:"s" }}</span>
-    <span class="text-xs text-gray-400">{{ board.created_by.first_name }}</span>
+  <div class="flex items-center justify-between mt-auto pt-3 border-t border-gray-100 text-xs text-gray-400">
+    <span class="inline-flex items-center gap-1">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
+      {{ board.columns.count }} coluna{{ board.columns.count|pluralize:"s" }}
+    </span>
+    <span class="inline-flex items-center gap-1.5">
+      <span class="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
+            style="background: linear-gradient(135deg, hsl({{ board.created_by.pk|add:120 }},55%,45%), hsl({{ board.created_by.pk|add:160 }},65%,35%));">{{ board.created_by.first_name|first|upper }}</span>
+      {{ board.created_by.first_name }}
+    </span>
   </div>
 </a>

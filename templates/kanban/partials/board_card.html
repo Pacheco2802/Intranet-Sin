@@ -36,7 +36,7 @@
 
 {% else %}
 {# ───────── Card completo ───────── #}
-<div class="kanban-card kc-stripe group bg-white rounded-lg shadow-sm pl-3.5 pr-3 py-2.5 border border-gray-100 hover:border-blue-200 hover:shadow transition-all{% if card.assignee_id == user.pk %} is-mine{% endif %}"
+<div class="kanban-card kc-stripe group bg-white rounded-xl shadow-sm pl-4 pr-3 py-3 border border-gray-100 hover:border-blue-300 hover:shadow-md hover:-translate-y-px transition-all{% if card.assignee_id == user.pk %} is-mine{% endif %}"
      data-card-id="{{ card.pk }}"
      style="--prio:{{ card.priority_color }}">
 

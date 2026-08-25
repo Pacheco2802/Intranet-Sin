@@ -1,0 +1,49 @@
+<div id="wizard-step">
+
+  <!-- Trilha de respostas já dadas -->
+  {% if trilha %}
+  <nav class="wiz-trail mb-4" aria-label="Respostas anteriores">
+    {% for t in trilha %}
+    <span class="wiz-chip">{% if t.icone %}{{ t.icone }}{% endif %}{{ t.resposta }}</span>
+    {% if not forloop.last %}<span class="wiz-trail-sep" aria-hidden="true">›</span>{% endif %}
+    {% endfor %}
+  </nav>
+  {% endif %}
+
+  <!-- Pergunta -->
+  <div class="flex items-center gap-2 mb-1">
+    <span class="text-[11px] font-bold uppercase tracking-widest text-blue-500">Passo {{ trilha|length|add:1 }}</span>
+  </div>
+  <h3 class="text-lg font-bold text-gray-900 leading-snug">{{ pergunta.texto }}</h3>
+  {% if pergunta.ajuda %}<p class="text-sm text-gray-500 mt-1 mb-4">{{ pergunta.ajuda }}</p>{% else %}<div class="mb-4"></div>{% endif %}
+
+  <form id="wizard-form">
+    <input type="hidden" name="caminho" value="{{ caminho_json }}">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+      {% for op in opcoes %}
+      <button type="button"
+              hx-post="{% url 'chamados:triagem_passo' %}"
+              hx-include="closest form"
+              hx-target="#wizard"
+              hx-swap="innerHTML"
+              name="opcao_id" value="{{ op.pk }}"
+              class="wiz-opt">
+        <span class="wiz-opt-ic">{{ op.icone|default:"▸" }}</span>
+        <span class="wiz-opt-label">{{ op.label }}</span>
+        <svg class="wiz-opt-arrow w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" d="M9 5l7 7-7 7"/>
+        </svg>
+      </button>
+      {% empty %}
+      <p class="text-sm text-gray-400 col-span-2">Esta pergunta ainda não tem respostas configuradas.</p>
+      {% endfor %}
+    </div>
+  </form>
+
+  <div class="mt-5 pt-3 border-t border-gray-100">
+    <a href="{% url 'chamados:abrir' %}" class="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M4 9a9 9 0 1 0 3-6.7L4 5"/></svg>
+      Recomeçar
+    </a>
+  </div>
+</div>

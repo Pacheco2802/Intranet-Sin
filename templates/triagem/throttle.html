@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Aguarde um instante{% endblock %}
+{% block auth_content %}
+<div class="min-h-screen flex items-center justify-center px-4" style="background:#f5f3ef;">
+  <div class="w-full max-w-md text-center">
+    <div class="bg-white rounded-2xl shadow-lg p-8" style="box-shadow:0 4px 24px rgba(0,0,0,.10),0 1px 4px rgba(0,0,0,.06);">
+      <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+        <svg class="w-9 h-9 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+      <h1 class="text-xl font-bold text-gray-900">Muitas tentativas</h1>
+      <p class="text-gray-600 mt-3 text-sm leading-relaxed">
+        Por segurança, aguarde alguns minutos e tente novamente.<br>
+        Se precisar de ajuda, procure a recepção.
+      </p>
+    </div>
+    <div class="flex items-center justify-center gap-2 mt-4">
+      <img src="{% static 'img/logo-sinsaude.png' %}" alt="SINSAÚDE-SP" class="w-6 h-6 object-contain">
+      <span class="text-xs text-gray-400">SINSAÚDE-SP</span>
+    </div>
+  </div>
+</div>
+{% endblock %}

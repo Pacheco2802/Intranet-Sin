@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Abrir chamado de TI{% endblock %}
+{% block page_title %}Abrir chamado de TI{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'chamados:meus' %}" class="btn-secondary text-xs">Meus chamados</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+
+  <!-- Cabeçalho do assistente (persiste entre os passos) -->
+  <div class="flex items-center gap-4 mb-5">
+    <div class="wiz-badge">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
+              d="M18 8a6 6 0 10-12 0v5a3 3 0 003 3h1v-6H8V8a4 4 0 118 0v2h-2v6h1a3 3 0 003-3V8z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
+              d="M16 16v1a3 3 0 01-3 3h-1"/>
+      </svg>
+    </div>
+    <div>
+      <div class="eyebrow" style="margin-bottom:.25rem;">Suporte de TI</div>
+      <h1 class="text-xl font-bold text-gray-900 leading-tight">Abrir um chamado</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Responda algumas perguntas rápidas — a categoria e a prioridade são preenchidas para você.</p>
+    </div>
+  </div>
+
+  <div class="card wiz-card">
+    <div id="wizard">
+      {% if categoria %}
+        {% include "chamados/partials/final.html" %}
+      {% else %}
+        {% include "chamados/partials/passo.html" %}
+      {% endif %}
+    </div>
+  </div>
+
+  <p class="text-center text-xs text-gray-400 mt-4">
+    Prefere falar direto? Descreva o problema no último passo e o time de TI cuida do resto.
+  </p>
+</div>
+
+<style>
+  .wiz-badge {
+    width: 54px; height: 54px; border-radius: 16px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; background: linear-gradient(135deg, #1a6b45, #124a30);
+    box-shadow: 0 8px 20px rgba(26,107,69,.28);
+  }
+  .wiz-card { padding: 1.5rem; }
+
+  /* Opção do assistente — cartão amplo e clicável */
+  .wiz-opt {
+    display: flex; align-items: center; gap: .9rem;
+    width: 100%; text-align: left;
+    padding: .85rem 1rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-std);
+    background: var(--surf-card);
+    cursor: pointer;
+    transition: border-color .15s, background .15s, box-shadow .15s, transform .1s;
+  }
+  .wiz-opt:hover {
+    border-color: #60a5fa;
+    background: rgba(59,130,246,.05);
+    box-shadow: var(--shadow-card);
+    transform: translateY(-1px);
+  }
+  .wiz-opt:active { transform: translateY(0); }
+  .wiz-opt-ic {
+    width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem; line-height: 1;
+    background: rgba(0,0,0,.04); color: var(--ink-2);
+    transition: background .15s, color .15s;
+  }
+  .wiz-opt:hover .wiz-opt-ic { background: rgba(59,130,246,.14); }
+  .wiz-opt-label { flex: 1; font-size: .9rem; font-weight: 600; color: var(--ink-1); line-height: 1.3; }
+  .wiz-opt-arrow { color: var(--ink-4); flex-shrink: 0; transition: color .15s, transform .15s; }
+  .wiz-opt:hover .wiz-opt-arrow { color: #3b82f6; transform: translateX(2px); }
+
+  [data-theme="dark"] .wiz-opt { background: var(--surf-raised); }
+  [data-theme="dark"] .wiz-opt:hover { background: rgba(59,130,246,.10); border-color: rgba(59,130,246,.4); }
+  [data-theme="dark"] .wiz-opt-ic { background: rgba(255,255,255,.06); }
+
+  /* Trilha de respostas já dadas */
+  .wiz-trail { display: flex; flex-wrap: wrap; align-items: center; gap: .375rem; }
+  .wiz-chip {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .2rem .6rem; border-radius: 999px;
+    font-size: .72rem; font-weight: 600;
+    background: rgba(26,107,69,.10); color: var(--accent);
+  }
+  [data-theme="dark"] .wiz-chip { background: rgba(74,222,128,.12); color: #6ee7a8; }
+  .wiz-trail-sep { color: var(--ink-4); }
+</style>
+{% endblock %}

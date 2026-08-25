@@ -14,37 +14,40 @@
 <div class="max-w-7xl mx-auto">
 
   <!-- Filtros -->
-  <form method="get" class="flex flex-wrap items-center gap-2 mb-4">
+  <form method="get" class="flex flex-wrap items-center gap-2 mb-4 p-2.5 rounded-xl border border-gray-100 bg-white/60" style="box-shadow:var(--shadow-card);">
     <input type="hidden" name="sort" value="{{ f.sort }}">
-    <input type="text" name="q" value="{{ f.q }}" placeholder="🔎 Buscar tarefa..."
-           class="text-xs form-input py-1 w-48">
-    <select name="board" class="text-xs form-input py-1 w-auto">
+    <div class="relative flex-shrink-0">
+      <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+      <input type="text" name="q" value="{{ f.q }}" placeholder="Buscar tarefa..."
+             class="text-xs form-input py-1.5 pl-8 w-48">
+    </div>
+    <select name="board" class="text-xs form-input py-1.5 w-auto">
       <option value="">Todos os quadros</option>
       {% for b in boards %}
       <option value="{{ b.pk }}" {% if f.board == b.pk|stringformat:'s' %}selected{% endif %}>{{ b.name }}</option>
       {% endfor %}
     </select>
-    <select name="status" class="text-xs form-input py-1 w-auto">
+    <select name="status" class="text-xs form-input py-1.5 w-auto">
       <option value="">Ativas</option>
       <option value="todos" {% if f.status == 'todos' %}selected{% endif %}>Todas (inclui finalizadas)</option>
       {% for val, label in status_choices %}
       <option value="{{ val }}" {% if f.status == val %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
     </select>
-    <select name="assignee" class="text-xs form-input py-1 w-auto">
+    <select name="assignee" class="text-xs form-input py-1.5 w-auto">
       <option value="">Todos os responsáveis</option>
       {% for u in responsaveis %}
       <option value="{{ u.pk }}" {% if f.assignee == u.pk|stringformat:'s' %}selected{% endif %}>{{ u.get_full_name|default:u.first_name }}</option>
       {% endfor %}
     </select>
-    <select name="priority" class="text-xs form-input py-1 w-auto">
+    <select name="priority" class="text-xs form-input py-1.5 w-auto">
       <option value="">Todas as prioridades</option>
       <option value="URGENT" {% if f.priority == 'URGENT' %}selected{% endif %}>Urgente</option>
       <option value="HIGH" {% if f.priority == 'HIGH' %}selected{% endif %}>Alta</option>
       <option value="MEDIUM" {% if f.priority == 'MEDIUM' %}selected{% endif %}>Média</option>
       <option value="LOW" {% if f.priority == 'LOW' %}selected{% endif %}>Baixa</option>
     </select>
-    <select name="prazo" class="text-xs form-input py-1 w-auto">
+    <select name="prazo" class="text-xs form-input py-1.5 w-auto">
       <option value="">Qualquer prazo</option>
       <option value="vencidos" {% if f.prazo == 'vencidos' %}selected{% endif %}>Vencidos</option>
       <option value="hoje" {% if f.prazo == 'hoje' %}selected{% endif %}>Vencem hoje</option>
@@ -162,7 +165,7 @@
 
   {% else %}
   <div class="card text-center py-20">
-    <div class="text-5xl mb-4">📋</div>
+    <div class="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center text-4xl mx-auto mb-4">🔍</div>
     <p class="text-gray-800 font-semibold">Nenhuma tarefa encontrada</p>
     <p class="text-gray-400 text-sm mt-1">Ajuste os filtros ou limpe a busca.</p>
   </div>

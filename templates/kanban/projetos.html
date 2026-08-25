@@ -22,10 +22,13 @@
 </div>
 
 {% if not projetos %}
-<div class="card text-center py-16">
-  <div class="text-5xl mb-4">🤝</div>
-  <p class="text-gray-500">
-    {% if aba == 'finalizados' %}Nenhum projeto finalizado.{% else %}Nenhum projeto ativo no momento.{% endif %}
+<div class="card text-center py-16 max-w-md mx-auto">
+  <div class="w-16 h-16 rounded-2xl bg-violet-100 flex items-center justify-center text-4xl mx-auto mb-4">🤝</div>
+  <p class="font-semibold text-gray-700">
+    {% if aba == 'finalizados' %}Nenhum projeto finalizado{% else %}Nenhum projeto ativo{% endif %}
+  </p>
+  <p class="text-sm text-gray-400 mt-1">
+    {% if aba == 'finalizados' %}Projetos concluídos aparecerão aqui.{% else %}Projetos reúnem pessoas de vários departamentos em um quadro compartilhado.{% endif %}
   </p>
   {% if pode_criar and aba != 'finalizados' %}
   <a href="{% url 'kanban:projeto_create' %}" class="btn-primary inline-block mt-4">Criar projeto</a>
@@ -35,7 +38,7 @@
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
   {% for board in projetos %}
   <a href="{% url 'kanban:board_detail' board.pk %}"
-     class="card hover:border-violet-300 hover:shadow-md transition-all group cursor-pointer relative {% if board.unread_count %}border-2 border-red-300 shadow-sm{% else %}border border-violet-100{% endif %}">
+     class="card card-hover group flex flex-col cursor-pointer relative hover:border-violet-300 {% if board.unread_count %}!border-2 !border-red-300{% else %}border-violet-100{% endif %}">
     {% if board.unread_count %}
     <span class="absolute -top-2 -right-2 bg-red-500 text-white text-[11px] font-bold rounded-full min-w-[22px] h-[22px] flex items-center justify-center px-1.5 shadow"
           title="{{ board.unread_count }} nova{{ board.unread_count|pluralize:'s' }} atualizaç{{ board.unread_count|pluralize:'ão,ões' }}">
@@ -43,21 +46,26 @@
     </span>
     {% endif %}
     <div class="flex items-start justify-between mb-3">
-      <div class="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600 text-xl flex-shrink-0">🤝</div>
+      <div class="w-11 h-11 rounded-2xl bg-violet-100 flex items-center justify-center text-violet-600 text-xl flex-shrink-0">🤝</div>
       {% if board.is_locked %}
-      <span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Finalizado</span>
+      <span class="text-[11px] font-semibold bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Finalizado</span>
       {% else %}
-      <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Ativo</span>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Ativo
+      </span>
       {% endif %}
     </div>
-    <h3 class="font-semibold text-gray-900 group-hover:text-violet-600 transition-colors text-sm">{{ board.name }}</h3>
-    <p class="text-xs text-gray-400 mt-1">
+    <h3 class="font-semibold text-gray-900 group-hover:text-violet-600 transition-colors text-sm leading-tight">{{ board.name }}</h3>
+    <p class="text-xs text-gray-400 mt-1 line-clamp-1">
       {% with areas=board.member_departments.all %}
       {% if areas %}{% for d in areas %}{{ d.name }}{% if not forloop.last %} · {% endif %}{% endfor %}{% else %}Participantes avulsos{% endif %}
       {% endwith %}
     </p>
-    <div class="flex items-center justify-between mt-3 pt-3 border-t border-violet-50 text-xs text-gray-400">
-      <span>{{ board.columns.count }} coluna{{ board.columns.count|pluralize:"s" }}</span>
+    <div class="flex items-center justify-between mt-auto pt-3 border-t border-violet-50 text-xs text-gray-400">
+      <span class="inline-flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
+        {{ board.columns.count }} coluna{{ board.columns.count|pluralize:"s" }}
+      </span>
       {% if board.is_locked and board.finished_at %}<span>fim {{ board.finished_at|date:"d/m/Y" }}</span>{% else %}<span>{{ board.created_by.first_name }}</span>{% endif %}
     </div>
   </a>

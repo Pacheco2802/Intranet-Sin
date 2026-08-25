@@ -7,6 +7,20 @@
 
 {% block content %}
 <div class="max-w-lg mx-auto">
+
+  <!-- Cabeçalho -->
+  <div class="flex items-center gap-4 mb-5">
+    <div class="flex items-center justify-center flex-shrink-0 text-white"
+         style="width:54px;height:54px;border-radius:16px;background:linear-gradient(135deg,#1a6b45,#124a30);box-shadow:0 8px 20px rgba(26,107,69,.28);">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+    </div>
+    <div>
+      <div class="eyebrow" style="margin-bottom:.25rem;">Solicitação</div>
+      <h1 class="text-xl font-bold text-gray-900 leading-tight">Pedir para outra área</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Descreva o que precisa. Você acompanha o andamento em “Minhas solicitações”.</p>
+    </div>
+  </div>
+
   <form method="post" enctype="multipart/form-data" class="space-y-4" x-data="deptPicker()" @submit.prevent="submitForm($event)">
     {% csrf_token %}
 

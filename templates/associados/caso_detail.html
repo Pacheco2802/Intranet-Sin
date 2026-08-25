@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}{{ caso.titulo }} — Caso{% endblock %}
+{% block page_title %}Caso #{{ caso.pk }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'associados:detail' associado.pk %}" class="btn-secondary text-xs">← Ficha do associado</a>
+<a href="{% url 'associados:caso_edit' caso.pk %}" class="btn-secondary text-xs">✎ Editar caso</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+  <!-- Principal -->
+  <div class="lg:col-span-2 space-y-4">
+
+    <!-- Cabeçalho do caso -->
+    <div class="card">
+      <div class="flex items-center gap-2 flex-wrap mb-2">
+        <span class="text-xs px-2.5 py-1 rounded-full text-white font-medium" style="background-color:{{ caso.status_color }};">
+          {{ caso.get_status_display }}
+        </span>
+        <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{{ caso.get_tipo_display }}</span>
+        <span class="text-xs text-gray-300 ml-auto">Aberto em {{ caso.created_at|date:"d/m/Y" }}</span>
+      </div>
+      <h2 class="text-lg font-bold text-gray-900">{{ caso.titulo }}</h2>
+      <p class="text-sm text-gray-500 mt-0.5">{{ associado.nome }}</p>
+      {% if caso.descricao %}
+      <p class="text-sm text-gray-700 whitespace-pre-wrap mt-3 pt-3 border-t border-gray-100">{{ caso.descricao }}</p>
+      {% endif %}
+    </div>
+
+    <!-- Documentos -->
+    <div class="card">
+      <div class="flex items-center gap-2 mb-4">
+        <h3 class="font-semibold text-gray-900">Documentos</h3>
+        <span class="text-xs bg-gray-100 text-gray-500 font-semibold px-2 py-0.5 rounded-full">{{ documentos|length }}</span>
+      </div>
+      <div class="space-y-2 mb-4">
+        {% for doc in documentos %}
+        <a href="{{ doc.arquivo.url }}" target="_blank"
+           class="flex items-center gap-3 border border-gray-100 rounded-xl px-3 py-2.5 hover:border-blue-200 transition-all">
+          <span class="text-lg flex-shrink-0">📎</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm text-gray-700 truncate">{{ doc.nome_original }}</p>
+            <p class="text-xs text-gray-400">{{ doc.get_tipo_display }} · {{ doc.created_at|date:"d/m/Y H:i" }}
+              {% if doc.enviado_por %} · {{ doc.enviado_por.get_full_name }}{% endif %}</p>
+          </div>
+        </a>
+        {% empty %}
+        <p class="text-center py-4 text-gray-400 text-sm">Nenhum documento anexado.</p>
+        {% endfor %}
+      </div>
+
+      <!-- Upload -->
+      <form method="post" enctype="multipart/form-data" class="pt-3 border-t border-gray-100">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="documento">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
+            {{ doc_form.tipo }}
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Arquivo (máx. 5 MB)</label>
+            {{ doc_form.arquivo }}
+            {% if doc_form.arquivo.errors %}<p class="text-red-500 text-xs mt-1">{{ doc_form.arquivo.errors|join:" " }}</p>{% endif %}
+          </div>
+        </div>
+        <button type="submit" class="btn-primary text-sm mt-3">⬆ Anexar documento</button>
+      </form>
+    </div>
+
+    <!-- Atendimentos vinculados -->
+    <div class="card">
+      <h3 class="font-semibold text-gray-900 mb-3">Atendimentos vinculados ao caso</h3>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="vincular">
+        <div class="space-y-1.5">
+          {% for at in atendimentos_do_associado %}
+          <label class="flex items-center gap-3 border border-gray-100 rounded-xl px-3 py-2 hover:bg-gray-50 cursor-pointer">
+            <input type="checkbox" name="atendimentos" value="{{ at.pk }}"
+                   {% if at.pk in vinculados %}checked{% endif %}
+                   class="w-4 h-4 rounded text-accent">
+            {% if at.nextqs_fila and at.numero_senha %}
+            <span class="font-mono font-bold text-blue-700 text-sm flex-shrink-0">{{ at.nextqs_fila }}{{ at.numero_senha }}</span>
+            {% endif %}
+            <span class="text-sm text-gray-700 flex-1 truncate">{{ at.assunto|default:"Atendimento" }}</span>
+            <span class="text-xs text-gray-400 flex-shrink-0">{{ at.created_at|date:"d/m/Y" }}</span>
+            <a href="{% url 'atendimento:detail' at.pk %}" class="text-xs text-blue-500 flex-shrink-0" title="Abrir atendimento">↗</a>
+          </label>
+          {% empty %}
+          <p class="text-center py-4 text-gray-400 text-sm">Nenhum atendimento deste associado visível para você.</p>
+          {% endfor %}
+        </div>
+        {% if atendimentos_do_associado %}
+        <button type="submit" class="btn-secondary text-sm mt-3">Salvar vínculos</button>
+        {% endif %}
+      </form>
+    </div>
+
+  </div>
+
+  <!-- Sidebar -->
+  <div class="space-y-4">
+    <div class="card">
+      <h3 class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-3">Detalhes</h3>
+      <div class="space-y-2.5 text-sm">
+        <div><p class="text-xs text-gray-400">Departamento responsável</p>
+          <p class="text-gray-800 mt-0.5">{{ caso.departamento_responsavel.name|default:"—" }}</p></div>
+        <div><p class="text-xs text-gray-400">Responsável</p>
+          <p class="text-gray-800 mt-0.5">{{ caso.responsavel.get_full_name|default:"—" }}</p></div>
+        <div><p class="text-xs text-gray-400">Aberto por</p>
+          <p class="text-gray-800 mt-0.5">{{ caso.created_by.get_full_name|default:"—" }}</p></div>
+        <div><p class="text-xs text-gray-400">Última atualização</p>
+          <p class="text-gray-800 mt-0.5">{{ caso.updated_at|date:"d/m/Y H:i" }}</p></div>
+        {% if caso.encerrado_em %}
+        <div><p class="text-xs text-gray-400">Encerrado em</p>
+          <p class="text-gray-800 mt-0.5">{{ caso.encerrado_em|date:"d/m/Y H:i" }}</p></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <a href="{% url 'associados:detail' associado.pk %}"
+       class="card block hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-all text-center">
+      <p class="text-sm font-medium text-emerald-700">📇 Ficha completa do associado</p>
+      <p class="text-xs text-emerald-500 mt-0.5">{{ associado.nome }}</p>
+    </a>
+  </div>
+
+</div>
+{% endblock %}

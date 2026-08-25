@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Painel de chamados TI{% endblock %}
+{% block page_title %}Painel de chamados TI{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'chamados:abrir' %}" class="btn-secondary text-xs">+ Abrir chamado</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+
+  <div class="flex flex-wrap gap-3 mb-4 text-sm">
+    <span class="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 font-medium">Em aberto: {{ abertos }}</span>
+    <span class="px-3 py-1 rounded-lg bg-gray-100 text-gray-600 font-medium">Total: {{ total }}</span>
+  </div>
+
+  <!-- Filtros -->
+  <form method="get" class="card mb-4">
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+      {{ form.q }}
+      {{ form.status }}
+      {{ form.categoria }}
+      {{ form.prioridade }}
+    </div>
+    <div class="flex gap-2 mt-3">
+      <button type="submit" class="btn-primary text-xs">Filtrar</button>
+      <a href="{% url 'chamados:painel' %}" class="btn-secondary text-xs">Limpar</a>
+    </div>
+  </form>
+
+  <div class="card overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-xs text-gray-400 border-b border-gray-100">
+          <th class="py-2 pr-3 font-medium">Código</th>
+          <th class="py-2 pr-3 font-medium">Título</th>
+          <th class="py-2 pr-3 font-medium">Categoria</th>
+          <th class="py-2 pr-3 font-medium">Prioridade</th>
+          <th class="py-2 pr-3 font-medium">Status</th>
+          <th class="py-2 pr-3 font-medium">Solicitante</th>
+          <th class="py-2 pr-3 font-medium">Responsável</th>
+          <th class="py-2 pr-3 font-medium">Aberto</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in chamados %}
+        <tr class="border-b border-gray-50 hover:bg-gray-50 cursor-pointer" onclick="window.location='{% url 'chamados:detail' c.pk %}'">
+          <td class="py-2 pr-3 font-mono text-xs text-gray-500 whitespace-nowrap">{{ c.codigo }}</td>
+          <td class="py-2 pr-3">
+            <span class="font-medium text-gray-800">{{ c.titulo }}</span>
+            {% if c.is_atrasado %}<span class="ml-1 text-[10px] font-bold text-red-600">⏰ SLA</span>{% endif %}
+          </td>
+          <td class="py-2 pr-3 text-gray-500 whitespace-nowrap">{% if c.categoria %}{{ c.categoria.display_icon }} {{ c.categoria.nome }}{% else %}—{% endif %}</td>
+          <td class="py-2 pr-3"><span class="text-xs px-2 py-0.5 rounded-full font-medium" style="color:{{ c.prioridade_color }};background-color:{{ c.prioridade_color }}22">{{ c.get_prioridade_display }}</span></td>
+          <td class="py-2 pr-3"><span class="text-xs px-2 py-0.5 rounded-full text-white font-medium whitespace-nowrap" style="background-color:{{ c.status_color }}">{{ c.get_status_display }}</span></td>
+          <td class="py-2 pr-3 text-gray-500 whitespace-nowrap">{{ c.solicitante.get_full_name|default:c.solicitante.email|default:"—" }}</td>
+          <td class="py-2 pr-3 text-gray-500 whitespace-nowrap">{{ c.responsavel.get_full_name|default:"—" }}</td>
+          <td class="py-2 pr-3 text-gray-400 text-xs whitespace-nowrap">{{ c.created_at|date:"d/m H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="py-10 text-center text-gray-400">Nenhum chamado encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="flex justify-center gap-2 mt-4 text-sm">
+    {% if page_obj.has_previous %}<a href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ page_obj.previous_page_number }}" class="btn-secondary text-xs">← Anterior</a>{% endif %}
+    <span class="px-3 py-1 text-gray-500">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ page_obj.next_page_number }}" class="btn-secondary text-xs">Próxima →</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

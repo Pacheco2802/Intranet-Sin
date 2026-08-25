@@ -35,8 +35,9 @@
     </div>
     {% else %}
     <div class="card text-center py-16">
-      <div class="text-5xl mb-4">📁</div>
-      <p class="text-gray-500">Esta pasta ainda não tem quadros.</p>
+      <div class="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center text-4xl mx-auto mb-4">📁</div>
+      <p class="font-semibold text-gray-700">Pasta vazia</p>
+      <p class="text-sm text-gray-400 mt-1">Esta pasta ainda não tem quadros de tarefas.</p>
       {% if pode_gerenciar %}
       <a href="{% url 'kanban:board_create' %}?department={{ dept.pk }}&folder={{ folder.pk }}" class="btn-primary inline-block mt-4">Criar quadro nesta pasta</a>
       {% endif %}

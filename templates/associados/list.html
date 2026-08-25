@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Associados{% endblock %}
+{% block page_title %}Associados{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-4">
+
+  <!-- Busca -->
+  <div class="card">
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <input type="text" name="cpf" value="{{ busca_cpf }}" placeholder="CPF do associado" class="form-input">
+      <input type="text" name="nome" value="{{ busca_nome }}" placeholder="Nome do associado" class="form-input">
+      <div class="flex gap-2">
+        <button type="submit" class="btn-primary text-sm flex-1">Buscar</button>
+        {% if busca_cpf or busca_nome %}
+        <a href="{% url 'associados:list' %}" class="btn-secondary text-sm">Limpar</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <div class="flex items-center justify-between">
+    <p class="text-sm text-gray-500">{{ total }} associado{{ total|pluralize }}</p>
+  </div>
+
+  <!-- Lista -->
+  <div class="space-y-2">
+    {% for a in associados %}
+    <a href="{% url 'associados:detail' a.pk %}"
+       class="card flex items-center gap-4 hover:border-emerald-200 border border-transparent transition-all">
+      <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold flex-shrink-0">
+        {{ a.nome|first|upper }}
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="font-semibold text-gray-800 text-sm truncate">{{ a.nome }}</p>
+        <p class="text-xs text-gray-400 truncate">
+          {% if a.cargo %}{{ a.cargo }}{% endif %}
+          {% if a.cargo and a.empregador %} · {% endif %}
+          {% if a.empregador %}{{ a.empregador }}{% endif %}
+        </p>
+      </div>
+      {% if a.n_casos %}
+      <span class="text-xs bg-blue-50 text-blue-600 font-semibold px-2 py-0.5 rounded-full flex-shrink-0">
+        {{ a.n_casos }} caso{{ a.n_casos|pluralize }}
+      </span>
+      {% endif %}
+      <span class="text-xs text-gray-300 flex-shrink-0">{{ a.updated_at|date:"d/m/Y" }}</span>
+    </a>
+    {% empty %}
+    <div class="card text-center py-12 text-gray-400">
+      <p class="text-sm">Nenhum associado encontrado.</p>
+      <p class="text-xs mt-1">As fichas são criadas automaticamente a partir dos atendimentos.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Paginação -->
+  {% if page_obj.has_other_pages %}
+  <div class="flex items-center justify-center gap-2 text-sm">
+    {% if page_obj.has_previous %}
+    <a href="?{{ base_query }}&page={{ page_obj.previous_page_number }}" class="btn-secondary text-xs">← Anterior</a>
+    {% endif %}
+    <span class="text-gray-400 text-xs">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?{{ base_query }}&page={{ page_obj.next_page_number }}" class="btn-secondary text-xs">Próxima →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
