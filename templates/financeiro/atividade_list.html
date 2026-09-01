@@ -141,6 +141,7 @@
   {# ── Minhas atividades: lista simples ── #}
   {% if atividades %}
   <div class="card p-0 overflow-hidden">
+   <div class="overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b border-gray-100 bg-gray-50">
@@ -187,6 +188,7 @@
         {% endfor %}
       </tbody>
     </table>
+   </div>
   </div>
   {% else %}
   <div class="card text-center py-14">
